@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+"""Record changing connection and listening-port inventories."""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+import time
+
+sys.path.insert(0, "/opt/nsg-observer/lib")
+from jsonlog import JsonLog  # noqa: E402
+
+
+log = JsonLog("sockets/sockets.jsonl", "socket-monitor")
+interval = float(os.environ.get("OBS_SOCKET_INTERVAL", "1.0"))
+
+
+def query(arguments: list[str]) -> set[str]:
+    result = subprocess.run(
+        ["ss", "-H", "-n", "-p", *arguments],
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    return {line for line in result.stdout.splitlines() if line.strip()}
+
+
+def main() -> None:
+    previous_connections: set[str] = set()
+    previous_listeners: set[str] = set()
+    log.write("monitor_started", interval_seconds=interval)
+    while True:
+        connections = query(["-t", "-u", "-a"])
+        listeners = query(["-t", "-u", "-l"])
+        for line in sorted(connections - previous_connections):
+            log.write("connection_seen", socket=line)
+        for line in sorted(previous_connections - connections):
+            log.write("connection_gone", socket=line)
+        for line in sorted(listeners - previous_listeners):
+            log.write("listener_seen", socket=line)
+        for line in sorted(previous_listeners - listeners):
+            log.write("listener_gone", socket=line)
+        previous_connections = connections
+        previous_listeners = listeners
+        time.sleep(interval)
+
+
+if __name__ == "__main__":
+    main()
