@@ -1,0 +1,25 @@
+services:
+  observed:
+    build:
+      context: .
+      args:
+        BASE_IMAGE: ubuntu:24.04
+    image: nsg-observer:local
+    container_name: nsg-observer-test
+    privileged: true
+    security_opt:
+      - seccomp=unconfined
+      - apparmor=unconfined
+    volumes:
+      - observation:/observation
+      - /lib/modules:/lib/modules:ro
+      - /usr/src:/usr/src:ro
+    environment:
+      OBS_ENABLE_STRACE: "1"
+      OBS_ENABLE_ZEEK: "1"
+      OBS_ENABLE_PCAP: "1"
+      OBS_SNAPSHOT_INTERVAL: "5"
+    command: ["/opt/nsg-observer/examples/demo-workload.sh"]
+
+volumes:
+  observation:
