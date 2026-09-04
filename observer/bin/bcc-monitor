@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+"""Start BCC event probes filtered to this container's cgroup."""
+
+from __future__ import annotations
+
+import os
+import shutil
+import signal
+import subprocess
+import sys
+import time
+import ctypes as ct
+from pathlib import Path
+
+sys.path.insert(0, "/opt/nsg-observer/lib")
+from jsonlog import JsonLog  # noqa: E402
+from bcc import BPF  # noqa: E402
+
+
+output = Path(os.environ.get("OBS_OUTPUT_DIR", "/observation")) / "bcc"
+output.mkdir(parents=True, exist_ok=True)
+log = JsonLog("bcc/status.jsonl", "bcc-monitor")
+safe_host = "".join(c if c.isalnum() or c in "._-" else "_" for c in os.uname().nodename)
+map_path = Path("/sys/fs/bpf") / f"nsg_observer_cgroups_{safe_host}_{os.getpid()}"
+children: list[tuple[str, subprocess.Popen, object]] = []
+map_owner = None
+reported_exits: set[str] = set()
+
+
+def cgroup_path() -> Path:
+    relative = "/"
+    for line in Path("/proc/self/cgroup").read_text(encoding="utf-8").splitlines():
+        fields = line.split(":", 2)
+        if len(fields) == 3 and fields[0] == "0":
+            relative = fields[2]
+            break
+    direct = Path("/sys/fs/cgroup") / relative.lstrip("/")
+    return direct if direct.exists() else Path("/sys/fs/cgroup")
+
+
+def setup_map() -> int:
+    global map_owner
+    Path("/sys/fs/bpf").mkdir(parents=True, exist_ok=True)
+    if not os.path.ismount("/sys/fs/bpf"):
+        subprocess.run(["mount", "-t", "bpf", "bpf", "/sys/fs/bpf"], check=True)
+    if map_path.exists():
+        map_path.unlink()
+    map_owner = BPF(text="BPF_HASH(cgroupset, u64, u64, 16);")
+    table = map_owner.get_table("cgroupset")
+    libbpf = ct.CDLL("libbpf.so.1", use_errno=True)
+    libbpf.bpf_obj_pin.argtypes = [ct.c_int, ct.c_char_p]
+    libbpf.bpf_obj_pin.restype = ct.c_int
+    result = libbpf.bpf_obj_pin(table.get_fd(), os.fsencode(map_path))
+    if result != 0:
+        error = ct.get_errno()
+        raise OSError(error, os.strerror(error), str(map_path))
+    cgroup_id = cgroup_path().stat().st_ino
+    table[ct.c_ulonglong(cgroup_id)] = ct.c_ulonglong(1)
+    log.write("cgroup_filter_ready", cgroup_id=cgroup_id, cgroup_path=str(cgroup_path()),
+              map_path=str(map_path))
+    return cgroup_id
+
+
+def start_tool(name: str, arguments: list[str]) -> None:
+    executable = shutil.which(name)
+    if not executable:
+        log.write("tool_unavailable", tool=name)
+        return
+    handle = (output / f"{name}.log").open("ab", buffering=0)
+    command = [executable, *arguments, "--cgroupmap", str(map_path)]
+    process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=handle,
+                               stderr=subprocess.STDOUT)
+    children.append((name, process, handle))
+    log.write("tool_started", tool=name, pid=process.pid, command=command)
+
+
+def stop(_signum=None, _frame=None) -> None:
+    for name, process, handle in children:
+        if process.poll() is None:
+            process.terminate()
+    deadline = time.monotonic() + 3
+    for name, process, handle in children:
+        if process.poll() is None:
+            try:
+                process.wait(timeout=max(0.05, deadline - time.monotonic()))
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=1)
+        handle.close()
+        log.write("tool_stopped", tool=name, returncode=process.poll())
+    try:
+        map_path.unlink()
+        log.write("cgroup_filter_removed", map_path=str(map_path))
+    except FileNotFoundError:
+        pass
+    except OSError as exc:
+        log.write("cgroup_filter_remove_failed", map_path=str(map_path), error=repr(exc))
+    raise SystemExit(0)
+
+
+def main() -> int:
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
+    try:
+        setup_map()
+    except Exception as exc:
+        log.write("cgroup_filter_failed", error=repr(exc))
+        return 1
+    start_tool("execsnoop-bpfcc", ["-T", "-U", "-x", "-q", "--max-args", "60"])
+    start_tool("opensnoop-bpfcc", ["-T", "-U", "-e", "-F"])
+    start_tool("tcpconnect-bpfcc", ["-t", "-U"])
+    start_tool("tcpaccept-bpfcc", ["-T"])
+    while True:
+        for name, process, _handle in children:
+            if process.poll() is not None and name not in reported_exits:
+                log.write("tool_exited", tool=name, returncode=process.returncode)
+                reported_exits.add(name)
+        time.sleep(2)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
