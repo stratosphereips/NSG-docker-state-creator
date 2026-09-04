@@ -1,0 +1,229 @@
+#!/usr/bin/env python3
+"""PID 1 supervisor for the all-in-one observed container."""
+
+from __future__ import annotations
+
+import json
+import os
+import pwd
+import shlex
+import signal
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, "/opt/nsg-observer/lib")
+from jsonlog import JsonLog, env_bool  # noqa: E402
+
+
+ROOT = Path("/opt/nsg-observer")
+OUTPUT = Path(os.environ.get("OBS_OUTPUT_DIR", "/observation"))
+STATUS = OUTPUT / "health.json"
+log = JsonLog("supervisor.jsonl", "supervisor")
+children: list[tuple[str, subprocess.Popen]] = []
+stopping = False
+reported_exits: set[str] = set()
+
+
+def status(state: str, workload_pid: int | None = None) -> None:
+    services = {
+        name: {"pid": proc.pid, "running": proc.poll() is None, "returncode": proc.poll()}
+        for name, proc in children
+    }
+    tmp = STATUS.with_suffix(".tmp")
+    tmp.write_text(json.dumps({
+        "state": state,
+        "timestamp": time.time(),
+        "workload_pid": workload_pid,
+        "services": services,
+    }, sort_keys=True), encoding="utf-8")
+    tmp.replace(STATUS)
+
+
+def start(name: str, argv: list[str], cwd: Path | None = None, stdout=None) -> None:
+    try:
+        proc = subprocess.Popen(
+            argv,
+            cwd=str(cwd) if cwd else None,
+            stdin=subprocess.DEVNULL,
+            stdout=stdout if stdout is not None else subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+        children.append((name, proc))
+        log.write("sensor_started", name=name, pid=proc.pid, argv=argv)
+    except Exception as exc:
+        log.write("sensor_start_failed", name=name, argv=argv, error=repr(exc))
+
+
+def enabled(name: str) -> bool:
+    return env_bool(name, True)
+
+
+def as_workload_user(argv: list[str]) -> list[str]:
+    spec = os.environ.get("OBS_WORKLOAD_USER", "").strip()
+    if not spec:
+        return argv
+
+    user, _sep, group = spec.partition(":")
+    if not user:
+        raise ValueError("OBS_WORKLOAD_USER must start with a user name or UID")
+
+    init_groups = False
+    if not group:
+        try:
+            entry = pwd.getpwnam(user) if not user.isdigit() else pwd.getpwuid(int(user))
+            group = str(entry.pw_gid)
+            init_groups = not user.isdigit()
+        except KeyError:
+            group = user
+    elif not user.isdigit():
+        try:
+            pwd.getpwnam(user)
+            init_groups = True
+        except KeyError:
+            init_groups = False
+
+    group_mode = ["--init-groups"] if init_groups else ["--clear-groups"]
+    return ["setpriv", "--reuid", user, "--regid", group, *group_mode, "--", *argv]
+
+
+def start_sensors() -> None:
+    if enabled("OBS_ENABLE_PROCESS_SNAPSHOTS"):
+        start("process-monitor", [str(ROOT / "bin/process-monitor")])
+    if enabled("OBS_ENABLE_SOCKET_SNAPSHOTS"):
+        start("socket-monitor", [str(ROOT / "bin/socket-monitor")])
+    if enabled("OBS_ENABLE_FILE_EVENTS"):
+        start("filesystem-monitor", [str(ROOT / "bin/filesystem-monitor")])
+    if enabled("OBS_ENABLE_STATE_RECONCILIATION"):
+        start("state-reconciler", [str(ROOT / "bin/state-reconciler")])
+    if enabled("OBS_ENABLE_BCC"):
+        start("bcc-monitor", [str(ROOT / "bin/bcc-monitor")])
+
+    if enabled("OBS_ENABLE_ZEEK"):
+        zeek_dir = OUTPUT / "zeek"
+        zeek_dir.mkdir(parents=True, exist_ok=True)
+        start(
+            "zeek",
+            ["zeek", "-C", "-i", os.environ.get("OBS_INTERFACE", "any"),
+             str(ROOT / "etc/zeek/local.zeek")],
+            cwd=zeek_dir,
+            stdout=(OUTPUT / "zeek-console.log").open("ab", buffering=0),
+        )
+
+    if enabled("OBS_ENABLE_PCAP"):
+        pcap_dir = OUTPUT / "pcap"
+        pcap_dir.mkdir(parents=True, exist_ok=True)
+        start(
+            "pcap",
+            ["tcpdump", "-i", os.environ.get("OBS_INTERFACE", "any"), "-n", "-U",
+             "-C", os.environ.get("OBS_PCAP_FILE_MB", "100"),
+             "-W", os.environ.get("OBS_PCAP_FILE_COUNT", "10"),
+             "-Z", "root", "-w", str(pcap_dir / "traffic.pcap")],
+            stdout=(OUTPUT / "pcap-console.log").open("ab", buffering=0),
+        )
+
+
+def workload_command(argv: list[str]) -> list[str]:
+    command = as_workload_user(argv)
+    if env_bool("OBS_ENABLE_TTY_RECORDING", True) and sys.stdin.isatty():
+        tty_dir = OUTPUT / "tty"
+        tty_dir.mkdir(parents=True, exist_ok=True)
+        session = str(time.time_ns())
+        command = [
+            "script", "-q", "-f",
+            "--log-in", str(tty_dir / f"{session}.input"),
+            "--log-out", str(tty_dir / f"{session}.output"),
+            "--log-timing", str(tty_dir / f"{session}.timing"),
+            "--command", shlex.join(command),
+        ]
+    if env_bool("OBS_ENABLE_STRACE", True):
+        trace_dir = OUTPUT / "syscalls"
+        trace_dir.mkdir(parents=True, exist_ok=True)
+        command = [
+            "strace", "-ff", "-ttt", "-T", "-yy", "-s",
+            os.environ.get("OBS_STRACE_STRING_LIMIT", "4096"),
+            "-o", str(trace_dir / "trace"), "--", *command,
+        ]
+    return command
+
+
+def stop_all(signum: int = signal.SIGTERM) -> None:
+    global stopping
+    if stopping:
+        return
+    stopping = True
+    for name, proc in reversed(children):
+        if proc.poll() is None:
+            try:
+                os.killpg(proc.pid, signum)
+                log.write("sensor_signal", name=name, pid=proc.pid, signal=signum)
+            except ProcessLookupError:
+                pass
+
+
+def on_signal(signum, _frame) -> None:
+    log.write("supervisor_signal", signal=signum)
+    stop_all(signum)
+
+
+def main() -> int:
+    if len(sys.argv) < 2:
+        print("observe-entrypoint: a workload command is required", file=sys.stderr)
+        return 64
+    OUTPUT.mkdir(parents=True, exist_ok=True)
+    for subdir in ("bcc", "files", "snapshots", "sockets", "syscalls", "tty", "zeek", "pcap"):
+        (OUTPUT / subdir).mkdir(exist_ok=True)
+    (OUTPUT / "tty").chmod(0o1777)
+    signal.signal(signal.SIGTERM, on_signal)
+    signal.signal(signal.SIGINT, on_signal)
+    start_sensors()
+    warmup = float(os.environ.get("OBS_SENSOR_WARMUP", "2"))
+    time.sleep(warmup)
+
+    command = workload_command(sys.argv[1:])
+    workload = subprocess.Popen(command, start_new_session=True)
+    children.append(("workload", workload))
+    log.write("workload_started", pid=workload.pid, requested_argv=sys.argv[1:], effective_argv=command)
+    status("running", workload.pid)
+
+    while workload.poll() is None and not stopping:
+        status("running", workload.pid)
+        for name, proc in children[:-1]:
+            if proc.poll() is not None and name not in reported_exits:
+                log.write("sensor_exited", name=name, returncode=proc.returncode)
+                reported_exits.add(name)
+        time.sleep(2)
+
+    if stopping and workload.poll() is None:
+        try:
+            os.killpg(workload.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+    try:
+        result = workload.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        os.killpg(workload.pid, signal.SIGKILL)
+        result = workload.wait()
+
+    log.write("workload_exited", pid=workload.pid, returncode=result)
+    stop_all()
+    deadline = time.monotonic() + 5
+    for _name, proc in children:
+        if proc is workload:
+            continue
+        remaining = max(0.05, deadline - time.monotonic())
+        try:
+            proc.wait(timeout=remaining)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+    status("stopped", workload.pid)
+    return result
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
