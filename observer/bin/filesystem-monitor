@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+"""Run recursive inotifywait and convert events to JSON Lines."""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, "/opt/nsg-observer/lib")
+from jsonlog import JsonLog, observer_exclusions  # noqa: E402
+
+
+log = JsonLog("files/events.jsonl", "filesystem-monitor")
+
+
+def roots() -> list[str]:
+    excluded = observer_exclusions()
+    result = []
+    for item in Path("/").iterdir():
+        try:
+            resolved = item.resolve()
+        except OSError:
+            continue
+        if not item.is_dir() or any(resolved == path or path in resolved.parents for path in excluded):
+            continue
+        result.append(str(item))
+    return result
+
+
+def main() -> int:
+    watched = roots()
+    if not watched:
+        log.write("monitor_failed", error="no filesystem roots to watch")
+        return 1
+    # Reads are already captured by strace/BCC. Watching ACCESS/OPEN here would
+    # make the reconciliation scanner generate millions of events about itself.
+    events = "attrib,close_write,create,delete,delete_self,modify,move,move_self"
+    command = [
+        "inotifywait", "--monitor", "--recursive", "--quiet",
+        "--event", events,
+        "--format", "%T\\t%w%f\\t%e\\t%c",
+        "--timefmt", "%s", *watched,
+    ]
+    log.write("monitor_started", roots=watched, command=command)
+    process = subprocess.Popen(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               errors="replace", bufsize=1)
+    assert process.stdout is not None
+    for raw in process.stdout:
+        parts = raw.rstrip("\n").split("\t", 3)
+        if len(parts) != 4:
+            log.write("unparsed", raw=raw.rstrip("\n"))
+            continue
+        timestamp, path, operations, cookie = parts
+        log.write("filesystem_event", kernel_time=timestamp, path=path,
+                  operations=operations.split(","), move_cookie=cookie)
+    stderr = process.stderr.read() if process.stderr else ""
+    log.write("monitor_exited", returncode=process.wait(), stderr=stderr)
+    return process.returncode
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
