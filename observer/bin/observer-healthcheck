@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+path = Path(os.environ.get("OBS_OUTPUT_DIR", "/observation")) / "health.json"
+try:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    fresh = time.time() - float(data["timestamp"]) < 45
+    workload = data.get("services", {}).get("workload", {})
+    healthy = data.get("state") == "running" and fresh and workload.get("running") is True
+except (OSError, ValueError, KeyError, TypeError):
+    healthy = False
+sys.exit(0 if healthy else 1)
