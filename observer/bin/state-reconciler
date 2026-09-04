@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+"""Hash filesystem state periodically to reconcile event-based observation."""
+
+from __future__ import annotations
+
+import hashlib
+import os
+import shutil
+import stat
+import sys
+import time
+from pathlib import Path
+
+sys.path.insert(0, "/opt/nsg-observer/lib")
+from jsonlog import JsonLog, env_bool, observer_exclusions  # noqa: E402
+
+
+log = JsonLog("files/reconciliation.jsonl", "state-reconciler")
+output = Path(os.environ.get("OBS_OUTPUT_DIR", "/observation"))
+interval = float(os.environ.get("OBS_SNAPSHOT_INTERVAL", "30"))
+max_bytes = int(os.environ.get("OBS_HASH_MAX_BYTES", "0"))
+archive = env_bool("OBS_ARCHIVE_CHANGED_FILES", False)
+excluded = observer_exclusions()
+
+
+def skip(path: Path) -> bool:
+    try:
+        resolved = path.resolve()
+    except OSError:
+        return True
+    return any(resolved == item or item in resolved.parents for item in excluded)
+
+
+def digest(path: Path, size: int) -> str:
+    if max_bytes > 0 and size > max_bytes:
+        return "size-limit"
+    value = hashlib.sha256()
+    with path.open("rb", buffering=0) as handle:
+        while chunk := handle.read(1024 * 1024):
+            value.update(chunk)
+    return value.hexdigest()
+
+
+def scan() -> dict[str, tuple]:
+    state: dict[str, tuple] = {}
+    for base, dirs, files in os.walk("/", topdown=True, followlinks=False):
+        base_path = Path(base)
+        dirs[:] = [name for name in dirs if not skip(base_path / name)]
+        for name in files:
+            path = base_path / name
+            if skip(path):
+                continue
+            try:
+                info = path.lstat()
+                if stat.S_ISREG(info.st_mode):
+                    checksum = digest(path, info.st_size)
+                elif stat.S_ISLNK(info.st_mode):
+                    checksum = "link:" + os.readlink(path)
+                else:
+                    checksum = "special"
+                state[str(path)] = (
+                    info.st_mode, info.st_uid, info.st_gid, info.st_size,
+                    info.st_mtime_ns, info.st_ctime_ns, checksum,
+                )
+            except (OSError, PermissionError):
+                continue
+    return state
+
+
+def archive_file(path: str, checksum: str) -> None:
+    if not archive or checksum in {"size-limit", "special"} or checksum.startswith("link:"):
+        return
+    destination = output / "snapshots" / "objects" / checksum[:2] / checksum
+    if destination.exists():
+        return
+    try:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(path, destination)
+    except OSError as exc:
+        log.write("archive_failed", path=path, error=repr(exc))
+
+
+def main() -> None:
+    previous = scan()
+    log.write("baseline_complete", files=len(previous), interval_seconds=interval,
+              archive_changed_files=archive, hash_max_bytes=max_bytes)
+    while True:
+        time.sleep(interval)
+        started = time.monotonic()
+        current = scan()
+        for path in sorted(current.keys() - previous.keys()):
+            log.write("file_added", path=path, state=current[path])
+            archive_file(path, current[path][-1])
+        for path in sorted(previous.keys() - current.keys()):
+            log.write("file_deleted", path=path, previous_state=previous[path])
+        for path in sorted(current.keys() & previous.keys()):
+            if current[path] != previous[path]:
+                log.write("file_changed", path=path, previous_state=previous[path], state=current[path])
+                archive_file(path, current[path][-1])
+        log.write("scan_complete", files=len(current), duration_seconds=time.monotonic() - started)
+        previous = current
+
+
+if __name__ == "__main__":
+    main()
