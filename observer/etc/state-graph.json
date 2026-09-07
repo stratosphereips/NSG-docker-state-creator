@@ -54,7 +54,7 @@
       "^/opt/nsg-observer(/|$)"
     ]
   },
-  "observer_process_regex": "(/opt/nsg-observer|state-reconciler|filesystem-monitor|process-monitor|socket-monitor|network-monitor|state-builder|bcc-monitor|inotifywait|tcpdump|(^| )zeek( |$)|execsnoop|opensnoop-bpfcc|(^| )ss -H -n -p)",
+  "observer_process_regex": "(/opt/nsg-observer/(bin|lib|etc)/|state-reconciler|filesystem-monitor|process-monitor|socket-monitor|network-monitor|state-builder|trajectory-monitor|bcc-monitor|inotifywait|tcpdump|(^| )zeek( |$)|(^| )strace( |$)|execsnoop|opensnoop-bpfcc|(^| )ss -H -n -p)",
   "service_names": {
     "20": "ftp-data", "21": "ftp", "22": "ssh", "23": "telnet",
     "25": "smtp", "53": "dns", "67": "dhcp", "68": "dhcp",
@@ -77,5 +77,47 @@
   "control_inference": {
     "minimum_confidence": 0.8,
     "successful_commands": ["ssh", "scp", "sftp"]
+  },
+  "trajectory": {
+    "snapshot_policy": "material",
+    "watched_domains": [
+      "known_networks",
+      "known_hosts",
+      "controlled_hosts",
+      "known_data",
+      "known_services",
+      "known_blocks"
+    ],
+    "critical_domains": [
+      "known_networks",
+      "known_hosts",
+      "controlled_hosts",
+      "known_blocks"
+    ],
+    "ignore_fields": [
+      "generated_at",
+      "first_seen",
+      "last_seen",
+      "evidence",
+      "evidence_count",
+      "evidence_sources",
+      "observations"
+    ],
+    "confidence_bucket": 0.1,
+    "poll_interval_seconds": 0.2,
+    "settle_seconds": 2.0,
+    "maximum_batch_seconds": 5.0,
+    "inferred_idle_seconds": 1.0,
+    "maximum_action_seconds": 3600,
+    "use_bcc_exec_fallback": true,
+    "command_rules": [
+      {"type": "network_scan", "scope": "network", "regex": "(^|/| )(nmap|masscan|zmap|rustscan)( |$)"},
+      {"type": "network_probe", "scope": "network", "regex": "(^|/| )(ping|traceroute|tracepath|dig|host|nslookup|nc|netcat|telnet)( |$)"},
+      {"type": "remote_access", "scope": "network", "regex": "(^|/| )(ssh|scp|sftp|rsync)( |$)"},
+      {"type": "network_request", "scope": "network", "regex": "(^|/| )(curl|wget|ftp)( |$)"},
+      {"type": "file_change", "scope": "local", "regex": "(^|/| )(cp|mv|rm|mkdir|rmdir|touch|chmod|chown|ln|truncate|dd)( |$)"},
+      {"type": "data_access", "scope": "local", "regex": "(^|/| )(cat|head|tail|less|more|grep|find|awk|sed)( |$)"},
+      {"type": "package_change", "scope": "local", "regex": "(^|/| )(apt|apt-get|dpkg|pip|pip3|npm|yarn)( |$)"}
+    ]
   }
 }
