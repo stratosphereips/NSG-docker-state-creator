@@ -9,7 +9,8 @@ target.
 
 Alpine, distroless, scratch, and non-Linux images need a different packaging
 layer. Copying these scripts alone is insufficient because Zeek, BCC, strace,
-inotifywait, tcpdump and their shared libraries must also be present.
+libbpf tools, inotifywait, tcpdump and their shared libraries must also be
+present.
 
 ## Rebuild on an existing image
 
@@ -82,6 +83,7 @@ services:
       OBS_SNAPSHOT_INTERVAL: "30"
       OBS_PCAP_FILE_MB: "100"
       OBS_PCAP_FILE_COUNT: "10"
+      OBS_STATE_LEVEL: "operational"
       # Optional: preserve an original non-root runtime user.
       # OBS_WORKLOAD_USER: "1000:1000"
 
@@ -118,6 +120,9 @@ base image.
 7. Confirm `/observation/health.json` reports `running`.
 8. Generate a file, process and network event before starting the real test.
 9. Preserve or export the evidence volume after the workload exits.
+10. Consume `/observation/state/summary.json` for the six core categories,
+    `/observation/state/graph.json` for graph reasoning, or
+    `/observation/state/embedding.jsonl` for embedding ingestion.
 
 The raw Docker socket is not needed and should not be mounted into the
 container.
