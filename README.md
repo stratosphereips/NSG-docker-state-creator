@@ -4,7 +4,9 @@ NSG Docker State Creator turns an Ubuntu-based image into a self-observing
 container. The workload and all collectors run in the **same container**. It
 records processes, syscalls, file activity and state, sockets, ports, packets,
 Zeek protocol logs, interactive shell history, and an agent-readable state
-graph inferred from those observations.
+graph inferred from those observations. It also passively builds an immutable
+`state, action, state, ...` trajectory without modifying or launching the
+observed agent.
 
 This project intentionally does not collect CPU or memory utilization.
 
@@ -23,6 +25,7 @@ This project intentionally does not collect CPU or memory utilization.
 | Interactive commands | `script` TTY input/output, persistent Bash history, command exit status | `tty/` |
 | Supervisor state | Lifecycle and health records | `supervisor.jsonl`, `health.json` |
 | Inferred world state | Confidence-bearing property graph, compact summary, embedding documents | `state/graph.json`, `state/summary.json`, `state/embedding.jsonl` |
+| Passive actions and state transitions | Bash boundaries, process trees, exec events, and syscall activity correlated with material graph changes | `trajectory/sequence.jsonl`, `trajectory/actions/`, `trajectory/states/`, `trajectory/deltas/` |
 
 The observation directory itself is excluded from file monitoring; otherwise
 recording a file event would recursively generate another file event.
@@ -123,6 +126,55 @@ short node and edge documents ready to send to a future embedding model. See
 [State graph](docs/STATE_GRAPH.md) for schema, inference rules, custom file
 filters, assertions, and examples.
 
+## Passive state/action trajectory
+
+`trajectory-monitor` runs beside the other collectors. It does not wrap,
+instrument, call, or require cooperation from the agent. It infers actions
+from these already-collected signals:
+
+- exact start/completion boundaries for an interactive Bash command;
+- a new child process launched by a persistent program or shell;
+- cgroup-filtered eBPF exec events as a fallback for very short processes;
+- grouped network connects and file mutations made inside a long-running
+  process without spawning a command.
+
+Every action is stored, including actions which do not change the selected
+state. By default, only a semantic change to one of the six core graph domains
+creates a new immutable state. This yields a sequence such as:
+
+```json
+{"sequence":0,"kind":"state","id":"state-000000"}
+{"sequence":1,"kind":"action","action_type":"generic_command","state_before":"state-000000","state_after":"state-000000","state_changed":false}
+{"sequence":2,"kind":"action","action_type":"network_scan","state_before":"state-000000","state_after":"state-000001","state_changed":true}
+{"sequence":3,"kind":"state","id":"state-000001","trigger_action_ids":["action:process:..."]}
+```
+
+Use `/observation/trajectory/sequence.jsonl` as the ordered index. It points to
+complete action records and immutable state graph snapshots. An agent inside
+the observed container can read it directly:
+
+```bash
+tail -n 10 /observation/trajectory/sequence.jsonl
+jq . /observation/trajectory/current.json
+```
+
+An external controller reads the same files through the evidence volume. It
+can also run a separate live monitor, using a different output directory:
+
+```bash
+docker run --rm \
+  --entrypoint trajectory-monitor \
+  -v nsg-observation:/observation \
+  nsg-observer:local \
+  --input /observation --output /observation/trajectory-external \
+  --level operational --sensitivity material --watch
+```
+
+Do not have two trajectory monitors write to the same output path. The
+embedded monitor owns `/observation/trajectory`. See
+[Passive action trajectories](docs/ACTIONS_TRAJECTORY.md) for the complete
+format, inference rules, timing model, sensitivity configuration, and limits.
+
 ## Add observation to another image
 
 For another Ubuntu 24.04 image, rebuild this Dockerfile on top of it:
@@ -177,6 +229,10 @@ All switches are environment variables:
 | `OBS_ENABLE_STATE_GRAPH` | `1` | Continuously compile the inferred graph |
 | `OBS_STATE_LEVEL` | `operational` | `forensic`, `operational`, or `strategic` graph detail |
 | `OBS_STATE_INTERVAL` | `10` | Seconds between graph rebuilds |
+| `OBS_ENABLE_TRAJECTORY` | `1` | Build the passive state/action/state sequence |
+| `OBS_TRAJECTORY_SENSITIVITY` | `material` | `always`, `material`, or `critical` snapshot policy |
+| `OBS_TRAJECTORY_SETTLE_SECONDS` | `2` | Wait after an action for resulting evidence to arrive |
+| `OBS_TRAJECTORY_POLL_INTERVAL` | `0.2` | Seconds between action-source polls |
 | `OBS_EXCLUDE_PATHS` | empty | Additional colon-separated filesystem exclusions |
 | `OBS_WORKLOAD_USER` | empty | Run the workload as `user`, `uid`, `user:group`, or `uid:gid` while keeping collectors privileged |
 
@@ -194,13 +250,26 @@ bash tests/smoke.sh
 Run the deterministic graph extraction tests without Docker:
 
 ```bash
-python3 -m unittest -v tests/test_state_graph.py
+make state-test
+```
+
+Or, on a minimal host without `make`:
+
+```bash
+python3 -m unittest -v tests/test_state_graph.py tests/test_trajectory.py
 ```
 
 If Docker's isolated build network cannot resolve package mirrors, use:
 
 ```bash
 DOCKER_BUILD_NETWORK=host bash tests/smoke.sh
+```
+
+If a dependency image was already built and you only need to test the current
+working tree code, run:
+
+```bash
+SKIP_BUILD=1 MOUNT_LOCAL_OBSERVER=1 bash tests/smoke.sh
 ```
 
 ## Accuracy boundary
