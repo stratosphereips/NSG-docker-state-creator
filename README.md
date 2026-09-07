@@ -85,7 +85,25 @@ Select one of three detail levels with `OBS_STATE_LEVEL`:
 | `operational` | Programs, aggregate flows, configured data filters, bounded evidence references (default) |
 | `strategic` | Only compact topology, access, important data, services, and block conclusions |
 
-Build any level again from an existing observation directory:
+### Use state inside the monitored Docker
+
+The default entrypoint starts `state-builder --watch` in the same Docker as the
+workload. An agent running in that Docker reads the latest atomically-written
+state directly; it does not need a network API or another container:
+
+```bash
+jq '.known_networks' /observation/state/summary.json
+jq '.nodes[] | select(.type == "host")' /observation/state/graph.json
+```
+
+Set `OBS_STATE_LEVEL=strategic` when the in-container agent only needs the six
+core state categories.
+
+### Build or replay state outside the monitored Docker
+
+An external controller uses the same `state-builder` binary and the same
+observation volume. This is useful for a forensic rebuild after a run, or for a
+second graph detail level:
 
 ```bash
 docker run --rm \
@@ -94,6 +112,11 @@ docker run --rm \
   nsg-observer:local \
   --input /observation --output /observation/state-forensic --level forensic
 ```
+
+The embedded builder owns `/observation/state`. External builds must write to a
+different directory such as `/observation/state-forensic` or
+`/observation/state-external`; do not run two writers against the same output
+directory.
 
 The JSONL embedding view is not an embedding itself. It is a stable stream of
 short node and edge documents ready to send to a future embedding model. See
