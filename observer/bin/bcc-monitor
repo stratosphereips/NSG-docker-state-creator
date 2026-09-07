@@ -21,10 +21,11 @@ output = Path(os.environ.get("OBS_OUTPUT_DIR", "/observation")) / "bcc"
 output.mkdir(parents=True, exist_ok=True)
 log = JsonLog("bcc/status.jsonl", "bcc-monitor")
 safe_host = "".join(c if c.isalnum() or c in "._-" else "_" for c in os.uname().nodename)
-map_path = Path("/sys/fs/bpf") / f"nsg_observer_cgroups_{safe_host}_{os.getpid()}"
+cgroup_map_path = Path("/sys/fs/bpf") / f"nsg_observer_cgroups_{safe_host}_{os.getpid()}"
 children: list[tuple[str, subprocess.Popen, object]] = []
 map_owner = None
 reported_exits: set[str] = set()
+cg_path = Path("/sys/fs/cgroup")
 
 
 def cgroup_path() -> Path:
@@ -38,40 +39,66 @@ def cgroup_path() -> Path:
     return direct if direct.exists() else Path("/sys/fs/cgroup")
 
 
+def ensure_kernel_mounts() -> None:
+    for mountpoint, fstype in (
+        (Path("/sys/kernel/tracing"), "tracefs"),
+        (Path("/sys/kernel/debug"), "debugfs"),
+    ):
+        try:
+            mountpoint.mkdir(parents=True, exist_ok=True)
+            if not os.path.ismount(mountpoint):
+                subprocess.run(["mount", "-t", fstype, fstype, str(mountpoint)],
+                               check=True, stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL)
+            log.write("kernel_mount_ready", mountpoint=str(mountpoint), fstype=fstype)
+        except Exception as exc:
+            log.write("kernel_mount_failed", mountpoint=str(mountpoint),
+                      fstype=fstype, error=repr(exc))
+
+
 def setup_map() -> int:
-    global map_owner
+    global map_owner, cg_path
     Path("/sys/fs/bpf").mkdir(parents=True, exist_ok=True)
     if not os.path.ismount("/sys/fs/bpf"):
         subprocess.run(["mount", "-t", "bpf", "bpf", "/sys/fs/bpf"], check=True)
-    if map_path.exists():
-        map_path.unlink()
+    if cgroup_map_path.exists():
+        cgroup_map_path.unlink()
     map_owner = BPF(text="BPF_HASH(cgroupset, u64, u64, 16);")
-    table = map_owner.get_table("cgroupset")
     libbpf = ct.CDLL("libbpf.so.1", use_errno=True)
     libbpf.bpf_obj_pin.argtypes = [ct.c_int, ct.c_char_p]
     libbpf.bpf_obj_pin.restype = ct.c_int
-    result = libbpf.bpf_obj_pin(table.get_fd(), os.fsencode(map_path))
+    table = map_owner.get_table("cgroupset")
+    result = libbpf.bpf_obj_pin(table.get_fd(), os.fsencode(cgroup_map_path))
     if result != 0:
         error = ct.get_errno()
-        raise OSError(error, os.strerror(error), str(map_path))
-    cgroup_id = cgroup_path().stat().st_ino
+        raise OSError(error, os.strerror(error), str(cgroup_map_path))
+    cg_path = cgroup_path()
+    cgroup_id = cg_path.stat().st_ino
     table[ct.c_ulonglong(cgroup_id)] = ct.c_ulonglong(1)
-    log.write("cgroup_filter_ready", cgroup_id=cgroup_id, cgroup_path=str(cgroup_path()),
-              map_path=str(map_path))
+    log.write("bpf_filter_ready", cgroup_id=cgroup_id, cgroup_path=str(cg_path),
+              cgroup_map_path=str(cgroup_map_path))
     return cgroup_id
 
 
-def start_tool(name: str, arguments: list[str]) -> None:
-    executable = shutil.which(name)
+def start_command(name: str, executable_name: str, arguments: list[str]) -> bool:
+    executable = shutil.which(executable_name)
     if not executable:
-        log.write("tool_unavailable", tool=name)
-        return
+        return False
     handle = (output / f"{name}.log").open("ab", buffering=0)
-    command = [executable, *arguments, "--cgroupmap", str(map_path)]
+    command = [executable, *arguments]
     process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=handle,
                                stderr=subprocess.STDOUT)
     children.append((name, process, handle))
-    log.write("tool_started", tool=name, pid=process.pid, command=command)
+    log.write("tool_started", tool=name, executable=executable_name,
+              pid=process.pid, command=command)
+    return True
+
+
+def start_preferred(name: str, candidates: list[tuple[str, list[str]]]) -> None:
+    for executable_name, arguments in candidates:
+        if start_command(name, executable_name, arguments):
+            return
+    log.write("tool_unavailable", tool=name, candidates=[candidate[0] for candidate in candidates])
 
 
 def stop(_signum=None, _frame=None) -> None:
@@ -89,27 +116,34 @@ def stop(_signum=None, _frame=None) -> None:
         handle.close()
         log.write("tool_stopped", tool=name, returncode=process.poll())
     try:
-        map_path.unlink()
-        log.write("cgroup_filter_removed", map_path=str(map_path))
+        cgroup_map_path.unlink()
+        log.write("bpf_filter_removed", map_path=str(cgroup_map_path))
     except FileNotFoundError:
         pass
     except OSError as exc:
-        log.write("cgroup_filter_remove_failed", map_path=str(map_path), error=repr(exc))
+        log.write("bpf_filter_remove_failed", map_path=str(cgroup_map_path), error=repr(exc))
+    except Exception as exc:
+        log.write("bpf_filter_cleanup_failed", error=repr(exc))
     raise SystemExit(0)
 
 
 def main() -> int:
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
+    ensure_kernel_mounts()
     try:
         setup_map()
     except Exception as exc:
         log.write("cgroup_filter_failed", error=repr(exc))
         return 1
-    start_tool("execsnoop-bpfcc", ["-T", "-U", "-x", "-q", "--max-args", "60"])
-    start_tool("opensnoop-bpfcc", ["-T", "-U", "-e", "-F"])
-    start_tool("tcpconnect-bpfcc", ["-t", "-U"])
-    start_tool("tcpaccept-bpfcc", ["-T"])
+    start_preferred("execsnoop", [
+        ("execsnoop", ["-T", "-U", "-x", "-q", "--max-args", "60", "-c", str(cg_path)]),
+        ("execsnoop-bpfcc", ["-T", "-U", "-x", "-q", "--max-args", "60",
+                             "--cgroupmap", str(cgroup_map_path)]),
+    ])
+    start_preferred("opensnoop", [
+        ("opensnoop-bpfcc", ["-T", "-U", "-e", "-F", "--cgroupmap", str(cgroup_map_path)]),
+    ])
     while True:
         for name, process, _handle in children:
             if process.poll() is not None and name not in reported_exits:
