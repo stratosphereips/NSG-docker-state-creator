@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+"""Capture structured network topology and local firewall policy changes."""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import subprocess
+import sys
+import time
+from typing import Any
+
+sys.path.insert(0, "/opt/nsg-observer/lib")
+from jsonlog import JsonLog  # noqa: E402
+
+
+log = JsonLog("network/topology.jsonl", "network-monitor")
+interval = float(os.environ.get("OBS_NETWORK_INTERVAL", "10"))
+
+
+def command(argv: list[str], parse_json: bool = False) -> dict[str, Any]:
+    try:
+        result = subprocess.run(
+            argv,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=15,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {"ok": False, "argv": argv, "error": repr(exc)}
+    value: Any = result.stdout
+    error = result.stderr.strip()
+    if parse_json and result.returncode == 0:
+        try:
+            value = json.loads(result.stdout or "[]")
+        except json.JSONDecodeError as exc:
+            error = f"invalid JSON: {exc}; {error}".strip("; ")
+    return {
+        "ok": result.returncode == 0,
+        "returncode": result.returncode,
+        "data": value,
+        "error": error,
+    }
+
+
+def snapshot() -> dict[str, Any]:
+    return {
+        "addresses": command(["ip", "-j", "address", "show"], True),
+        "routes_v4": command(["ip", "-j", "-4", "route", "show", "table", "all"], True),
+        "routes_v6": command(["ip", "-j", "-6", "route", "show", "table", "all"], True),
+        "neighbors": command(["ip", "-j", "neighbor", "show"], True),
+        "iptables_v4": command(["iptables-save", "-c"]),
+        "iptables_v6": command(["ip6tables-save", "-c"]),
+        "nftables": command(["nft", "--json", "list", "ruleset"], True),
+    }
+
+
+def main() -> None:
+    previous = ""
+    sequence = 0
+    log.write("monitor_started", interval_seconds=interval)
+    while True:
+        current = snapshot()
+        canonical = json.dumps(current, sort_keys=True, separators=(",", ":"), default=str)
+        digest = hashlib.sha256(canonical.encode()).hexdigest()
+        if digest != previous:
+            sequence += 1
+            log.write("topology_snapshot", sequence=sequence, snapshot_sha256=digest, **current)
+            previous = digest
+        time.sleep(interval)
+
+
+if __name__ == "__main__":
+    main()
