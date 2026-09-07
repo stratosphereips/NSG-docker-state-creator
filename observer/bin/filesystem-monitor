@@ -40,7 +40,7 @@ def main() -> int:
     command = [
         "inotifywait", "--monitor", "--recursive", "--quiet",
         "--event", events,
-        "--format", "%T\\t%w%f\\t%e\\t%c",
+        "--format", "%T\t%w%f\t%e\t%c",
         "--timefmt", "%s", *watched,
     ]
     log.write("monitor_started", roots=watched, command=command)
