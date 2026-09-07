@@ -1,0 +1,81 @@
+{
+  "schema_version": "nsg-state-graph/1.0",
+  "profiles": {
+    "forensic": {
+      "description": "Maximum entity, process, flow, attribute, and raw evidence detail.",
+      "process_mode": "instance",
+      "include_flows": true,
+      "evidence_mode": "full",
+      "max_evidence_per_entity": 1000,
+      "data_mode": "all",
+      "max_data_per_host": 0,
+      "include_firewall_rules": true
+    },
+    "operational": {
+      "description": "Decision-oriented hosts, services, selected data, programs, access, and blocks.",
+      "process_mode": "program",
+      "include_flows": true,
+      "evidence_mode": "references",
+      "max_evidence_per_entity": 50,
+      "data_mode": "configured",
+      "max_data_per_host": 2000,
+      "include_firewall_rules": true
+    },
+    "strategic": {
+      "description": "Compact host/network/service/data/access/block state for low-context decisions.",
+      "process_mode": "none",
+      "include_flows": false,
+      "evidence_mode": "counts",
+      "max_evidence_per_entity": 0,
+      "data_mode": "important",
+      "max_data_per_host": 250,
+      "include_firewall_rules": false
+    }
+  },
+  "data": {
+    "include_regex": [
+      "^/(etc|home|root|srv|tmp)(/|$)",
+      "^/var/(log|lib|www|tmp)(/|$)",
+      "\\.(txt|json|jsonl|csv|tsv|ya?ml|xml|ini|conf|cfg|log|db|sqlite3?|sql|pem|key|crt|sh|py|js|ts|md|pdf|docx?|xlsx?|zip|tar|gz)$"
+    ],
+    "important_regex": [
+      "^/etc/(passwd|shadow|group|sudoers|hosts|resolv\\.conf)$",
+      "^/(home|root)/.*(/\\.ssh/|authorized_keys|known_hosts|id_[^/]+$)",
+      "(^|/)(credentials?|secrets?|tokens?|passwords?|config|settings|database|backup)([._/-]|$)",
+      "\\.(pem|key|kdbx|db|sqlite3?|sql|csv|json|ya?ml|conf|env)$"
+    ],
+    "exclude_regex": [
+      "^/observation(/|$)",
+      "^/proc(/|$)",
+      "^/sys(/|$)",
+      "^/dev(/|$)",
+      "^/run(/|$)",
+      "^/usr/(lib|share|include)(/|$)",
+      "^/opt/nsg-observer(/|$)"
+    ]
+  },
+  "observer_process_regex": "(/opt/nsg-observer|state-reconciler|filesystem-monitor|process-monitor|socket-monitor|network-monitor|state-builder|bcc-monitor|inotifywait|tcpdump|(^| )zeek( |$)|execsnoop|opensnoop-bpfcc|(^| )ss -H -n -p)",
+  "service_names": {
+    "20": "ftp-data", "21": "ftp", "22": "ssh", "23": "telnet",
+    "25": "smtp", "53": "dns", "67": "dhcp", "68": "dhcp",
+    "80": "http", "110": "pop3", "123": "ntp", "135": "msrpc",
+    "139": "netbios", "143": "imap", "161": "snmp", "389": "ldap",
+    "443": "https", "445": "smb", "465": "smtps", "587": "submission",
+    "636": "ldaps", "993": "imaps", "995": "pop3s", "1433": "mssql",
+    "1521": "oracle", "2049": "nfs", "2375": "docker", "2376": "docker-tls",
+    "3306": "mysql", "3389": "rdp", "5432": "postgresql", "5601": "kibana",
+    "5672": "amqp", "5900": "vnc", "6379": "redis", "6443": "kubernetes-api",
+    "8080": "http-alt", "8443": "https-alt", "9200": "elasticsearch",
+    "11211": "memcached", "27017": "mongodb"
+  },
+  "block_inference": {
+    "zeek_no_reply_states": ["S0", "RSTOS0", "SH", "SHR"],
+    "zeek_rejected_states": ["REJ", "RSTR", "RSTO"],
+    "minimum_origin_packets": 1,
+    "minimum_confidence": 0.5
+  },
+  "control_inference": {
+    "minimum_confidence": 0.8,
+    "successful_commands": ["ssh", "scp", "sftp"]
+  }
+}
