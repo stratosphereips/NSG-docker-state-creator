@@ -94,6 +94,8 @@ def start_sensors() -> None:
         start("process-monitor", [str(ROOT / "bin/process-monitor")])
     if enabled("OBS_ENABLE_SOCKET_SNAPSHOTS"):
         start("socket-monitor", [str(ROOT / "bin/socket-monitor")])
+    if enabled("OBS_ENABLE_NETWORK_TOPOLOGY"):
+        start("network-monitor", [str(ROOT / "bin/network-monitor")])
     if enabled("OBS_ENABLE_FILE_EVENTS"):
         start("filesystem-monitor", [str(ROOT / "bin/filesystem-monitor")])
     if enabled("OBS_ENABLE_STATE_RECONCILIATION"):
@@ -122,6 +124,16 @@ def start_sensors() -> None:
              "-W", os.environ.get("OBS_PCAP_FILE_COUNT", "10"),
              "-Z", "root", "-w", str(pcap_dir / "traffic.pcap")],
             stdout=(OUTPUT / "pcap-console.log").open("ab", buffering=0),
+        )
+
+    if enabled("OBS_ENABLE_STATE_GRAPH"):
+        start(
+            "state-builder",
+            [str(ROOT / "bin/state-builder"), "--input", str(OUTPUT),
+             "--output", str(OUTPUT / "state"), "--watch",
+             "--interval", os.environ.get("OBS_STATE_INTERVAL", "10"),
+             "--level", os.environ.get("OBS_STATE_LEVEL", "operational")],
+            stdout=(OUTPUT / "state-builder.log").open("ab", buffering=0),
         )
 
 
@@ -173,7 +185,8 @@ def main() -> int:
         print("observe-entrypoint: a workload command is required", file=sys.stderr)
         return 64
     OUTPUT.mkdir(parents=True, exist_ok=True)
-    for subdir in ("bcc", "files", "snapshots", "sockets", "syscalls", "tty", "zeek", "pcap"):
+    for subdir in ("bcc", "files", "network", "snapshots", "sockets", "state",
+                   "syscalls", "tty", "zeek", "pcap"):
         (OUTPUT / subdir).mkdir(exist_ok=True)
     (OUTPUT / "tty").chmod(0o1777)
     signal.signal(signal.SIGTERM, on_signal)
