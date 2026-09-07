@@ -44,7 +44,11 @@ test -s "$tmpdir/processes.jsonl"
 test -s "$tmpdir/files/events.jsonl"
 test -s "$tmpdir/files/reconciliation.jsonl"
 test -s "$tmpdir/sockets/sockets.jsonl"
+test -s "$tmpdir/network/topology.jsonl"
 test -s "$tmpdir/bcc/status.jsonl"
+test -s "$tmpdir/state/graph.json"
+test -s "$tmpdir/state/summary.json"
+test -s "$tmpdir/state/embedding.jsonl"
 test -n "$(find "$tmpdir/syscalls" -type f -size +0c -print -quit)"
 test -n "$(find "$tmpdir/pcap" -type f -size +24c -print -quit)"
 test -n "$(find "$tmpdir/zeek" -type f -name '*.log' -size +0c -print -quit)"
@@ -52,7 +56,15 @@ test -n "$(find "$tmpdir/zeek" -type f -name '*.log' -size +0c -print -quit)"
 grep -q 'workload_started' "$tmpdir/supervisor.jsonl"
 grep -q 'nsg-observer-demo' "$tmpdir/files/events.jsonl"
 grep -q 'process_seen' "$tmpdir/processes.jsonl"
-grep -q 'cgroup_filter_ready' "$tmpdir/bcc/status.jsonl"
+grep -q 'bpf_filter_ready' "$tmpdir/bcc/status.jsonl"
+! grep -q '"event":"unparsed"' "$tmpdir/files/events.jsonl"
+! grep -q '"event":"tool_exited"' "$tmpdir/bcc/status.jsonl"
+python3 -c 'import json,sys
+s=json.load(open(sys.argv[1], encoding="utf-8"))["summary"]
+required=("known_networks","known_hosts","controlled_hosts","known_data","known_services","known_blocks")
+assert all(key in s for key in required)
+assert s["counts"]["known_networks"] >= 1
+assert s["counts"]["controlled_hosts"] >= 1' "$tmpdir/state/graph.json"
 
 echo "Smoke test passed. Captured artifacts:"
 find "$tmpdir" -maxdepth 3 -type f -printf '%P %s bytes\n' | sort
