@@ -21,6 +21,64 @@ The live compiler writes three files atomically under `/observation/state`:
 as the lookup key, and use the source/target IDs on edge documents to reconstruct
 topology after nearest-neighbor retrieval.
 
+## Using state inside and outside the monitored Docker
+
+There is one compiler and two supported ways to run it. Both consume the same
+raw observation logs and produce the same graph schema.
+
+### Inside: live state for the workload's agent
+
+`observe-entrypoint` starts `state-builder --watch` by default when
+`OBS_ENABLE_STATE_GRAPH=1`. It rebuilds `/observation/state` every
+`OBS_STATE_INTERVAL` seconds (default: 10). A program or human inside the
+monitored Docker reads those files directly:
+
+```bash
+# Minimal six-category decision state.
+jq . /observation/state/summary.json
+
+# Full graph when the agent needs relationships and evidence.
+jq '.nodes[] | select(.type == "network")' /observation/state/graph.json
+```
+
+Use `OBS_STATE_LEVEL=strategic` for the smallest in-container state,
+`operational` for the default, or `forensic` when the agent genuinely needs
+high-detail evidence. Graph files are written atomically, so readers see either
+the previous complete graph or the next complete graph, never a partial JSON
+document.
+
+### Outside: replay, alternate level, or sidecar
+
+An external analyst/controller uses the same image and mounts the observation
+volume. A one-shot rebuild is appropriate after a workload has exited:
+
+```bash
+docker run --rm \
+  --entrypoint state-builder \
+  -v nsg-observation:/observation \
+  nsg-observer:local \
+  --input /observation \
+  --output /observation/state-forensic \
+  --level forensic
+```
+
+For continuous external processing, run the same command as a sidecar:
+
+```bash
+docker run -d --name nsg-state-sidecar \
+  --entrypoint state-builder \
+  -v nsg-observation:/observation \
+  nsg-observer:local \
+  --input /observation \
+  --output /observation/state-external \
+  --level strategic --watch --interval 10
+```
+
+Only one compiler may write a given state directory. The embedded compiler owns
+`/observation/state`; external rebuilds and sidecars must use a separate path,
+for example `/observation/state-forensic` or `/observation/state-external`.
+They may safely read the same raw logs at the same time.
+
 ## Detail levels
 
 - `forensic` retains individual processes, network-flow edges, all non-excluded
@@ -151,7 +209,7 @@ knowledge that encrypted traffic cannot reveal.
 Assertions are evidence, not magic overrides: they remain visible as
 `operator-assertion` provenance and participate in the same confidence model.
 
-## One-shot use outside the observed container
+## Local development use
 
 The compiler has no non-standard Python dependency. From this repository:
 
