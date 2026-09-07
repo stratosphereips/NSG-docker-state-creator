@@ -1,0 +1,2 @@
+1757000070.100000 execve("/usr/sbin/nft", ["/usr/sbin/nft", "insert", "rule", "inet", "f9", "forward", "ip", "saddr", "10.10.0.11", "drop"], /* 5 vars */) = 0 <0.000280>
+1757000070.150000 socket(AF_NETLINK, SOCK_RAW|SOCK_CLOEXEC, NETLINK_NETFILTER) = 3 <0.000031>

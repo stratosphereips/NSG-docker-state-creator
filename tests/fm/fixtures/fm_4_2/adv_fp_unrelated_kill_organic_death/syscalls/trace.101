@@ -1,0 +1,2 @@
+1757100002.200000 execve("/usr/bin/touch", ["/usr/bin/touch", "/tmp/nsg-observer-demo"], /* 5 vars */) = 0 <0.000280>
+1757100005.850000 +++ killed by SIGTERM +++

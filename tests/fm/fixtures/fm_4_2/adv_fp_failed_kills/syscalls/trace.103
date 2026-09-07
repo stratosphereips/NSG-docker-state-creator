@@ -1,0 +1,4 @@
+1757100004.700000 execve("/usr/bin/kill", ["/usr/bin/kill", "999"], /* 5 vars */) = 0 <0.000251>
+1757100004.720000 kill(999, SIGTERM)             = -1 ESRCH (No such process) <0.000027>
+1757100004.740000 exit_group(1) = 0
+1757100004.760000 +++ exited with 1 +++

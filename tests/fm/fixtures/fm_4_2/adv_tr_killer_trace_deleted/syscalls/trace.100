@@ -1,0 +1,5 @@
+1757100002.100000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "ids-cli check; sleep 10"], /* 5 vars */) = 0 <0.000412>
+1757100005.850000 clone(child_stack=NULL, flags=SIGCHLD) = 101 <0.000319>
+1757100006.250000 wait4(-1, [{WIFEXITED(s) && WEXITSTATUS(s) == 0}], 0, NULL) = 101 <0.390100>
+1757100011.900000 exit_group(0)                 = 0
+1757100011.950000 +++ exited with 0 +++

@@ -1,0 +1,1 @@
+1757000040.100000 execve("/usr/sbin/nft", ["/usr/sbin/nft", "-f", "/tmp/rules.nft"], /* 5 vars */) = -1 ENOENT (No such file or directory) <0.000280>

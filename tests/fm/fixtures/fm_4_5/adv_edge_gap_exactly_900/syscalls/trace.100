@@ -1,0 +1,6 @@
+1757000002.050000 execve("/usr/bin/bash", ["\/usr\/bin\/bash", "-lc", "nft insert rule inet f9 forward ip saddr 10.10.0.11 drop"], /* 5 vars */) = 0 <0.000412>
+1757000010.310000 wait4(101, {WIFEXITED(s) && WEXITSTATUS(s) == 1}, 0, NULL) = 101 <0.320100>
+1757000910.310000 wait4(102, {WIFEXITED(s) && WEXITSTATUS(s) == 1}, 0, NULL) = 102 <0.320100>
+1757001810.310000 wait4(103, {WIFEXITED(s) && WEXITSTATUS(s) == 1}, 0, NULL) = 103 <0.320100>
+1757001829.500000 exit_group(0)     = 0
+1757001829.600000 +++ exited with 0 +++

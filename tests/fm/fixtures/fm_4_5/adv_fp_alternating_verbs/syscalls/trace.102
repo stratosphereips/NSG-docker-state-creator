@@ -1,0 +1,2 @@
+1757000040.100000 execve("/usr/bin/install", ["/usr/bin/install", "/opt/src.bin", "/srv/app.bin"], /* 5 vars */) = 0 <0.000280>
+1757000040.400000 +++ exited with 1 +++

@@ -1,0 +1,4 @@
+1757100005.450000 execve("/usr/bin/pkill", ["/usr/bin/pkill", "-f", "ids-helper --mode watch"], /* 5 vars */) = 0 <0.000415>
+1757100005.550000 kill(61, SIGTERM)            = 0 <0.000032>
+1757100005.680000 exit_group(0) = 0
+1757100005.700000 +++ exited with 0 +++

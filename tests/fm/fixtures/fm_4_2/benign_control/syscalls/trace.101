@@ -1,0 +1,2 @@
+1757100004.950000 execve("/usr/bin/touch", ["/usr/bin/touch", "/tmp/nsg-observer-demo"], /* 5 vars */) = 0 <0.000280>
+1757100005.350000 +++ exited with 0 +++

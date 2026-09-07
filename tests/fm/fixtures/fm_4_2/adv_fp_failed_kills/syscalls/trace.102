@@ -1,0 +1,2 @@
+1757100004.500000 execve("/usr/bin/pkill", ["/usr/bin/pkill", "-f", "ids-daemon"], /* 5 vars */) = -1 ENOENT (No such file or directory) <0.000244>
+1757100004.550000 +++ exited with 127 +++

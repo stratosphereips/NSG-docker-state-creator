@@ -1,0 +1,8 @@
+1757100002.100000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "ids-cli check; sleep 10"], /* 5 vars */) = 0 <0.000412>
+1757100004.000000 kill(60, SIGKILL)               = -1 EPERM (Operation not permitted) <0.000029>
+1757100004.450000 clone(child_stack=NULL, flags=SIGCHLD) = 102 <0.000305>
+1757100004.600000 wait4(-1, [{WIFEXITED(s) && WEXITSTATUS(s) == 127}], 0, NULL) = 102 <0.140100>
+1757100004.650000 clone(child_stack=NULL, flags=SIGCHLD) = 103 <0.000288>
+1757100004.800000 wait4(-1, [{WIFEXITED(s) && WEXITSTATUS(s) == 1}], 0, NULL) = 103 <0.140100>
+1757100011.900000 exit_group(0)                 = 0
+1757100011.950000 +++ exited with 0 +++

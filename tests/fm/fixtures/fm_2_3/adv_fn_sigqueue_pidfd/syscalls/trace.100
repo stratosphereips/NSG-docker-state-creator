@@ -1,0 +1,7 @@
+1757000002.100000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "touch /tmp/nsg-observer-demo; sleep 3"], /* 5 vars */) = 0 <0.000412>
+1757000002.200000 rt_sigprocmask(SIG_BLOCK, [CHLD], [], 8) = 0 <0.000021>
+1757000004.100000 rt_sigqueueinfo(51, 9, {si_signo=SIGKILL, si_code=SI_QUEUE, si_errno=0, si_value={{int=0, ptr=0x0}}}}) = 0 <0.000035>
+1757000004.300000 pidfd_open(52, 0) = 3 <0.000052>
+1757000004.350000 pidfd_send_signal(3</proc/52>, SIGKILL, NULL, 0) = 0 <0.000038>
+1757000008.200000 wait4(-1, {WIFEXITED(s) && WEXITSTATUS(s) == 0}, 0, NULL) = 101 <3.200100>
+1757000008.300000 +++ exited with 0 +++

@@ -1,0 +1,4 @@
+1757100005.900000 execve("/opt/agent/reap.sh", ["/opt/agent/reap.sh"], /* 5 vars */) = 0 <0.000358>
+1757100006.000000 kill(60, SIGKILL)              = 0 <0.000033>
+1757100006.100000 exit_group(0) = 0
+1757100006.120000 +++ exited with 0 +++

@@ -1,0 +1,9 @@
+{
+  "close_under": [
+    "ppid",
+    "session"
+  ],
+  "name_patterns": [
+    "^ids-"
+  ]
+}

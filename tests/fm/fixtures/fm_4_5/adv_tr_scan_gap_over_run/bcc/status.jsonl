@@ -1,0 +1,6 @@
+{"cgroup_id": 987654, "cgroup_path": "/sys/fs/cgroup", "event": "cgroup_filter_ready", "map_path": "/sys/fs/bpf/nsg_observer_cgroups_host_54", "source": "bcc-monitor", "timestamp": 1757000000.4}
+{"command": ["/usr/sbin/execsnoop-bpfcc", "-T", "-U", "-x", "-q", "--max-args", "60"], "event": "tool_started", "pid": 60, "source": "bcc-monitor", "timestamp": 1757000000.45, "tool": "execsnoop-bpfcc"}
+{"command": ["/usr/sbin/opensnoop-bpfcc", "-T", "-U", "-e", "-F"], "event": "tool_started", "pid": 61, "source": "bcc-monitor", "timestamp": 1757000000.46, "tool": "opensnoop-bpfcc"}
+{"event": "tool_stopped", "returncode": 0, "source": "bcc-monitor", "timestamp": 1757000150.8, "tool": "execsnoop-bpfcc"}
+{"event": "tool_stopped", "returncode": 0, "source": "bcc-monitor", "timestamp": 1757000150.85, "tool": "opensnoop-bpfcc"}
+{"event": "cgroup_filter_removed", "source": "bcc-monitor", "timestamp": 1757000150.9}

@@ -1,0 +1,2 @@
+1757000010.100000 execve("/usr/sbin/nft", ["/usr/bin/touch", "/tmp/app.lock"], /* 5 vars */) = 0 <0.000280>
+1757000010.400000 +++ exited with 0 +++

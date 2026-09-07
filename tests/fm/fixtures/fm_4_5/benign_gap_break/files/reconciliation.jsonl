@@ -1,0 +1,4 @@
+{"archive_changed_files": false, "event": "baseline_complete", "files": 120, "hash_max_bytes": 0, "interval_seconds": 900, "source": "state-reconciler", "timestamp": 1757000000.5}
+{"duration_seconds": 0.8, "event": "scan_complete", "files": 120, "source": "state-reconciler", "timestamp": 1757000900.5}
+{"duration_seconds": 0.8, "event": "scan_complete", "files": 120, "source": "state-reconciler", "timestamp": 1757001800.5}
+{"duration_seconds": 0.8, "event": "scan_complete", "files": 120, "source": "state-reconciler", "timestamp": 1757002700.5}

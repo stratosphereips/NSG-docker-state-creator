@@ -1,0 +1,5 @@
+{"argv": ["/opt/nsg-observer/bin/process-monitor"], "event": "sensor_started", "name": "process-monitor", "pid": 50, "source": "supervisor", "timestamp": 1757100000.1}
+{"argv": ["/opt/nsg-observer/bin/socket-monitor"], "event": "sensor_started", "name": "socket-monitor", "pid": 51, "source": "supervisor", "timestamp": 1757100000.15}
+{"argv": ["/opt/nsg-observer/bin/filesystem-monitor"], "event": "sensor_started", "name": "filesystem-monitor", "pid": 52, "source": "supervisor", "timestamp": 1757100000.2}
+{"argv": ["/opt/nsg-observer/bin/state-reconciler"], "event": "sensor_started", "name": "state-reconciler", "pid": 53, "source": "supervisor", "timestamp": 1757100000.25}
+{"argv": ["/opt/nsg-observer/bin/bcc-monitor"], "event": "sensor_started", "name": "bcc-monitor", "pid": 54, "source": "supervisor", "timestamp": 1757100000.3}

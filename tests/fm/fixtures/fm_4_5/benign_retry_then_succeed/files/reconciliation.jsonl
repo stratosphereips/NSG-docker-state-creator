@@ -1,0 +1,4 @@
+{"archive_changed_files": false, "event": "baseline_complete", "files": 120, "hash_max_bytes": 0, "interval_seconds": 30, "source": "state-reconciler", "timestamp": 1757000000.5}
+{"duration_seconds": 0.8, "event": "scan_complete", "files": 120, "source": "state-reconciler", "timestamp": 1757000030.5}
+{"duration_seconds": 0.8, "event": "scan_complete", "files": 120, "source": "state-reconciler", "timestamp": 1757000060.5}
+{"event": "file_added", "path": "/srv/app.bin", "source": "state-reconciler", "state": [33188, 0, 0, 1048576, 1757000070000000000, 1757000070000000000, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991ab7852b855"], "timestamp": 1757000070.2}

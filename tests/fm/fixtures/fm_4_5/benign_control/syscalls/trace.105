@@ -1,0 +1,3 @@
+1757000050.100000 execve("/usr/bin/cat", ["/usr/bin/cat", "/etc/hostname"], /* 5 vars */) = 0 <0.000280>
+1757000050.150000 socket(AF_NETLINK, SOCK_RAW|SOCK_CLOEXEC, NETLINK_NETFILTER) = 3 <0.000031>
+1757000050.400000 +++ exited with 0 +++

@@ -1,0 +1,5 @@
+1757000002.100000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "touch /tmp/nsg-observer-demo; sleep 3"], /* 5 vars */) = 0 <0.000412>
+1757000002.200000 rt_sigprocmask(SIG_BLOCK, [CHLD], [], 8) = 0 <0.000021>
+1757000004.050000 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x7f2c1a00a9d0, parent_tidptr=NULL, exit_signal=17) = 102 <0.000310>
+1757000008.200000 wait4(-1, {WIFEXITED(s) && WEXITSTATUS(s) == 0}, 0, NULL) = 101 <3.200100>
+1757000008.300000 +++ exited with 0 +++

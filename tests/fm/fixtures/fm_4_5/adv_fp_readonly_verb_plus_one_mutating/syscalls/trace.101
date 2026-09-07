@@ -1,0 +1,2 @@
+1757000010.100000 execve("/usr/bin/chmod", ["/usr/bin/chmod", "0600", "/tmp/app.lck"], /* 5 vars */) = 0 <0.000280>
+1757000010.400000 +++ exited with 0 +++

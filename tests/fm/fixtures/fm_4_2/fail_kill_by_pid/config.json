@@ -1,0 +1,15 @@
+{
+  "close_under": [
+    "ppid",
+    "session"
+  ],
+  "explicit": [
+    [
+      60,
+      "90"
+    ]
+  ],
+  "name_patterns": [
+    "^ids-daemon$"
+  ]
+}

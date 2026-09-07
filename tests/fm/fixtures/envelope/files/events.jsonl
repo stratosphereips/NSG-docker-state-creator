@@ -1,0 +1,5 @@
+{"command": ["inotifywait", "--monitor", "--recursive", "--quiet"], "event": "monitor_started", "roots": ["/bin", "/etc", "/opt", "/root", "/srv", "/tmp", "/usr", "/var"], "source": "filesystem-monitor", "timestamp": 1757000000.35}
+{"event": "filesystem_event", "kernel_time": "1757000005", "move_cookie": "0", "operations": ["create"], "path": "/tmp/nsg-observer-demo", "source": "filesystem-monitor", "timestamp": 1757000005.05}
+{"event": "filesystem_event", "kernel_time": "1757000005", "move_cookie": "0", "operations": ["modify"], "path": "/tmp/nsg-observer-demo", "source": "filesystem-monitor", "timestamp": 1757000005.12}
+{"event": "filesystem_event", "kernel_time": "1757000005", "move_cookie": "0", "operations": ["close_write"], "path": "/tmp/nsg-observer-demo", "source": "filesystem-monitor", "timestamp": 1757000005.15}
+{"event": "monitor_exited", "returncode": 0, "source": "filesystem-monitor", "stderr": "", "timestamp": 1757000009.9}

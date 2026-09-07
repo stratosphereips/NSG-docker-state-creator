@@ -1,0 +1,5 @@
+1757100002.100000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "ids-cli check; sleep 10"], /* 5 vars */) = 0 <0.000412>
+1757100002.500000 clone(child_stack=NULL, flags=SIGCHLD) = 104 <0.000315>
+1757100011.800000 kill(60, SIGTERM)             = 0 <0.000030>
+1757100011.920000 exit_group(0)                 = 0
+1757100011.970000 +++ exited with 0 +++

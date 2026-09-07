@@ -1,0 +1,5 @@
+1757000002.100000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "touch /tmp/nsg-observer-demo; sleep 3"], /* 5 vars */) = 0 <0.000412>
+1757000002.200000 rt_sigprocmask(SIG_BLOCK, [CHLD], [], 8) = 0 <0.000021>
+1757000006.000000 kill(99, SIGKILL) = 0 <0.000030>
+1757000006.050000 close(3)                = 0 <0.000012>
+1757000006.050000 +++ exited with 0 +++

@@ -1,0 +1,4 @@
+1757000010.100000 execve("/usr/bin/cp", ["/usr/bin/cp", "/opt/src.bin", "/srv/app.bin"], /* 5 vars */) = 0 <0.000280>
+1757000010.150000 socket(AF_NETLINK, SOCK_RAW|SOCK_CLOEXEC, NETLINK_NETFILTER) = 3 <0.000031>
+1757000010.150000 openat(AT_FDCWD, "/opt/src.bin", O_RDONLY) = -1 ENOENT (No such file or directory)
+1757000010.400000 +++ exited with 1 +++
