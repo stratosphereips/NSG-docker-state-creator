@@ -136,6 +136,16 @@ def start_sensors() -> None:
             stdout=(OUTPUT / "state-builder.log").open("ab", buffering=0),
         )
 
+    if enabled("OBS_ENABLE_TRAJECTORY"):
+        start(
+            "trajectory-monitor",
+            [str(ROOT / "bin/trajectory-monitor"), "--input", str(OUTPUT),
+             "--output", str(OUTPUT / "trajectory"), "--watch",
+             "--level", os.environ.get("OBS_STATE_LEVEL", "operational"),
+             "--sensitivity", os.environ.get("OBS_TRAJECTORY_SENSITIVITY", "material")],
+            stdout=(OUTPUT / "trajectory-monitor.log").open("ab", buffering=0),
+        )
+
 
 def workload_command(argv: list[str]) -> list[str]:
     command = as_workload_user(argv)
@@ -186,7 +196,7 @@ def main() -> int:
         return 64
     OUTPUT.mkdir(parents=True, exist_ok=True)
     for subdir in ("bcc", "files", "network", "snapshots", "sockets", "state",
-                   "syscalls", "tty", "zeek", "pcap"):
+                   "syscalls", "trajectory", "tty", "zeek", "pcap"):
         (OUTPUT / subdir).mkdir(exist_ok=True)
     (OUTPUT / "tty").chmod(0o1777)
     signal.signal(signal.SIGTERM, on_signal)
