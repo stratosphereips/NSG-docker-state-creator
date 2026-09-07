@@ -43,6 +43,7 @@ def process_info(pid: int) -> dict:
     stat_fields = text(base / "stat").split()
     uid_values = status.get("Uid", "-1").split()
     gid_values = status.get("Gid", "-1").split()
+    namespace_pids = status.get("NSpid", "").split()
     uid = int(uid_values[0]) if uid_values and uid_values[0].isdigit() else -1
     try:
         username = pwd.getpwuid(uid).pw_name
@@ -72,6 +73,8 @@ def process_info(pid: int) -> dict:
         "root": link(base / "root"),
         "loginuid": text(base / "loginuid"),
         "sessionid": text(base / "sessionid"),
+        "namespace_pids": namespace_pids,
+        "host_pid": int(namespace_pids[0]) if namespace_pids and namespace_pids[0].isdigit() else pid,
         "cgroup": text(base / "cgroup"),
         "tty_nr": stat_fields[6] if len(stat_fields) > 6 else "",
         "start_ticks": stat_fields[21] if len(stat_fields) > 21 else "",
