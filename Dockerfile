@@ -14,12 +14,15 @@ RUN apt-get update \
         curl \
         gnupg \
         inotify-tools \
+        iptables \
         iproute2 \
         iputils-ping \
         jq \
+        libbpf-tools \
         libcap2-bin \
         lsof \
         netcat-openbsd \
+        nftables \
         procps \
         python3 \
         python3-bpfcc \
@@ -49,16 +52,21 @@ ENV PATH="/opt/zeek/bin:/opt/nsg-observer/bin:${PATH}" \
     OBS_OUTPUT_DIR=/observation \
     OBS_ENABLE_BCC=1 \
     OBS_ENABLE_FILE_EVENTS=1 \
+    OBS_ENABLE_NETWORK_TOPOLOGY=1 \
     OBS_ENABLE_PCAP=1 \
     OBS_ENABLE_PROCESS_SNAPSHOTS=1 \
     OBS_ENABLE_SOCKET_SNAPSHOTS=1 \
     OBS_ENABLE_STATE_RECONCILIATION=1 \
+    OBS_ENABLE_STATE_GRAPH=1 \
     OBS_ENABLE_STRACE=1 \
     OBS_ENABLE_TTY_RECORDING=1 \
     OBS_ENABLE_ZEEK=1 \
     OBS_PROCESS_INTERVAL=0.10 \
     OBS_SOCKET_INTERVAL=1.0 \
+    OBS_NETWORK_INTERVAL=10 \
     OBS_SNAPSHOT_INTERVAL=30 \
+    OBS_STATE_INTERVAL=10 \
+    OBS_STATE_LEVEL=operational \
     OBS_PCAP_FILE_MB=100 \
     OBS_PCAP_FILE_COUNT=10
 
