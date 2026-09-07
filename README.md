@@ -3,7 +3,8 @@
 NSG Docker State Creator turns an Ubuntu-based image into a self-observing
 container. The workload and all collectors run in the **same container**. It
 records processes, syscalls, file activity and state, sockets, ports, packets,
-Zeek protocol logs, and interactive shell history.
+Zeek protocol logs, interactive shell history, and an agent-readable state
+graph inferred from those observations.
 
 This project intentionally does not collect CPU or memory utilization.
 
@@ -12,14 +13,16 @@ This project intentionally does not collect CPU or memory utilization.
 | Area | Capture mechanism | Output |
 |---|---|---|
 | Workload syscalls | `strace -ff` with timestamps, durations, paths and file descriptors | `syscalls/trace.*` |
-| All visible processes | `/proc` lifecycle polling; BCC `execsnoop` when available | `processes.jsonl`, `bcc/` |
+| All visible processes | `/proc` lifecycle polling; libbpf/BCC `execsnoop` when available | `processes.jsonl`, `bcc/` |
 | File events | Recursive inotify create/write/move/delete/attribute events | `files/events.jsonl` |
 | File state | Periodic metadata and SHA-256 reconciliation | `files/reconciliation.jsonl` |
-| Connections and ports | Repeated `ss` connection/listener inventory; BCC TCP probes | `sockets/sockets.jsonl`, `bcc/` |
+| Connections and ports | Repeated `ss` connection/listener inventory in the container network namespace | `sockets/sockets.jsonl` |
+| Network knowledge | Interfaces, addresses, routes, neighbors, iptables and nftables snapshots | `network/topology.jsonl` |
 | Network protocols | Zeek on the container network namespace | `zeek/*.log` |
 | Packets | Bounded rotating `tcpdump` ring | `pcap/traffic.pcap*` |
-| Interactive commands | `script` TTY input/output plus persistent Bash history | `tty/` |
+| Interactive commands | `script` TTY input/output, persistent Bash history, command exit status | `tty/` |
 | Supervisor state | Lifecycle and health records | `supervisor.jsonl`, `health.json` |
+| Inferred world state | Confidence-bearing property graph, compact summary, embedding documents | `state/graph.json`, `state/summary.json`, `state/embedding.jsonl` |
 
 The observation directory itself is excluded from file monitoring; otherwise
 recording a file event would recursively generate another file event.
@@ -60,6 +63,43 @@ docker run --rm -it \
   ubuntu:24.04 find /observation -maxdepth 3 -type f -ls
 ```
 
+## Agent state graph
+
+`state-builder` continuously turns the raw observations into a directed
+property graph. Its central node is `agent:observed`; it links to everything
+the agent can reasonably be said to know and distinguishes observation from
+inference. Every output, even the smallest level, contains:
+
+- known networks;
+- known hosts;
+- controlled hosts;
+- known data, indexed by host;
+- known services, indexed by host;
+- known or suspected blocks.
+
+Select one of three detail levels with `OBS_STATE_LEVEL`:
+
+| Level | Intended use |
+|---|---|
+| `forensic` | Process instances, flows, all selected data, full source records in evidence |
+| `operational` | Programs, aggregate flows, configured data filters, bounded evidence references (default) |
+| `strategic` | Only compact topology, access, important data, services, and block conclusions |
+
+Build any level again from an existing observation directory:
+
+```bash
+docker run --rm \
+  --entrypoint state-builder \
+  -v nsg-observation:/observation \
+  nsg-observer:local \
+  --input /observation --output /observation/state-forensic --level forensic
+```
+
+The JSONL embedding view is not an embedding itself. It is a stable stream of
+short node and edge documents ready to send to a future embedding model. See
+[State graph](docs/STATE_GRAPH.md) for schema, inference rules, custom file
+filters, assertions, and examples.
+
 ## Add observation to another image
 
 For another Ubuntu 24.04 image, rebuild this Dockerfile on top of it:
@@ -97,7 +137,7 @@ All switches are environment variables:
 |---|---:|---|
 | `OBS_OUTPUT_DIR` | `/observation` | Persistent output directory |
 | `OBS_ENABLE_STRACE` | `1` | Trace every syscall of the launched workload tree |
-| `OBS_ENABLE_BCC` | `1` | Capture exec/open/TCP events for the container cgroup |
+| `OBS_ENABLE_BCC` | `1` | Capture eBPF exec/open events for the container cgroup |
 | `OBS_ENABLE_FILE_EVENTS` | `1` | Enable recursive inotify events |
 | `OBS_ENABLE_STATE_RECONCILIATION` | `1` | Periodically hash filesystem state |
 | `OBS_SNAPSHOT_INTERVAL` | `30` | Seconds between reconciliation scans |
@@ -105,10 +145,15 @@ All switches are environment variables:
 | `OBS_ARCHIVE_CHANGED_FILES` | `0` | Copy changed contents into SHA-256 object storage |
 | `OBS_ENABLE_ZEEK` | `1` | Enable live Zeek analysis |
 | `OBS_ENABLE_PCAP` | `1` | Enable rotating packet capture |
+| `OBS_ENABLE_NETWORK_TOPOLOGY` | `1` | Snapshot addresses, routes, neighbors, and firewall policy |
+| `OBS_NETWORK_INTERVAL` | `10` | Seconds between topology snapshots; unchanged snapshots are not repeated |
 | `OBS_INTERFACE` | `any` | Interface used by Zeek and tcpdump |
 | `OBS_PCAP_FILE_MB` | `100` | Size of each rotating PCAP segment |
 | `OBS_PCAP_FILE_COUNT` | `10` | Number of PCAP segments retained |
 | `OBS_ENABLE_TTY_RECORDING` | `1` | Record the initial interactive terminal |
+| `OBS_ENABLE_STATE_GRAPH` | `1` | Continuously compile the inferred graph |
+| `OBS_STATE_LEVEL` | `operational` | `forensic`, `operational`, or `strategic` graph detail |
+| `OBS_STATE_INTERVAL` | `10` | Seconds between graph rebuilds |
 | `OBS_EXCLUDE_PATHS` | empty | Additional colon-separated filesystem exclusions |
 | `OBS_WORKLOAD_USER` | empty | Run the workload as `user`, `uid`, `user:group`, or `uid:gid` while keeping collectors privileged |
 
@@ -123,6 +168,12 @@ that all principal artifacts were produced:
 bash tests/smoke.sh
 ```
 
+Run the deterministic graph extraction tests without Docker:
+
+```bash
+python3 -m unittest -v tests/test_state_graph.py
+```
+
 If Docker's isolated build network cannot resolve package mirrors, use:
 
 ```bash
@@ -134,7 +185,7 @@ DOCKER_BUILD_NETWORK=host bash tests/smoke.sh
 The launched workload and its descendants receive full syscall tracing.
 Processes injected later with `docker exec` are visible to the process poller
 and, when BCC is supported by the host kernel, to the cgroup-filtered BCC
-probes. Their entire syscall stream is not attached to the original `strace`
+or libbpf probes. Their entire syscall stream is not attached to the original `strace`
 tree. Likewise, inotify reports paths and operations but not the responsible
 PID; the syscall/BCC streams provide that attribution by time correlation.
 File reads and opens are captured by `strace` and BCC `opensnoop`; the inotify
