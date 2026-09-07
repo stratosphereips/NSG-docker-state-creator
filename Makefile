@@ -17,4 +17,4 @@ syntax:
 	python3 -m json.tool observer/etc/state-graph.json >/dev/null
 
 state-test:
-	python3 -m unittest -v tests/test_state_graph.py
+	python3 -m unittest -v tests/test_state_graph.py tests/test_trajectory.py
