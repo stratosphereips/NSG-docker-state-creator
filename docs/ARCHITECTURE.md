@@ -12,6 +12,11 @@ all available observations into a fresh graph at a configurable interval. The
 compiler also runs once when it receives a shutdown signal, subject to the
 supervisor's flush deadline.
 
+`trajectory-monitor` independently tails the append-only observations. It
+identifies action boundaries, waits briefly for delayed Zeek, socket, file, and
+process evidence, recompiles the graph, and records the action between its
+before and after state identifiers. It never controls the workload.
+
 The implementation deliberately stays in one container and uses that
 container's mount, PID, user and network namespaces. The eBPF/BCC components
 interact with the shared Linux kernel, but their pinned cgroup map filters
@@ -96,10 +101,12 @@ of each complete snapshot suppresses identical repetitions.
 When the container is started interactively, the requested command is wrapped
 with util-linux `script`, producing separate input, output and timing streams.
 Interactive Bash instances source `bash-observer.sh`, which writes unlimited,
-timestamped history immediately after every prompt. It also writes structured
-`command_completed` JSON records with the working directory and previous
-command's exit status. A successful `ssh`, `scp`, or `sftp` command can
-therefore support a controlled-host inference.
+timestamped history immediately after every prompt. A silent `PS0` hook writes
+`action_started` immediately before Bash executes a command; `PROMPT_COMMAND`
+writes the matching `command_completed`, working directory, and exit status.
+The stable action ID joins both boundaries. This is shell-wide configuration,
+not a wrapper around an individual user or agent. A successful `ssh`, `scp`,
+or `sftp` command can therefore support a controlled-host inference.
 
 Do not place secrets directly in command-line arguments. They will appear in
 the syscall, process and history logs. TTY recordings may also contain secrets
@@ -119,6 +126,25 @@ Raw claims never silently become facts: network timeouts and unanswered Zeek
 flows are block hypotheses, while an iptables DROP rule is near-certain local
 policy evidence. See [State graph](STATE_GRAPH.md).
 
+## Passive action trajectory
+
+Action detection is deliberately multi-source. Bash supplies exact human
+command text and exit status. The process collector identifies child commands
+of persistent agent roots. Strace attaches their network and file effects and
+also groups direct syscalls from long-running agents into inferred actions.
+Cgroup-filtered execsnoop is used only when container/host PID mapping is
+available and the structured process stream missed an exec.
+
+Actions can overlap. Each record has an actor identity, start/end event time,
+detection and recording time, concurrent action IDs, evidence references, and
+before/after state IDs. When overlapping actions precede one graph update, the
+delta names every contributing action and marks causal isolation false.
+
+The semantic change detector projects only configured graph domains, removes
+volatile timestamps and evidence counters, and buckets confidence. Therefore
+collecting another copy of identical evidence does not create a fake new
+state. See [Passive action trajectories](ACTIONS_TRAJECTORY.md).
+
 ## Output durability
 
 Use a named volume or bind mount for `/observation`. Without one, Docker removes
@@ -134,6 +160,9 @@ operator's responsibility.
   later through the Docker API.
 - `/proc` and socket polling can miss processes or connections whose complete
   lifetime is shorter than the polling interval; BCC reduces this gap.
+- Passive inference cannot always recover application-level intent. A direct
+  syscall action has lower confidence than an exact Bash command, and
+  overlapping actions may share a resulting state delta.
 - Inotify queues can overflow. File hash reconciliation identifies end-state
   differences but cannot reconstruct every intermediate state.
 - Memory-mapped writes can be observed by state reconciliation and syscalls
