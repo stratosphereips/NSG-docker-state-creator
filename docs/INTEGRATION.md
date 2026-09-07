@@ -84,6 +84,7 @@ services:
       OBS_PCAP_FILE_MB: "100"
       OBS_PCAP_FILE_COUNT: "10"
       OBS_STATE_LEVEL: "operational"
+      OBS_TRAJECTORY_SENSITIVITY: "material"
       # Optional: preserve an original non-root runtime user.
       # OBS_WORKLOAD_USER: "1000:1000"
 
@@ -121,6 +122,37 @@ Keep `/observation/state` for the embedded live builder. An external build or
 sidecar must use another output path, such as `/observation/state-forensic`,
 so two processes never overwrite the same state files.
 
+The embedded passive action monitor similarly owns
+`/observation/trajectory`. Both the application and an outside controller with
+the evidence volume mounted can consume its ordered index:
+
+```bash
+# Inside the observed container
+tail -n 20 /observation/trajectory/sequence.jsonl
+
+# Outside, without running another writer
+docker run --rm -v application-evidence:/evidence:ro ubuntu:24.04 \
+  tail -n 20 /evidence/trajectory/sequence.jsonl
+```
+
+To operate the state/action compiler from outside instead, disable the
+embedded writer with `OBS_ENABLE_TRAJECTORY=0` and keep a sidecar running:
+
+```bash
+docker run --rm \
+  --entrypoint trajectory-monitor \
+  -v application-evidence:/observation \
+  registry.example/team/application-observed:1.2.3 \
+  --input /observation --output /observation/trajectory-external \
+  --level operational --sensitivity material --watch
+```
+
+Run the trajectory builder live, beginning before the workload, when accurate
+before/after states are required. A one-shot invocation over completed logs is
+useful for extracting the action inventory, but the graph compiler sees the
+completed evidence set and cannot recreate historical graph cutoffs that were
+not captured live.
+
 ## Different Ubuntu releases
 
 Select the matching Zeek repository when it exists:
@@ -150,6 +182,8 @@ base image.
 10. Consume `/observation/state/summary.json` for the six core categories,
     `/observation/state/graph.json` for graph reasoning, or
     `/observation/state/embedding.jsonl` for embedding ingestion.
+11. Consume `/observation/trajectory/sequence.jsonl` for ordered state/action
+    training or decision records.
 
 The raw Docker socket is not needed and should not be mounted into the
 container.
