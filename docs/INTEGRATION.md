@@ -94,6 +94,33 @@ volumes:
 Keep the application's original ports, networks, environment variables,
 secrets, mounts, working directory and other service settings unchanged.
 
+## Read state inside or outside the container
+
+The observed application and any agent it launches can read the live state from
+inside its own container:
+
+```bash
+jq . /observation/state/summary.json
+```
+
+The default entrypoint keeps that state current. An outside controller can
+mount the same evidence volume and run the identical compiler for replay or a
+different level:
+
+```bash
+docker run --rm \
+  --entrypoint state-builder \
+  -v application-evidence:/observation \
+  registry.example/team/application-observed:1.2.3 \
+  --input /observation \
+  --output /observation/state-forensic \
+  --level forensic
+```
+
+Keep `/observation/state` for the embedded live builder. An external build or
+sidecar must use another output path, such as `/observation/state-forensic`,
+so two processes never overwrite the same state files.
+
 ## Different Ubuntu releases
 
 Select the matching Zeek repository when it exists:
