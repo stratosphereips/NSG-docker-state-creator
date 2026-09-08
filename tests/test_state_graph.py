@@ -69,6 +69,10 @@ class StateGraphTest(unittest.TestCase):
             {"ts": 6, "id.orig_h": "10.0.0.2", "id.orig_p": 40101,
              "id.resp_h": "10.0.0.30", "id.resp_p": 443, "proto": "tcp",
              "conn_state": "S0", "orig_pkts": 3, "resp_pkts": 0,
+             "local_orig": True, "local_resp": False},
+            {"ts": 6.5, "id.orig_h": "10.0.0.2", "id.orig_p": 0,
+             "id.resp_h": "1.1.1.1", "id.resp_p": 0, "proto": "icmp",
+             "conn_state": "OTH", "orig_pkts": 1, "resp_pkts": 1,
              "local_orig": True, "local_resp": False}
         ])
         self.jsonl("zeek/ssh.log", [
@@ -123,6 +127,12 @@ class StateGraphTest(unittest.TestCase):
         )
         self.assertTrue(any(item.get("cidr") == "10.0.0.0/24"
                             for item in summary["known_networks"]))
+        self.assertFalse(any(item.get("cidr", "").endswith(("/32", "/128"))
+                             for item in summary["known_networks"]))
+        self.assertTrue(any(item.get("cidr") == "1.1.1.0/24" and item.get("inferred") is True
+                            for item in summary["known_networks"]))
+        self.assertTrue(any("1.1.1.1" in item.get("addresses", [])
+                            for item in summary["known_hosts"]))
         self.assertTrue(any("10.0.0.20" in item.get("addresses", [])
                             for item in summary["controlled_hosts"]))
         all_data = [item for values in summary["known_data"].values() for item in values]
@@ -131,6 +141,9 @@ class StateGraphTest(unittest.TestCase):
         services = [item for values in summary["known_services"].values() for item in values]
         self.assertTrue(any(item.get("port") == 22 and item.get("service_name") == "ssh"
                             for item in services))
+        self.assertTrue(all(item.get("protocol") in {"tcp", "udp", "sctp"}
+                            for item in services))
+        self.assertFalse(any(item.get("protocol") == "icmp" for item in services))
         self.assertTrue(any(item.get("reason") == "network-no-reply"
                             for item in summary["known_blocks"]))
         self.assertTrue(any(item.get("reason") == "local-firewall-rule"
