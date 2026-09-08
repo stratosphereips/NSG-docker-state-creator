@@ -1,0 +1,3 @@
+{"archive_changed_files": false, "event": "baseline_complete", "files": 120, "hash_max_bytes": 0, "interval_seconds": 30, "source": "state-reconciler", "timestamp": 1757200000.5}
+{"event": "file_added", "path": "/opt/tools/dropped.sh", "source": "state-reconciler", "state": [33261, 0, 0, 9, 1757200021.0, 1757200021.0, "dd44dd44dd44dd44dd44dd44dd44dd44dd44dd44dd44dd44dd44dd44dd44dd44"], "timestamp": 1757200021.0}
+{"duration_seconds": 0.8, "event": "scan_complete", "files": 121, "source": "state-reconciler", "timestamp": 1757200021.01}

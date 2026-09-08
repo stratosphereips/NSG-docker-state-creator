@@ -1,0 +1,8 @@
+1757000002.100000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "echo x > /var/log/auth.log; rm /var/log/auth.log"], /* 5 vars */) = 0 <0.000412>
+1757000004.050000 openat(AT_FDCWD, "/var/log/auth.log", O_WRONLY|O_CREAT|O_TRUNC, 0644) = 3</var/log/auth.log> <0.000240>
+1757000004.060000 dup2(3</var/log/auth.log>, 1) = 1 <0.000020>
+1757000004.070000 close(3</var/log/auth.log>) = 0 <0.000018>
+1757000004.080000 write(1</var/log/auth.log>, "x\n", 2) = 2 <0.000035>
+1757000004.500000 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|SIGCHLD) = 101 <0.000350>
+1757000005.900000 wait4(-1, {WIFEXITED(s) && WEXITSTATUS(s) == 0}, 0, NULL) = 101 <0.900100>
+1757000008.300000 +++ exited with 0 +++

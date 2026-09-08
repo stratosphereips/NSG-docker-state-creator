@@ -1,0 +1,4 @@
+1757300003.300000 execve("/usr/bin/nmap", ["nmap", "-sV", "10.10.0.0/16"], /* 5 vars */) = 0 <0.000980>
+1757300005.000000 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3<TCP:[2001]> <0.000050>
+1757300005.100000 connect(3<TCP:[2001]>, {sa_family=AF_INET, sin_port=htons(443), sin_addr=inet_addr("10.10.0.5")}}, 16) = 0 <0.010000>
+1757300007.900000 +++ exited with 0 +++

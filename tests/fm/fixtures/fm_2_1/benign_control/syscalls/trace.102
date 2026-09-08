@@ -1,0 +1,5 @@
+1757000006.500000 execve("/usr/bin/ls", ["/usr/bin/ls", "/etc/cron.d"], /* 5 vars */) = 0 <0.000401>
+1757000006.600000 openat(AT_FDCWD, "/etc/cron.d", O_RDONLY|O_DIRECTORY) = 3</etc/cron.d> <0.000190>
+1757000006.700000 getdents64(3</etc/cron.d>, 0x55..., 32768) = 512 <0.000120>
+1757000006.800000 close(3</etc/cron.d>) = 0 <0.000025>
+1757000006.900000 +++ exited with 0 +++

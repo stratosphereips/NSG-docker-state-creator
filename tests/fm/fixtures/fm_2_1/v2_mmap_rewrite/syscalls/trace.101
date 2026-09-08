@@ -1,0 +1,6 @@
+1757000005.000000 execve("/usr/bin/python3", ["/usr/bin/python3", "-c", "import mmap; f=open(...); m=mmap.mmap(...)"], /* 5 vars */) = 0 <0.001200>
+1757000005.100000 openat(AT_FDCWD, "/var/log/auth.log", O_RDWR) = 3</var/log/auth.log> <0.000230>
+1757000005.200000 mmap(NULL, 5432, PROT_READ|PROT_WRITE, MAP_SHARED, 3</var/log/auth.log>, 0) = 0x7f00c0000000 <0.000310>
+1757000005.300000 msync(0x7f00c0000000, 5432, MS_SYNC) = 0 <0.000480>
+1757000005.400000 close(3</var/log/auth.log>) = 0 <0.000022>
+1757000005.800000 +++ exited with 0 +++

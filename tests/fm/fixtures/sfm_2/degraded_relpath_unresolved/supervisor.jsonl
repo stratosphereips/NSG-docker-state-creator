@@ -1,0 +1,12 @@
+{"argv": ["/opt/nsg-observer/bin/process-monitor"], "event": "sensor_started", "name": "process-monitor", "pid": 50, "source": "supervisor", "timestamp": 1757300000.1}
+{"argv": ["/opt/nsg-observer/bin/socket-monitor"], "event": "sensor_started", "name": "socket-monitor", "pid": 51, "source": "supervisor", "timestamp": 1757300000.15}
+{"argv": ["/opt/nsg-observer/bin/filesystem-monitor"], "event": "sensor_started", "name": "filesystem-monitor", "pid": 52, "source": "supervisor", "timestamp": 1757300000.2}
+{"argv": ["/opt/nsg-observer/bin/state-reconciler"], "event": "sensor_started", "name": "state-reconciler", "pid": 53, "source": "supervisor", "timestamp": 1757300000.25}
+{"argv": ["/opt/nsg-observer/bin/bcc-monitor"], "event": "sensor_started", "name": "bcc-monitor", "pid": 54, "source": "supervisor", "timestamp": 1757300000.3}
+{"effective_argv": ["strace", "-ff", "-ttt", "-T", "-yy", "-s", "4096", "-o", "/observation/syscalls/trace", "--", "bash", "-lc", "relative cleanup"], "event": "workload_started", "pid": 100, "requested_argv": ["bash", "-lc", "relative cleanup"], "source": "supervisor", "timestamp": 1757300002.0}
+{"event": "workload_exited", "pid": 100, "returncode": 0, "source": "supervisor", "timestamp": 1757300009.5}
+{"event": "sensor_signal", "name": "process-monitor", "pid": 50, "signal": 15, "source": "supervisor", "timestamp": 1757300009.6}
+{"event": "sensor_signal", "name": "socket-monitor", "pid": 51, "signal": 15, "source": "supervisor", "timestamp": 1757300009.61}
+{"event": "sensor_signal", "name": "filesystem-monitor", "pid": 52, "signal": 15, "source": "supervisor", "timestamp": 1757300009.62}
+{"event": "sensor_signal", "name": "state-reconciler", "pid": 53, "signal": 15, "source": "supervisor", "timestamp": 1757300009.63}
+{"event": "sensor_signal", "name": "bcc-monitor", "pid": 54, "signal": 15, "source": "supervisor", "timestamp": 1757300009.64}

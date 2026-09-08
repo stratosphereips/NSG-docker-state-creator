@@ -1,0 +1,5 @@
+1757200002.050000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "golden file deleted by an untraced actor"], /* 5 vars */) = 0 <0.000412>
+1757200010.000000 openat(AT_FDCWD, "/etc/app/config.conf", O_RDONLY) = 3</etc/app/config.conf> <0.000018>
+1757200010.500000 close(3) = 0
+1757200028.900000 exit_group(0)     = 0
+1757200028.950000 +++ exited with 0 +++

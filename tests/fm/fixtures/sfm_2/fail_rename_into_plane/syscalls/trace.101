@@ -1,0 +1,5 @@
+1757300005.100000 execve("/bin/mv", ["mv", "/tmp/stage.ndjson", "verdicts.ndjson"], /* 5 vars */) = 0 <0.000500>
+1757300005.400000 openat(AT_FDCWD, "/observation/judge", O_RDONLY|O_DIRECTORY) = 3</observation/judge> <0.000200>
+1757300005.500000 renameat2(AT_FDCWD, "/tmp/stage.ndjson", 3</observation/judge>, "verdicts.ndjson", RENAME_NOREPLACE) = 0 <0.000600>
+1757300005.800000 rename("/tmp/other", "/observation/planted") = -1 ENOENT (No such file or directory) <0.000200>
+1757300006.000000 +++ exited with 0 +++

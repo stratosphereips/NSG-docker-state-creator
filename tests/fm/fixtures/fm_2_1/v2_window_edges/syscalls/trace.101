@@ -1,0 +1,6 @@
+1757000001.950000 execve("/usr/bin/rm", ["/usr/bin/rm"], /* 5 vars */) = 0 <0.000390>
+1757000002.000000 unlinkat(AT_FDCWD, "/var/log/w_join_ws", 0) = 0 <0.000270>
+1757000003.010000 unlinkat(AT_FDCWD, "/var/log/w_lo_excl", 0) = 0 <0.000270>
+1757000006.000000 unlinkat(AT_FDCWD, "/var/log/w_join_hi", 0) = 0 <0.000270>
+1757000009.500000 unlinkat(AT_FDCWD, "/var/log/w_we_excl", 0) = 0 <0.000270>
+1757000009.510000 +++ exited with 0 +++

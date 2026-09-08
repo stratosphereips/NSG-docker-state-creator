@@ -1,0 +1,3 @@
+1757200010.050000 socket(AF_INET, SOCK_DGRAM|SOCK_CLOEXEC, IPPROTO_IP) = 3<UDP:[172.17.0.2:43215]> <0.000031>
+1757200010.100000 sendmmsg(3<UDP:[172.17.0.2:43215]>, [{msg_hdr={msg_name=NULL, msg_namelen=0, msg_iov=[{iov_base="connected hop msg_name={sa_family=AF_INET, sin_port=htons(6666), sin_addr=inet_addr(\"203.0.113.66\")} injected", iov_len=32}], msg_iovlen=1, msg_controllen=0, msg_flags=0}}, {msg_hdr={msg_name={sa_family=AF_INET, sin_port=htons(161), sin_addr=inet_addr("198.51.100.9")}, msg_namelen=16, msg_iov=[{iov_base="snmp-probe", iov_len=10}], msg_iovlen=1, msg_controllen=0, msg_flags=0}}], 2) = 2 <0.000410>
+1757200011.000000 +++ exited with 0 +++

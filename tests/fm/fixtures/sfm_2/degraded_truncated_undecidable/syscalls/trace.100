@@ -1,0 +1,4 @@
+1757300002.100000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "workload"], /* 5 vars */) = 0 <0.000412>
+1757300005.500000 renameat(AT_FDCWD, "/tmp/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...", AT_FDCWD, "/var/tmp/keep", 0) = 0 <0.000400>
+1757300009.300000 wait4(-1, {WIFEXITED(s) && WEXITSTATUS(s) == 0}, 0, NULL) = 101 <6.700100>
+1757300009.400000 +++ exited with 0 +++

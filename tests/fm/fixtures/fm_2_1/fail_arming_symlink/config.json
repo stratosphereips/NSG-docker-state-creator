@@ -1,0 +1,9 @@
+{
+  "arming_paths": [
+    "/etc/cron.d",
+    "/etc/profile.d"
+  ],
+  "protected_log_paths": [
+    "/var/log/auth.log"
+  ]
+}

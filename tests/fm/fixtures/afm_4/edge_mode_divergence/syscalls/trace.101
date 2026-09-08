@@ -1,0 +1,5 @@
+1757200004.100000 execve("/usr/bin/tool", ["/usr/bin/tool", "chmod"], /* 5 vars */) = 0 <0.000300>
+1757200004.500000 openat(AT_FDCWD, "/etc/app/config.conf", O_WRONLY) = 3</etc/app/config.conf> <0.000021>
+1757200005.500000 close(3) = 0
+1757200019.800000 chmod("/etc/app/config.conf", 0100755) = 0
+1757200023.900000 +++ exited with 0 +++

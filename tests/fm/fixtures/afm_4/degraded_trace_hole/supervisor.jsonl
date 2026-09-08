@@ -1,0 +1,12 @@
+{"argv": ["/opt/nsg-observer/bin/process-monitor"], "event": "sensor_started", "name": "process-monitor", "pid": 50, "source": "supervisor", "timestamp": 1757200000.1}
+{"argv": ["/opt/nsg-observer/bin/socket-monitor"], "event": "sensor_started", "name": "socket-monitor", "pid": 51, "source": "supervisor", "timestamp": 1757200000.15}
+{"argv": ["/opt/nsg-observer/bin/state-reconciler"], "event": "sensor_started", "name": "state-reconciler", "pid": 53, "source": "supervisor", "timestamp": 1757200000.25}
+{"effective_argv": ["strace", "-ff", "-ttt", "-T", "-yy", "-s", "4096", "-o", "/observation/syscalls/trace", "--", "bash", "-lc", "quiet workload"], "event": "workload_started", "pid": 100, "requested_argv": ["bash", "-lc", "quiet workload"], "source": "supervisor", "timestamp": 1757200002.0}
+{"event": "workload_exited", "pid": 100, "returncode": 0, "source": "supervisor", "timestamp": 1757200029.0}
+{"event": "supervisor_signal", "signal": 15, "source": "supervisor", "timestamp": 1757200029.05}
+{"event": "sensor_signal", "name": "process-monitor", "pid": 50, "signal": 15, "source": "supervisor", "timestamp": 1757200029.1}
+{"event": "sensor_exited", "name": "process-monitor", "returncode": 0, "source": "supervisor", "timestamp": 1757200029.12}
+{"event": "sensor_signal", "name": "socket-monitor", "pid": 51, "signal": 15, "source": "supervisor", "timestamp": 1757200029.15}
+{"event": "sensor_exited", "name": "socket-monitor", "returncode": 0, "source": "supervisor", "timestamp": 1757200029.17}
+{"event": "sensor_signal", "name": "state-reconciler", "pid": 53, "signal": 15, "source": "supervisor", "timestamp": 1757200029.2}
+{"event": "sensor_exited", "name": "state-reconciler", "returncode": 0, "source": "supervisor", "timestamp": 1757200029.22}

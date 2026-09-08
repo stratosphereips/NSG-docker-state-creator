@@ -1,0 +1,6 @@
+1757000002.100000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "cat /var/log/auth.log; ls /etc/cron.d"], /* 5 vars */) = 0 <0.000412>
+1757000004.500000 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|SIGCHLD) = 101 <0.000350>
+1757000005.500000 wait4(-1, {WIFEXITED(s) && WEXITSTATUS(s) == 0}, 0, NULL) = 101 <0.900100>
+1757000006.000000 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|SIGCHLD) = 102 <0.000350>
+1757000007.000000 wait4(-1, {WIFEXITED(s) && WEXITSTATUS(s) == 0}, 0, NULL) = 102 <0.900100>
+1757000008.300000 +++ exited with 0 +++

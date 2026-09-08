@@ -1,0 +1,9 @@
+{
+  "evidence_plane_roots": [
+    "/observation"
+  ],
+  "forbidden_runtime_sockets": [
+    "/run/docker.sock",
+    "/run/containerd/containerd.sock"
+  ]
+}

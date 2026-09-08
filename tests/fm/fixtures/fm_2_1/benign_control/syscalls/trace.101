@@ -1,0 +1,5 @@
+1757000005.000000 execve("/usr/bin/cat", ["/usr/bin/cat", "/var/log/auth.log"], /* 5 vars */) = 0 <0.000395>
+1757000005.100000 openat(AT_FDCWD, "/var/log/auth.log", O_RDONLY) = 3</var/log/auth.log> <0.000210>
+1757000005.200000 read(3</var/log/auth.log>, "root...", 4096) = 4096 <0.000090>
+1757000005.300000 close(3</var/log/auth.log>) = 0 <0.000030>
+1757000005.400000 +++ exited with 0 +++

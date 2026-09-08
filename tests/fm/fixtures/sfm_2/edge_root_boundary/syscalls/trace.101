@@ -1,0 +1,3 @@
+1757300005.100000 execve("/usr/bin/python3", ["python3", "-c", "boundary"], /* 5 vars */) = 0 <0.000700>
+1757300005.500000 write(3</observation>, "x", 1) = 1 <0.000030>
+1757300006.000000 +++ exited with 0 +++

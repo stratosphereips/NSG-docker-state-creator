@@ -1,0 +1,4 @@
+1757200010.100000 execve("/usr/bin/tool", ["/usr/bin/tool", "rewrite"], /* 5 vars */) = 0 <0.000300>
+1757200019.500000 openat(AT_FDCWD, "/etc/app/config.conf", O_WRONLY|O_TRUNC) = 3</etc/app/config.conf> <0.000022>
+1757200020.500000 close(3) = 0
+1757200023.900000 +++ exited with 0 +++

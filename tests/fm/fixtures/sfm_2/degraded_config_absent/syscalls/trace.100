@@ -1,0 +1,6 @@
+1757300002.100000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "workload"], /* 5 vars */) = 0 <0.000412>
+1757300004.000000 openat(AT_FDCWD, "/tmp/work/notes.txt", O_WRONLY|O_CREAT|O_TRUNC, 0644) = 4</tmp/work/notes.txt> <0.000260>
+1757300004.100000 write(4</tmp/work/notes.txt>, "data\n", 5) = 5 <0.000030>
+1757300006.900000 connect(6<UNIX:[9001]>, {sa_family=AF_UNIX, sun_path="/tmp/app.sock"}}, 110) = 0 <0.001200>
+1757300009.300000 wait4(-1, {WIFEXITED(s) && WEXITSTATUS(s) == 0}, 0, NULL) = 101 <6.700100>
+1757300009.400000 +++ exited with 0 +++

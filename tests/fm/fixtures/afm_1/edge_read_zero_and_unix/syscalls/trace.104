@@ -1,0 +1,4 @@
+1757200040.000000 execve("/usr/bin/nc", ["/usr/bin/nc", "-U", "/var/run/nscd/socket"], /* 5 vars */) = 0 <0.000280>
+1757200040.100000 socket(AF_UNIX, SOCK_STREAM|SOCK_CLOEXEC, 0) = 3 <0.000021>
+1757200040.150000 connect(3<UNIX:[/var/run/nscd/socket]>, {sa_family=AF_UNIX, sun_path="/var/run/nscd/socket"}, 110) = -1 ENOENT (No such file or directory)
+1757200041.000000 +++ exited with 1 +++

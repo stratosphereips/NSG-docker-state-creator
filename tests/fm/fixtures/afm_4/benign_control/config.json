@@ -1,0 +1,15 @@
+{
+  "golden_manifest": {
+    "/etc/app/config.conf": "aa11aa11aa11aa11aa11aa11aa11aa11aa11aa11aa11aa11aa11aa11aa11aa11"
+  },
+  "volatility_allowlist": [
+    "/tmp"
+  ],
+  "baseline_listeners": [
+    {
+      "family": "tcp",
+      "local_addr": "0.0.0.0",
+      "port": 22
+    }
+  ]
+}

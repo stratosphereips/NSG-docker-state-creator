@@ -1,0 +1,4 @@
+{"archive_changed_files": false, "event": "baseline_complete", "files": 120, "hash_max_bytes": 0, "interval_seconds": 30, "source": "state-reconciler", "timestamp": 1757000000.5}
+{not json at all
+{"event": "file_deleted", "path": "/var/log/auth.log", "previous_state": [33188, 0, 0, 5432, 1756990000000000000, 1756990000000000000, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"], "source": "state-reconciler", "timestamp": 1757000006.0}
+{"duration_seconds": 0.8, "event": "scan_complete", "files": 119, "source": "state-reconciler", "timestamp": 1757000006.01}

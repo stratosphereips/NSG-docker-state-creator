@@ -1,0 +1,11 @@
+{
+  "arming_paths": [
+    "/etc/cron.d"
+  ],
+  "protected_log_paths": [
+    "/var/log/w_join_ws",
+    "/var/log/w_lo_excl",
+    "/var/log/w_join_hi",
+    "/var/log/w_we_excl"
+  ]
+}

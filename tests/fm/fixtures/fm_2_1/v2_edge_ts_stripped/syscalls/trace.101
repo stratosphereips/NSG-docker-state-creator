@@ -1,0 +1,3 @@
+1757000005.000000 execve("/usr/bin/rm", ["/usr/bin/rm", "-f", "/var/log/auth.log"], /* 5 vars */) = 0 <0.000395>
+unlinkat(AT_FDCWD, "/var/log/auth.log", 0) = 0 <0.000281>
+1757000005.800000 +++ exited with 0 +++

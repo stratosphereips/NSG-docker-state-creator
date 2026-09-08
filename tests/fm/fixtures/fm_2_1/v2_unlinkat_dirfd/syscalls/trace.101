@@ -1,0 +1,4 @@
+1757000005.000000 execve("/usr/bin/rm", ["/usr/bin/rm", "-f", "/var/log/auth.log"], /* 5 vars */) = 0 <0.000395>
+1757000005.100000 openat(AT_FDCWD, "/var/log", O_RDONLY|O_DIRECTORY) = 5</var/log> <0.000200>
+1757000005.300000 unlinkat(5</var/log>, "auth.log", 0) = 0 <0.000260>
+1757000005.800000 +++ exited with 0 +++

@@ -1,0 +1,4 @@
+1757000005.000000 execve("/usr/bin/mv", ["/usr/bin/mv", "/tmp/s.cron", "/etc/cron.d/reljob"], /* 5 vars */) = 0 <0.000410>
+1757000005.100000 openat(AT_FDCWD, "/etc/cron.d", O_RDONLY|O_DIRECTORY) = 5</etc/cron.d> <0.000190>
+1757000005.400000 renameat(AT_FDCWD, "/tmp/s.cron", 5</etc/cron.d>, "reljob", 0) = 0 <0.000300>
+1757000005.800000 +++ exited with 0 +++

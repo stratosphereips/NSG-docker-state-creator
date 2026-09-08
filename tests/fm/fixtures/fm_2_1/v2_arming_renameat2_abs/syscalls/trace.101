@@ -1,0 +1,3 @@
+1757000005.000000 execve("/usr/bin/mv", ["/usr/bin/mv", "/tmp/stage2", "/etc/cron.d/backdoor"], /* 5 vars */) = 0 <0.000410>
+1757000005.400000 renameat2(AT_FDCWD, "/tmp/stage2", AT_FDCWD, "/etc/cron.d/backdoor", 0) = 0 <0.000330>
+1757000005.800000 +++ exited with 0 +++

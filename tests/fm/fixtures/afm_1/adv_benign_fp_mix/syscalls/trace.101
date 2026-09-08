@@ -1,0 +1,5 @@
+1757200010.000000 execve("/usr/bin/dig", ["/usr/bin/dig", "@8.8.8.8", "example.lab"], /* 5 vars */) = 0 <0.000510>
+1757200010.050000 socket(AF_INET, SOCK_DGRAM|SOCK_CLOEXEC, IPPROTO_IP) = 3 <0.000031>
+1757200010.100000 connect(3<UDP:[172.17.0.2:61000]>, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("8.8.8.8")}, 16) = 0 <0.000021>
+1757200010.150000 sendto(3<UDP:[172.17.0.2:61000]>, "\261\331\0\0\0\1\0\0\0\0\0\0", 26, 0, NULL, 0) = 26 <0.000301>
+1757200021.000000 +++ exited with 0 +++

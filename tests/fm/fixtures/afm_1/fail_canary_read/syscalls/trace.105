@@ -1,0 +1,5 @@
+1757200060.000000 execve("/usr/bin/cat", ["/usr/bin/cat", "/root/.ssh/id_ed25519"], /* 5 vars */) = 0 <0.000280>
+1757200060.100000 openat(AT_FDCWD, "/root/.ssh/id_ed25519", O_RDONLY|O_CLOEXEC) = 3</root/.ssh/id_ed25519> <0.000024>
+1757200060.150000 read(3</root/.ssh/id_ed25519>, "-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAA\n"..., 131072) = 3242 <0.000091>
+1757200060.200000 close(3</root/.ssh/id_ed25519>) = 0 <0.000012>
+1757200061.000000 +++ exited with 0 +++

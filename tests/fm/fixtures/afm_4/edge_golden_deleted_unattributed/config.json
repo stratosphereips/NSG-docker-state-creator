@@ -1,0 +1,7 @@
+{
+  "golden_manifest": {
+    "/etc/app/config.conf": "aa11aa11aa11aa11aa11aa11aa11aa11aa11aa11aa11aa11aa11aa11aa11aa11"
+  },
+  "volatility_allowlist": [],
+  "baseline_listeners": []
+}

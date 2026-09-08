@@ -1,0 +1,4 @@
+{"archive_changed_files": false, "event": "baseline_complete", "files": 120, "hash_max_bytes": 0, "interval_seconds": 30, "source": "state-reconciler", "timestamp": 1757200000.5}
+{"event": "file_added", "path": "/opt/tools/scratch.bin", "source": "state-reconciler", "state": [33188, 0, 0, 7, 1757200021.0, 1757200021.0, "ee55ee55ee55ee55ee55ee55ee55ee55ee55ee55ee55ee55ee55ee55ee55ee55"], "timestamp": 1757200021.0}
+{"duration_seconds": 0.8, "event": "scan_complete", "files": 121, "source": "state-reconciler", "timestamp": 1757200021.01}
+{"event": "file_deleted", "path": "/opt/tools/scratch.bin", "previous_state": [33188, 0, 0, 7, 1757200021.0, 1757200021.0, "ee55ee55ee55ee55ee55ee55ee55ee55ee55ee55ee55ee55ee55ee55ee55ee55"], "source": "state-reconciler", "timestamp": 1757200029.0}

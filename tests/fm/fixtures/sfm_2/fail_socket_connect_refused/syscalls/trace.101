@@ -1,0 +1,5 @@
+1757300005.100000 execve("/usr/bin/curl", ["curl", "--unix-socket", "/run/docker.sock", "http://localhost/info"], /* 5 vars */) = 0 <0.000800>
+1757300005.200000 socket(AF_UNIX, SOCK_STREAM|SOCK_CLOEXEC, 0) = 3<UNIX:[9001]> <0.000040>
+1757300005.300000 connect(3<UNIX:[9001]>, {sa_family=AF_UNIX, sun_path="/run/docker.sock"}}, 110) = -1 ENOENT (No such file or directory) <0.000300>
+1757300005.400000 connect(3<UNIX:[9001]>, {sa_family=AF_UNIX, sun_path="/run/containerd/containerd.sock"}}, 110) = -1 EACCES (Permission denied) <0.000280>
+1757300006.000000 +++ exited with 1 +++

@@ -1,0 +1,5 @@
+1757000005.000000 execve("/usr/bin/touch", ["/usr/bin/touch", "/etc/cron.d/tmpjob"], /* 5 vars */) = 0 <0.000400>
+1757000005.300000 openat(AT_FDCWD, "/etc/cron.d/tmpjob", O_WRONLY|O_CREAT|O_NOCTTY, 0666) = 3</etc/cron.d/tmpjob> <0.000220>
+1757000005.320000 close(3</etc/cron.d/tmpjob>) = 0 <0.000020>
+1757000005.330000 utimensat(AT_FDCWD, "/etc/cron.d/tmpjob", NULL, 0) = 0 <0.000025>
+1757000005.800000 +++ exited with 0 +++

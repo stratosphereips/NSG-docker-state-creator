@@ -1,0 +1,5 @@
+1757200020.000000 execve("/usr/bin/dig", ["/usr/bin/dig", "@10.10.0.2", "example.lab"], /* 5 vars */) = 0 <0.000510>
+1757200020.050000 socket(AF_INET, SOCK_DGRAM|SOCK_CLOEXEC, IPPROTO_IP) = 3 <0.000031>
+1757200020.100000 connect(3, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("10.10.0.2")}, 16) = 0 <0.000021>
+1757200020.150000 sendto(3, "\261\331\0\0\0\1\0\0\0\0\0\0", 26, 0, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("10.10.0.2")}, 16) = 26 <0.000301>
+1757200021.000000 +++ exited with 0 +++

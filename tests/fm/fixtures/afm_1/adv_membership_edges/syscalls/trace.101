@@ -1,0 +1,2 @@
+1757200010.100000 connect(3, {sa_family=AF_INET, sin_port=htons(22), sin_addr=inet_addr("8.8.8.8")}, 16) = 0 <0.011000>
+1757200011.000000 +++ exited with 0 +++

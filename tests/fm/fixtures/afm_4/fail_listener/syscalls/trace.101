@@ -1,0 +1,4 @@
+1757200014.100000 execve("/usr/bin/lstn", ["/usr/bin/lstn"], /* 5 vars */) = 0 <0.000300>
+1757200015.000000 socket(AF_INET, SOCK_STREAM|SOCK_CLOEXEC, IPPROTO_IP) = 3 <0.000031>
+1757200015.100000 bind(3, {sa_family=AF_INET, sin_port=htons(4444), sin_addr=inet_addr("0.0.0.0")}, 16) = 0 <0.000021>
+1757200015.200000 listen(3, 128) = 0 <0.000015>

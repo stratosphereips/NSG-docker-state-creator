@@ -1,0 +1,5 @@
+1757200002.050000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "drop tooling into /opt/tools"], /* 5 vars */) = 0 <0.000412>
+1757200014.000000 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|SIGCHLD) = 101 <0.000350>
+1757200028.100000 wait4(-1, {WIFEXITED(s) && WEXITSTATUS(s) == 0}, 0, NULL) = 101 <0.100000>
+1757200028.900000 exit_group(0)     = 0
+1757200028.950000 +++ exited with 0 +++

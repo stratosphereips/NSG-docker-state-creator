@@ -1,0 +1,6 @@
+1757200050.000000 execve("/usr/bin/curl", ["/usr/bin/curl", "--unix-socket", "/var/run/docker.sock", "http://localhost/_ping"], /* 5 vars */) = 0 <0.000510>
+1757200050.100000 socket(AF_UNIX, SOCK_STREAM|SOCK_CLOEXEC, 0) = 3 <0.000021>
+1757200050.150000 connect(3<UNIX:[/var/run/docker.sock]>, {sa_family=AF_UNIX, sun_path="/var/run/docker.sock"}, 110) = 0 <0.001100>
+1757200050.200000 openat(AT_FDCWD, "/var/run/docker.sock", O_RDONLY|O_CLOEXEC) = 4</var/run/docker.sock> <0.000024>
+1757200050.250000 read(4</var/run/docker.sock>, "GET /_ping HTTP/1.1\r\nHost: localhost\r\n\r\n"..., 4096) = 62 <0.000210>
+1757200051.000000 +++ exited with 0 +++

@@ -1,0 +1,3 @@
+1757200010.100000 execve("/usr/bin/tool", ["/usr/bin/tool", "purge"], /* 5 vars */) = 0 <0.000300>
+1757200012.000000 unlinkat(AT_FDCWD, "/opt/data/state.db", 0) = 0
+1757200023.900000 +++ exited with 0 +++

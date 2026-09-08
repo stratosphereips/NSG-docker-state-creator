@@ -1,0 +1,5 @@
+1757200030.000000 execve("/usr/bin/cat", ["/usr/bin/cat", "/etc/hostname"], /* 5 vars */) = 0 <0.000280>
+1757200030.100000 openat(AT_FDCWD, "/etc/hostname", O_RDONLY|O_CLOEXEC) = 3</etc/hostname> <0.000021>
+1757200030.150000 read(3</etc/hostname>, "lab-target-01\n", 131072) = 14 <0.000019>
+1757200030.200000 close(3</etc/hostname>) = 0 <0.000012>
+1757200041.000000 +++ exited with 0 +++

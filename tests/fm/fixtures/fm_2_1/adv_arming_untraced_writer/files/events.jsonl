@@ -1,0 +1,4 @@
+{"command": ["inotifywait", "--monitor", "--recursive", "--quiet"], "event": "monitor_started", "roots": ["/bin", "/etc", "/opt", "/root", "/srv", "/tmp", "/usr", "/var"], "source": "filesystem-monitor", "timestamp": 1757000000.35}
+{"event": "filesystem_event", "kernel_time": "1757000005", "move_cookie": "0", "operations": ["create"], "path": "/etc/cron.d/syscheck", "source": "filesystem-monitor", "timestamp": 1757000005.51}
+{"event": "filesystem_event", "kernel_time": "1757000005", "move_cookie": "0", "operations": ["close_write"], "path": "/etc/cron.d/syscheck", "source": "filesystem-monitor", "timestamp": 1757000005.53}
+{"event": "monitor_exited", "returncode": 0, "source": "filesystem-monitor", "stderr": "", "timestamp": 1757000009.9}

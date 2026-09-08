@@ -1,0 +1,4 @@
+1757300005.100000 execve("/usr/bin/python3", ["python3", "-c", "sock probe"], /* 5 vars */) = 0 <0.000700>
+1757300005.300000 openat(AT_FDCWD, "/run/docker.sock", O_RDONLY) = -1 ENOENT (No such file or directory) <0.000200>
+1757300005.600000 openat(5</run>, "containerd.sock", O_RDWR) = 6</run/containerd/containerd.sock> <0.000240>
+1757300006.000000 +++ exited with 0 +++

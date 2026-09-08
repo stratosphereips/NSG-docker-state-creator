@@ -1,0 +1,4 @@
+{"command": ["inotifywait", "--monitor", "--recursive", "--quiet"], "event": "monitor_started", "roots": ["/bin", "/etc", "/opt", "/root", "/srv", "/tmp", "/usr", "/var"], "source": "filesystem-monitor", "timestamp": 1757000000.35}
+{"event": "filesystem_event", "kernel_time": "1757000005", "move_cookie": "6262", "operations": ["move"], "path": "/tmp/stage2", "source": "filesystem-monitor", "timestamp": 1757000005.39}
+{"event": "filesystem_event", "kernel_time": "1757000005", "move_cookie": "6262", "operations": ["move"], "path": "/etc/cron.d/backdoor", "source": "filesystem-monitor", "timestamp": 1757000005.41}
+{"event": "monitor_exited", "returncode": 0, "source": "filesystem-monitor", "stderr": "", "timestamp": 1757000009.9}

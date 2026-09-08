@@ -1,0 +1,4 @@
+{"event": "monitor_started", "interval_seconds": 1.0, "source": "socket-monitor", "timestamp": 1757200000.55}
+{"event": "connection_seen", "socket": "ESTAB 0 0 172.17.0.2:40122 10.10.0.5:22 users:((\"ssh\",pid=101,fd=3))", "source": "socket-monitor", "timestamp": 1757200010.5}
+{"event": "connection_gone", "socket": "ESTAB 0 0 172.17.0.2:40122 10.10.0.5:22 users:((\"ssh\",pid=101,fd=3))", "source": "socket-monitor", "timestamp": 1757200013.5}
+{"event": "connection_seen", "socket": "TIME-WAIT 0 0 172.17.0.2:40122 203.0.113.50:443", "source": "socket-monitor", "timestamp": 1757200050.0}

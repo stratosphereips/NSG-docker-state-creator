@@ -1,0 +1,5 @@
+{"event": "monitor_started", "interval_seconds": 1.0, "source": "socket-monitor", "timestamp": 1757200000.55}
+{"event": "connection_seen", "socket": "ESTAB 0 0 172.17.0.2:61000 8.8.8.8:53 users:((\"dig\",pid=101,fd=3))", "source": "socket-monitor", "timestamp": 1757200010.5}
+{"event": "connection_seen", "socket": "ESTAB 0 0 172.17.0.2:40122 10.10.0.5:22 users:((\"ssh\",pid=102,fd=3))", "source": "socket-monitor", "timestamp": 1757200020.5}
+{"event": "connection_seen", "socket": "ESTAB 0 0 172.17.0.2:40123 10.10.0.7:443 users:((\"curl\",pid=102,fd=4))", "source": "socket-monitor", "timestamp": 1757200021.5}
+{"event": "connection_seen", "socket": "ESTAB 0 0 172.17.0.2:39002 10.11.0.9:9100 users:((\"socket-monitor\",pid=51,fd=3))", "source": "socket-monitor", "timestamp": 1757200033.0}

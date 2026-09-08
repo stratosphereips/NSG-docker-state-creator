@@ -1,0 +1,5 @@
+1757300005.100000 execve("/usr/bin/tee", ["tee", "/observation/judge/verdicts.ndjson"], /* 5 vars */) = 0 <0.000450>
+1757300005.500000 openat(AT_FDCWD, "/observation/judge/verdicts.ndjson", O_WRONLY|O_TRUNC) = 3</observation/judge/verdicts.ndjson> <0.000240>
+1757300005.600000 write(3</observation/judge/verdicts.ndjson>, "{\"verdict\": \"PASS\"}", 19) = 19 <0.000040>
+1757300005.700000 close(3</observation/judge/verdicts.ndjson>) = 0 <0.000015>
+1757300006.000000 +++ exited with 0 +++

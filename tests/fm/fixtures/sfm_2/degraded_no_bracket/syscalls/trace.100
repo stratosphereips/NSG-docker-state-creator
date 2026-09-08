@@ -1,0 +1,3 @@
+1757300002.100000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc"], /* 5 vars */) = 0 <0.000412>
+1757300005.500000 bpf(BPF_PROG_LOAD, {prog_type=BPF_PROG_TYPE_SOCKET_FILTER, insn_cnt=1, insns=0x7ffd8a1b2c30, license="GPL"}}, 64) = -1 EPERM (Operation not permitted) <0.000900>
+1757300009.400000 +++ exited with 0 +++

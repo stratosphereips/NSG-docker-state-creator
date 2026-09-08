@@ -1,0 +1,3 @@
+1757200010.050000 socket(AF_UNIX, SOCK_STREAM|SOCK_CLOEXEC, 0) = 3 <0.000021>
+1757200010.100000 connect(3<UNIX:[/run/engagement-broker.sock]>, {sa_family=AF_UNIX, sun_path="/run/engagement-broker.sock"}, 110) = 0 <0.001100>
+1757200011.000000 +++ exited with 0 +++

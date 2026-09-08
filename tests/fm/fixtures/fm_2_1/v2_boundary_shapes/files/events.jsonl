@@ -1,0 +1,6 @@
+{"command": ["inotifywait", "--monitor", "--recursive", "--quiet"], "event": "monitor_started", "roots": ["/bin", "/etc", "/opt", "/root", "/srv", "/tmp", "/usr", "/var"], "source": "filesystem-monitor", "timestamp": 1757000000.35}
+{"event": "filesystem_event", "kernel_time": "1757000005", "move_cookie": "0", "operations": ["modify", "close_write"], "path": "/var/log/a_shrink", "source": "filesystem-monitor", "timestamp": 1757000005.13}
+{"event": "filesystem_event", "kernel_time": "1757000005", "move_cookie": "0", "operations": ["modify", "close_write"], "path": "/var/log/a_equal", "source": "filesystem-monitor", "timestamp": 1757000005.23}
+{"event": "filesystem_event", "kernel_time": "1757000005", "move_cookie": "0", "operations": ["attrib"], "path": "/var/log/a_meta", "source": "filesystem-monitor", "timestamp": 1757000005.5}
+{"event": "filesystem_event", "kernel_time": "1757000005", "move_cookie": "0", "operations": ["modify", "close_write"], "path": "/var/log/a_grow", "source": "filesystem-monitor", "timestamp": 1757000005.6}
+{"event": "monitor_exited", "returncode": 0, "source": "filesystem-monitor", "stderr": "", "timestamp": 1757000009.9}

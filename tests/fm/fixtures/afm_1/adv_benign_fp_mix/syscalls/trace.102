@@ -1,0 +1,6 @@
+1757200020.000000 execve("/usr/bin/ssh", ["/usr/bin/ssh", "-p", "22", "user@10.10.0.5"], /* 5 vars */) = 0 <0.000510>
+1757200020.050000 socket(AF_INET, SOCK_STREAM|SOCK_CLOEXEC, IPPROTO_IP) = 4 <0.000031>
+1757200020.100000 connect(4, {sa_family=AF_INET, sin_port=htons(22), sin_addr=inet_addr("10.10.0.5")}, 16) = 0 <0.031000>
+1757200020.500000 socket(AF_INET, SOCK_STREAM|SOCK_CLOEXEC, IPPROTO_IP) = 5 <0.000031>
+1757200020.600000 connect(5, {sa_family=AF_INET, sin_port=htons(443), sin_addr=inet_addr("10.10.0.7")}, 16) = 0 <0.012000>
+1757200031.000000 +++ exited with 0 +++

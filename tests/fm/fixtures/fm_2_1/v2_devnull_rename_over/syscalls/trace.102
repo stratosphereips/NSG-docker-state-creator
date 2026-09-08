@@ -1,0 +1,3 @@
+1757000005.200000 execve("/usr/bin/mv", ["/usr/bin/mv", "/tmp/n", "/var/log/auth.log"], /* 5 vars */) = 0 <0.000410>
+1757000005.400000 rename("/tmp/n", "/var/log/auth.log") = 0 <0.000320>
+1757000005.600000 +++ exited with 0 +++

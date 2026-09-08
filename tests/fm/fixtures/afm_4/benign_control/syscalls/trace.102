@@ -1,0 +1,6 @@
+1757200007.600000 execve("/usr/bin/pytool", ["/usr/bin/pytool", "--serve"], /* 5 vars */) = 0 <0.000300>
+1757200008.000000 socket(AF_INET, SOCK_STREAM|SOCK_CLOEXEC, IPPROTO_IP) = 3 <0.000031>
+1757200008.100000 bind(3, {sa_family=AF_INET, sin_port=htons(8080), sin_addr=inet_addr("127.0.0.1")}, 16) = 0 <0.000021>
+1757200008.200000 listen(3, 128) = 0 <0.000015>
+1757200026.000000 close(3) = 0
+1757200026.500000 +++ exited with 0 +++

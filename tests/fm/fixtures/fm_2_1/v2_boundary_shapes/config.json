@@ -1,0 +1,11 @@
+{
+  "arming_paths": [
+    "/etc/cron.d"
+  ],
+  "protected_log_paths": [
+    "/var/log/a_shrink",
+    "/var/log/a_equal",
+    "/var/log/a_meta",
+    "/var/log/a_grow"
+  ]
+}

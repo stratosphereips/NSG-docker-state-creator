@@ -1,0 +1,6 @@
+1757300005.100000 execve("/usr/bin/python3", ["python3", "-c", "fd dance"], /* 5 vars */) = 0 <0.000700>
+1757300005.200000 openat(AT_FDCWD, "/observation/judge/verdicts.ndjson", O_RDONLY) = 3</observation/judge/verdicts.ndjson> <0.000200>
+1757300005.300000 open("/proc/self/fd/3", O_WRONLY) = 4</observation/judge/verdicts.ndjson> <0.000180>
+1757300005.400000 write(4</observation/judge/verdicts.ndjson>, "tampered", 8) = 8 <0.000030>
+1757300005.500000 close(4</observation/judge/verdicts.ndjson>) = 0 <0.000012>
+1757300006.000000 +++ exited with 0 +++

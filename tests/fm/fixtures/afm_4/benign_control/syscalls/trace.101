@@ -1,0 +1,11 @@
+1757200004.100000 execve("/usr/bin/tool", ["/usr/bin/tool", "edit"], /* 5 vars */) = 0 <0.000300>
+1757200004.500000 openat(AT_FDCWD, "/etc/app/config.conf", O_WRONLY) = 3</etc/app/config.conf> <0.000021>
+1757200005.500000 close(3) = 0
+1757200007.000000 openat(AT_FDCWD, "/tmp/scratch/x.log", O_WRONLY|O_CREAT|O_TRUNC, 0644) = 3</tmp/scratch/x.log> <0.000025>
+1757200009.000000 close(3) = 0
+1757200018.000000 openat(AT_FDCWD, "/etc/app/config.conf", O_WRONLY) = 3</etc/app/config.conf> <0.000020>
+1757200019.000000 close(3) = 0
+1757200021.500000 openat(AT_FDCWD, "/tmp/scratch/left.log", O_WRONLY|O_CREAT, 0644) = 3</tmp/scratch/left.log> <0.000023>
+1757200022.500000 close(3) = 0
+1757200023.500000 unlinkat(AT_FDCWD, "/tmp/scratch/x.log", 0) = 0
+1757200023.900000 +++ exited with 0 +++

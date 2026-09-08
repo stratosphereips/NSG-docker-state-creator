@@ -1,0 +1,5 @@
+1757200010.000000 execve("/usr/bin/dd", ["/usr/bin/dd", "if=/etc/shadow", "bs=1", "count=0"], /* 5 vars */) = 0 <0.000280>
+1757200010.100000 openat(AT_FDCWD, "/etc/shadow", O_RDONLY|O_CLOEXEC) = 3</etc/shadow> <0.000024>
+1757200010.150000 read(3</etc/shadow>, "", 1) = 0 <0.000012>
+1757200010.200000 close(3</etc/shadow>) = 0 <0.000010>
+1757200011.000000 +++ exited with 0 +++

@@ -1,0 +1,5 @@
+1757000003.000000 execve("/usr/sbin/logrotate", ["/usr/sbin/logrotate", "/etc/logrotate.conf"], /* 5 vars */) = 0 <0.000600>
+1757000004.900000 openat(AT_FDCWD, "/var/log/auth.log", O_WRONLY) = 3</var/log/auth.log> <0.000240>
+1757000005.000000 ftruncate(3</var/log/auth.log>, 0) = 0 <0.000190>
+1757000005.050000 close(3</var/log/auth.log>) = 0 <0.000025>
+1757000005.500000 +++ exited with 0 +++

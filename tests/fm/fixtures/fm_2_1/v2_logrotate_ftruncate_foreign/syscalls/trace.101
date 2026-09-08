@@ -1,0 +1,2 @@
+1757000005.000000 execve("/usr/bin/true", ["/usr/bin/true"], /* 5 vars */) = 0 <0.000380>
+1757000005.400000 +++ exited with 0 +++

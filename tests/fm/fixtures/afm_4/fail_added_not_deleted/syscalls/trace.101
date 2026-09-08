@@ -1,0 +1,4 @@
+1757200014.100000 execve("/usr/bin/tool", ["/usr/bin/tool", "drop"], /* 5 vars */) = 0 <0.000300>
+1757200020.500000 openat(AT_FDCWD, "/opt/tools/dropped.sh", O_WRONLY|O_CREAT|O_TRUNC, 0644) = 3</opt/tools/dropped.sh> <0.000028>
+1757200021.500000 close(3) = 0
+1757200027.900000 +++ exited with 0 +++

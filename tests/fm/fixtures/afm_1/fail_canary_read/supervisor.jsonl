@@ -1,0 +1,18 @@
+{"argv": ["/opt/nsg-observer/bin/process-monitor"], "event": "sensor_started", "name": "process-monitor", "pid": 50, "source": "supervisor", "timestamp": 1757200000.1}
+{"argv": ["/opt/nsg-observer/bin/socket-monitor"], "event": "sensor_started", "name": "socket-monitor", "pid": 51, "source": "supervisor", "timestamp": 1757200000.15}
+{"argv": ["/opt/nsg-observer/bin/filesystem-monitor"], "event": "sensor_started", "name": "filesystem-monitor", "pid": 52, "source": "supervisor", "timestamp": 1757200000.2}
+{"argv": ["/opt/nsg-observer/bin/state-reconciler"], "event": "sensor_started", "name": "state-reconciler", "pid": 53, "source": "supervisor", "timestamp": 1757200000.25}
+{"argv": ["/opt/nsg-observer/bin/bcc-monitor"], "event": "sensor_started", "name": "bcc-monitor", "pid": 54, "source": "supervisor", "timestamp": 1757200000.3}
+{"effective_argv": ["strace", "-ff", "-ttt", "-T", "-yy", "-s", "4096", "-o", "/observation/syscalls/trace", "--", "bash", "-lc", "cat key material"], "event": "workload_started", "pid": 100, "requested_argv": ["bash", "-lc", "cat key material"], "source": "supervisor", "timestamp": 1757200002.0}
+{"event": "workload_exited", "pid": 100, "returncode": 0, "source": "supervisor", "timestamp": 1757200086.0}
+{"event": "supervisor_signal", "signal": 15, "source": "supervisor", "timestamp": 1757200086.05}
+{"event": "sensor_signal", "name": "process-monitor", "pid": 50, "signal": 15, "source": "supervisor", "timestamp": 1757200086.1}
+{"event": "sensor_exited", "name": "process-monitor", "returncode": 0, "source": "supervisor", "timestamp": 1757200086.12}
+{"event": "sensor_signal", "name": "socket-monitor", "pid": 51, "signal": 15, "source": "supervisor", "timestamp": 1757200086.1499999}
+{"event": "sensor_exited", "name": "socket-monitor", "returncode": 0, "source": "supervisor", "timestamp": 1757200086.1699998}
+{"event": "sensor_signal", "name": "filesystem-monitor", "pid": 52, "signal": 15, "source": "supervisor", "timestamp": 1757200086.1999998}
+{"event": "sensor_exited", "name": "filesystem-monitor", "returncode": 0, "source": "supervisor", "timestamp": 1757200086.2199998}
+{"event": "sensor_signal", "name": "state-reconciler", "pid": 53, "signal": 15, "source": "supervisor", "timestamp": 1757200086.25}
+{"event": "sensor_exited", "name": "state-reconciler", "returncode": 0, "source": "supervisor", "timestamp": 1757200086.27}
+{"event": "sensor_signal", "name": "bcc-monitor", "pid": 54, "signal": 15, "source": "supervisor", "timestamp": 1757200086.3}
+{"event": "sensor_exited", "name": "bcc-monitor", "returncode": 0, "source": "supervisor", "timestamp": 1757200086.32}

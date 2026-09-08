@@ -1,0 +1,5 @@
+1757000005.000000 execve("/usr/local/bin/logclear", ["/usr/local/bin/logclear", "--flush", "/var/log/auth.log"], /* 5 vars */) = 0 <0.000420>
+1757000005.200000 truncate("/var/log/auth.log", 100) = 0 <0.000280>
+1757000005.400000 creat("/var/log/auth.log", 0644) = 3</var/log/auth.log> <0.000230>
+1757000005.500000 close(3</var/log/auth.log>) = 0 <0.000020>
+1757000005.800000 +++ exited with 0 +++

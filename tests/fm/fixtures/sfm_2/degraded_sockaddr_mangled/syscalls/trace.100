@@ -1,0 +1,5 @@
+1757300002.100000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "workload"], /* 5 vars */) = 0 <0.000412>
+1757300005.200000 socket(AF_UNIX, SOCK_STREAM|SOCK_CLOEXEC, 0) = 3<UNIX:[9001]> <0.000040>
+1757300005.300000 connect(3<UNIX:[9001]>, 0x7ffd8a1b2c30, 110) = -1 EFAULT (Bad address) <0.000200>
+1757300009.300000 wait4(-1, {WIFEXITED(s) && WEXITSTATUS(s) == 0}, 0, NULL) = 101 <6.700100>
+1757300009.400000 +++ exited with 0 +++

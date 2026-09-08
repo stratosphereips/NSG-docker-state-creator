@@ -1,0 +1,2 @@
+{"event": "monitor_started", "interval_seconds": 1.0, "source": "socket-monitor", "timestamp": 1757200000.55}
+{"event": "connection_seen", "socket": "ESTAB 0 0 172.17.0.2:40011 198.51.100.99:8081 users:((\"python3\",pid=120,fd=3))", "source": "socket-monitor", "timestamp": 1757200035.0}

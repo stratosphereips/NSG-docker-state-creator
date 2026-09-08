@@ -1,0 +1,5 @@
+1757200014.100000 execve("/usr/bin/tool", ["/usr/bin/tool", "scratch"], /* 5 vars */) = 0 <0.000300>
+1757200020.500000 openat(AT_FDCWD, "/opt/tools/scratch.bin", O_WRONLY|O_CREAT, 0644) = 3</opt/tools/scratch.bin> <0.000024>
+1757200021.500000 close(3) = 0
+1757200028.000000 unlinkat(AT_FDCWD, "/opt/tools/scratch.bin", 0) = 0
+1757200028.300000 +++ exited with 0 +++

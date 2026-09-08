@@ -1,0 +1,5 @@
+1757000005.000000 execve("/usr/bin/bash", ["/usr/bin/bash", "-c", "echo * * * * * root /tmp/x.sh >> /etc/cron.d/every-hour"], /* 5 vars */) = 0 <0.000395>
+1757000005.200000 openat(AT_FDCWD, "/etc/cron.d/every-hour", O_WRONLY|O_APPEND) = 3</etc/cron.d/every-hour> <0.000220>
+1757000005.300000 write(3</etc/cron.d/every-hour>, "* * * * * root /tmp/x.sh\n", 25) = 25 <0.000035>
+1757000005.350000 close(3</etc/cron.d/every-hour>) = 0 <0.000018>
+1757000005.800000 +++ exited with 0 +++
