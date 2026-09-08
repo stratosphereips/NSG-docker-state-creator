@@ -50,12 +50,12 @@ document.
 ### Outside: replay, alternate level, or sidecar
 
 An external analyst/controller uses the same image and mounts the observation
-volume. A one-shot rebuild is appropriate after a workload has exited:
+directory. A one-shot rebuild is appropriate after a workload has exited:
 
 ```bash
 docker run --rm \
   --entrypoint state-builder \
-  -v nsg-observation:/observation \
+  -v "$(pwd)/observation/manual-run:/observation" \
   nsg-observer:local \
   --input /observation \
   --output /observation/state-forensic \
@@ -67,7 +67,7 @@ For continuous external processing, run the same command as a sidecar:
 ```bash
 docker run -d --name nsg-state-sidecar \
   --entrypoint state-builder \
-  -v nsg-observation:/observation \
+  -v "$(pwd)/observation/manual-run:/observation" \
   nsg-observer:local \
   --input /observation \
   --output /observation/state-external \
@@ -120,13 +120,22 @@ than observation order, so the same entity can be compared across rebuilds.
 
 ## Inference rules
 
-Known networks come from configured interface prefixes and routes. An observed
-IP that is outside those sources also creates a `/32` or `/128` host route so
-the model never invents a broader subnet. Known hosts come from interfaces,
-gateways, neighbors, sockets, Zeek flows/DNS, command targets, and assertions.
+These host/network and transport-service semantics are identified as graph
+schema `nsg-state-graph/1.1`.
 
-Services come from local listeners, target or responder ports, Zeek protocol
-identification, HTTP, DNS, SSH, and assertions. A targeted port is labeled
+Known networks come from configured interface prefixes and routes. A `/32` or
+`/128` always represents a host and is never emitted as a network. When an
+observed host is outside every specific known network, the default configuration
+estimates `/24` for IPv4 or `/64` for IPv6. Estimated networks have confidence
+`0.35` and carry `inferred=true`, `inference_method`, `inferred_from`, and
+`assumed_prefix_length`; change or disable this under `network_inference` in the
+configuration. Known hosts come from interfaces, gateways, neighbors, sockets,
+Zeek flows/DNS, command targets, and assertions.
+
+Services are restricted to TCP, UDP, and SCTP endpoints. ICMP and other
+network-layer protocols may provide host or flow evidence but never create a
+service. Services come from local listeners, target or responder ports, Zeek
+protocol identification, HTTP, DNS, SSH, and assertions. A targeted port is labeled
 `targeted` or `attempted`; response evidence promotes it to `observed` or
 `open`. Common ports receive a configured name when protocol identification is
 not available.
