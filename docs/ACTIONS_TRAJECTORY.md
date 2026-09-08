@@ -128,11 +128,13 @@ This is the default and the recommended mode for correct temporal states.
 `observe-entrypoint` starts the monitor before starting the workload:
 
 ```bash
+mkdir -p observation/manual-run
+
 docker run --rm --privileged --security-opt seccomp=unconfined \
   -e OBS_ENABLE_TRAJECTORY=1 \
   -e OBS_TRAJECTORY_SENSITIVITY=material \
   -e OBS_STATE_LEVEL=operational \
-  -v nsg-observation:/observation \
+  -v "$(pwd)/observation/manual-run:/observation" \
   nsg-observer:local /path/to/agent
 ```
 
@@ -152,7 +154,7 @@ output directory:
 
 ```bash
 docker run --rm --entrypoint trajectory-monitor \
-  -v nsg-observation:/observation \
+  -v "$(pwd)/observation/manual-run:/observation" \
   nsg-observer:local \
   --input /observation \
   --output /observation/trajectory-external \
