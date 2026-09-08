@@ -258,12 +258,50 @@ class StateCompiler:
             network = ipaddress.ip_network(cidr, strict=False)
         except ValueError:
             return None
+        # A singleton prefix identifies one host, not a network. Keeping that
+        # distinction here prevents /32 and /128 nodes from leaking in through
+        # routes, firewall rules, flows, or assertions.
+        if network.prefixlen == network.max_prefixlen:
+            return None
         canonical = str(network)
         node_id = f"network:{canonical}"
         attrs = {"cidr": canonical, "version": network.version, "knowledge_source": source, **attributes}
         self.graph.node(node_id, "network", canonical, attrs, confidence, evidence)
         self._knowledge(node_id, "KNOWS_NETWORK", confidence, evidence)
         return node_id
+
+    def _network_or_host(self, value: str, source: str, confidence: float,
+                         evidence: dict[str, Any] | None = None,
+                         **attributes: Any) -> str | None:
+        """Represent a CIDR as a network, except singleton CIDRs are hosts."""
+        try:
+            target = ipaddress.ip_network(value, strict=False)
+        except ValueError:
+            return None
+        if target.prefixlen == target.max_prefixlen:
+            return self._host(str(target.network_address), source, confidence, evidence,
+                              **attributes)
+        return self._network(str(target), source, confidence, evidence, **attributes)
+
+    def _inferred_network(self, address: ipaddress.IPv4Address | ipaddress.IPv6Address,
+                          source_confidence: float,
+                          evidence: dict[str, Any] | None) -> str | None:
+        inference = self.config.get("network_inference", {})
+        if not inference.get("enabled", True):
+            return None
+        prefix_key = "ipv4_prefix" if address.version == 4 else "ipv6_prefix"
+        default_prefix = 24 if address.version == 4 else 64
+        try:
+            prefix = int(inference.get(prefix_key, default_prefix))
+            guessed = ipaddress.ip_network(f"{address}/{prefix}", strict=False)
+        except (TypeError, ValueError):
+            return None
+        confidence = min(source_confidence, float(inference.get("confidence", 0.35)))
+        return self._network(
+            str(guessed), "host-prefix-inference", confidence, evidence,
+            inferred=True, inference_method="configured-prefix-guess",
+            inferred_from=[str(address)], assumed_prefix_length=prefix,
+        )
 
     def _host(self, value: str, source: str, confidence: float = 0.9,
               evidence: dict[str, Any] | None = None, local_hint: bool = False,
@@ -300,15 +338,20 @@ class StateCompiler:
                         )
                     except ValueError:
                         continue
-                    if candidate_network.prefixlen > 0 and address in candidate_network:
+                    if 0 < candidate_network.prefixlen < candidate_network.max_prefixlen \
+                            and address in candidate_network:
                         containing.append((candidate_network.prefixlen, candidate_id))
                 if containing:
                     network_id = max(containing)[1]
                 else:
-                    host_route = f"{canonical}/{32 if address.version == 4 else 128}"
-                    network_id = self._network(host_route, "observed-host", confidence * 0.75, evidence)
+                    network_id = self._inferred_network(address, confidence, evidence)
                 if network_id:
-                    self.graph.edge(node_id, "MEMBER_OF", network_id, confidence=confidence * 0.75,
+                    membership_confidence = min(
+                        confidence,
+                        float(self.config.get("network_inference", {}).get("confidence", 0.35)),
+                    ) if not containing else confidence * 0.75
+                    self.graph.edge(node_id, "MEMBER_OF", network_id,
+                                    confidence=membership_confidence,
                                     evidence=evidence)
             attrs.update(attributes)
         except ValueError:
@@ -325,9 +368,11 @@ class StateCompiler:
     def _service(self, host_id: str | None, protocol: str, port: int | None,
                  name: str | None, status: str, confidence: float,
                  evidence: dict[str, Any] | None = None, **attributes: Any) -> str | None:
-        if not host_id or port is None or port < 0:
+        if not host_id or port is None or port < 0 or port > 65535:
             return None
         protocol = (protocol or "unknown").lower()
+        if protocol not in {"tcp", "udp", "sctp"}:
+            return None
         configured_name = self.config["service_names"].get(str(port))
         service_name = name or configured_name or "unknown"
         node_id = stable_id("service", f"{host_id}\0{protocol}\0{port}")
@@ -581,17 +626,17 @@ class StateCompiler:
                 destination = route.get("dst", "default")
                 if destination == "default":
                     destination = "0.0.0.0/0" if family == "routes_v4" else "::/0"
-                network_id = self._network(str(destination), "route", 0.98, evidence,
-                                           route_type=route.get("type", "unicast"))
+                target_id = self._network_or_host(str(destination), "route", 0.98, evidence,
+                                                  route_type=route.get("type", "unicast"))
                 gateway = route.get("gateway")
                 gateway_id = self._host(str(gateway), "route-gateway", 0.98, evidence) if gateway else None
-                if network_id:
-                    self.graph.edge(LOCAL_HOST_ID, "HAS_ROUTE_TO", network_id,
+                if target_id:
+                    self.graph.edge(LOCAL_HOST_ID, "HAS_ROUTE_TO", target_id,
                                     {"gateway": gateway, "interface": route.get("dev"),
                                      "metric": route.get("metric"), "table": route.get("table")},
                                     0.98, evidence)
-                if gateway_id and network_id:
-                    self.graph.edge(network_id, "VIA", gateway_id, confidence=0.98, evidence=evidence)
+                if gateway_id and target_id:
+                    self.graph.edge(target_id, "VIA", gateway_id, confidence=0.98, evidence=evidence)
 
         for neighbor in payload("neighbors"):
             host_id = self._host(str(neighbor.get("dst", "")), "neighbor-table", 0.98, evidence,
@@ -623,7 +668,7 @@ class StateCompiler:
             port_match = re.search(r"(?:^| )--dport (\S+)", line)
             protocol_match = re.search(r"(?:^| )-p (\S+)", line)
             target = target_match.group(1) if target_match else ("0.0.0.0/0" if family.endswith("v4") else "::/0")
-            target_id = self._network(target, "local-firewall", 0.99, evidence)
+            target_id = self._network_or_host(target, "local-firewall", 0.99, evidence)
             if not target_id:
                 continue
             attrs = {
@@ -982,7 +1027,10 @@ class StateCompiler:
                     port = int(connection.group(1))
                     address = connection.group(2)
                     host_id = self._host(address, "connect-syscall", 0.98, evidence)
-                    service = self._service(host_id, "tcp-or-udp", port, None,
+                    transport_match = re.search(r'connect\([^<]*<(TCP|UDP|SCTP)(?::|\[)',
+                                                line, re.IGNORECASE)
+                    transport = transport_match.group(1).lower() if transport_match else ""
+                    service = self._service(host_id, transport, port, None,
                                             "targeted", 0.9, evidence)
                     errors = {
                         "ETIMEDOUT": ("connect-timeout", 0.82),
@@ -1100,7 +1148,9 @@ class StateCompiler:
 
         hosts = [node for node in by_type["host"]
                  if node["attributes"].get("address_type") != "multicast"]
-        networks = [compact(node, ("cidr", "knowledge_source", "interfaces", "scope"))
+        networks = [compact(node, ("cidr", "knowledge_source", "interfaces", "scope",
+                                   "inferred", "inference_method", "inferred_from",
+                                   "assumed_prefix_length"))
                     for node in by_type["network"]]
         known_hosts = [compact(node, ("addresses", "names", "local", "mac", "knowledge_source"))
                        for node in hosts]
