@@ -80,6 +80,7 @@ Inside the container, try:
 ```bash
 hostname
 id
+apt-get update
 mkdir -p /tmp/nsg-demo
 echo "hello from monitored docker" > /tmp/nsg-demo/hello.txt
 curl -I https://example.com
@@ -140,6 +141,8 @@ docker exec nsg-observer-manual curl -I --max-time 10 https://example.com
 If DNS resolves but HTTPS times out, inspect the host's `DOCKER-USER` firewall
 chain and Docker NAT rules. Those host rules are outside the image and can block
 outbound container traffic even when the container configuration is correct.
+The image rewrites the official Ubuntu APT sources to HTTPS so `apt-get update`
+does not depend on outbound port 80.
 
 ## Agent state graph
 
@@ -232,6 +235,25 @@ the observed container can read it directly:
 tail -n 10 /observation/trajectory/sequence.jsonl
 jq . /observation/trajectory/current.json
 ```
+
+For a resolved, human-readable `state before -> action -> state after` view,
+including compact summaries rather than file references, run inside:
+
+```bash
+trajectory-view --limit 10 --exclude-generic
+```
+
+Or run the same viewer from the repository on the host:
+
+```bash
+observer/bin/trajectory-view \
+  --input observation/manual-run/trajectory \
+  --limit 10 --exclude-generic
+```
+
+Add `--changed-only` to keep only actions that created a material state change.
+Use `--format jsonl` to emit one embedding/ML-friendly transition object per
+line, with nested `state_before`, `action`, and `state_after` summaries.
 
 An external controller reads the same files through the evidence volume. It
 can also run a separate live monitor, using a different output directory:
