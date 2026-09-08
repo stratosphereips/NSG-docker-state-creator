@@ -44,16 +44,32 @@ CMD ["--listen", "0.0.0.0:8080"]
 run its observed derivative as:
 
 ```bash
+docker network inspect observed-outbound >/dev/null 2>&1 || \
+  docker network create observed-outbound
+mkdir -p observation/application-run
+
 docker run --rm \
+  --network observed-outbound \
   --privileged \
   --security-opt seccomp=unconfined \
   -p 8080:8080 \
-  -v application-evidence:/observation \
+  -v "$(pwd)/observation/application-run:/observation" \
   -v /lib/modules:/lib/modules:ro \
   -v /usr/src:/usr/src:ro \
   registry.example/team/application-observed:1.2.3 \
   /usr/local/bin/server --listen 0.0.0.0:8080
 ```
+
+This bind mount writes evidence into the repository path
+`observation/application-run`. A named Docker volume such as
+`application-evidence:/observation` also works, but its files live in Docker's
+volume storage, not in `./observation`.
+
+`observed-outbound` is a normal user-defined Docker bridge: the application
+retains an isolated network namespace and Docker supplies DNS and outbound NAT.
+For an existing application, use its original `--network` value instead so its
+service discovery and connectivity remain unchanged. If that network is marked
+`internal: true`, it intentionally has no internet access.
 
 Inspect the original configuration with:
 
@@ -71,8 +87,10 @@ services:
     privileged: true
     security_opt:
       - seccomp=unconfined
+    networks:
+      - observed-outbound
     volumes:
-      - application-evidence:/observation
+      - ./observation/application-run:/observation
       - /lib/modules:/lib/modules:ro
       - /usr/src:/usr/src:ro
     command:
@@ -88,8 +106,9 @@ services:
       # Optional: preserve an original non-root runtime user.
       # OBS_WORKLOAD_USER: "1000:1000"
 
-volumes:
-  application-evidence:
+networks:
+  observed-outbound:
+    driver: bridge
 ```
 
 Keep the application's original ports, networks, environment variables,
@@ -111,7 +130,7 @@ different level:
 ```bash
 docker run --rm \
   --entrypoint state-builder \
-  -v application-evidence:/observation \
+  -v "$(pwd)/observation/application-run:/observation" \
   registry.example/team/application-observed:1.2.3 \
   --input /observation \
   --output /observation/state-forensic \
@@ -131,7 +150,7 @@ the evidence volume mounted can consume its ordered index:
 tail -n 20 /observation/trajectory/sequence.jsonl
 
 # Outside, without running another writer
-docker run --rm -v application-evidence:/evidence:ro ubuntu:24.04 \
+docker run --rm -v "$(pwd)/observation/application-run:/evidence:ro" ubuntu:24.04 \
   tail -n 20 /evidence/trajectory/sequence.jsonl
 ```
 
@@ -141,7 +160,7 @@ embedded writer with `OBS_ENABLE_TRAJECTORY=0` and keep a sidecar running:
 ```bash
 docker run --rm \
   --entrypoint trajectory-monitor \
-  -v application-evidence:/observation \
+  -v "$(pwd)/observation/application-run:/observation" \
   registry.example/team/application-observed:1.2.3 \
   --input /observation --output /observation/trajectory-external \
   --level operational --sensitivity material --watch
