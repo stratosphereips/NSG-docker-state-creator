@@ -39,6 +39,14 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends zeek \
     && rm -rf /var/lib/apt/lists/*
 
+# Some hosts intentionally block outbound container traffic on port 80. Keep
+# runtime APT operations on HTTPS after ca-certificates has been installed.
+RUN find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) \
+    -exec sed -i \
+      -e 's|http://archive.ubuntu.com|https://archive.ubuntu.com|g' \
+      -e 's|http://security.ubuntu.com|https://security.ubuntu.com|g' \
+      -e 's|http://ports.ubuntu.com|https://ports.ubuntu.com|g' {} +
+
 COPY observer /opt/nsg-observer
 COPY examples /opt/nsg-observer/examples
 
