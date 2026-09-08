@@ -1,5 +1,5 @@
 {
-  "schema_version": "nsg-state-graph/1.0",
+  "schema_version": "nsg-state-graph/1.1",
   "profiles": {
     "forensic": {
       "description": "Maximum entity, process, flow, attribute, and raw evidence detail.",
@@ -67,6 +67,12 @@
     "5672": "amqp", "5900": "vnc", "6379": "redis", "6443": "kubernetes-api",
     "8080": "http-alt", "8443": "https-alt", "9200": "elasticsearch",
     "11211": "memcached", "27017": "mongodb"
+  },
+  "network_inference": {
+    "enabled": true,
+    "ipv4_prefix": 24,
+    "ipv6_prefix": 64,
+    "confidence": 0.35
   },
   "block_inference": {
     "zeek_no_reply_states": ["S0", "RSTOS0", "SH", "SHR"],
