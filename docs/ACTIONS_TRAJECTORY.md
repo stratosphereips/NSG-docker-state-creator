@@ -146,6 +146,39 @@ tail -n 1 /observation/trajectory/sequence.jsonl
 jq . /observation/trajectory/current.json
 ```
 
+### Read resolved state/action/state transitions
+
+`sequence.jsonl` is deliberately a small index. Use `trajectory-view` to join
+its action and state references into a clear transition summary:
+
+```bash
+# Inside the observed container
+trajectory-view --limit 10 --exclude-generic
+
+# Outside, from this repository
+observer/bin/trajectory-view \
+  --input observation/manual-run/trajectory \
+  --limit 10 --exclude-generic
+```
+
+Each result contains the state-before timestamp and six-domain summary, command
+and actor details, action timestamps/result/effects, changed domains and delta
+counts, followed by the state-after summary. The same state ID on both sides
+means the action was observed but did not materially change configured state.
+
+Useful filters and formats:
+
+```bash
+# Only transitions that generated a new state
+trajectory-view --changed-only --exclude-generic --limit 20
+
+# One complete compact transition object per JSONL line for agents/ML
+trajectory-view --format jsonl --exclude-generic --limit 20
+
+# Include low-level generic process/eBPF actions too
+trajectory-view --limit 20
+```
+
 ## Run or consume outside the observed container
 
 An external program can consume the named volume read-only at any time. To run
