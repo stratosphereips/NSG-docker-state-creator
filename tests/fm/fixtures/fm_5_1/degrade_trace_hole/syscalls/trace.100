@@ -1,0 +1,4 @@
+1757200002.050000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "engagement triage"], /* 5 vars */) = 0 <0.000412>
+1757200005.000000 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x55f2a1c21650) = 102 <0.000210>
+1757200019.950000 exit_group(0)     = 0
+1757200019.960000 +++ exited with 0 +++

@@ -1,0 +1,2 @@
+{"archive_changed_files": true, "event": "baseline_complete", "files": 1200, "hash_max_bytes": 0, "interval_seconds": 30, "source": "state-reconciler", "timestamp": 1757200000.3}
+{"duration_seconds": 1.2, "event": "scan_complete", "files": 1200, "source": "state-reconciler", "timestamp": 1757200015.5}

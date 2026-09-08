@@ -1,0 +1,11 @@
+{
+  "archive_enabled": true,
+  "contract_version": "2026-09-c",
+  "delivery_residue": [
+    {
+      "path": "/opt/lure/payload.sh",
+      "sha256": "5298a7993d7cd665e00c697ad3fd05744c790431d12543bd6ee8f3658f648c29"
+    }
+  ],
+  "mark": "3f2a9c4d7e81b0605aa3c7f2d1e4b8a6"
+}

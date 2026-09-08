@@ -1,0 +1,8 @@
+1757200010.000000 execve("/usr/bin/ssh", ["/usr/bin/ssh", "-p", "22", "user@10.10.0.5"], /* 5 vars */) = 0 <0.000510>
+1757200010.100000 connect(3<TCP:[3]>, {sa_family=AF_INET, sin_port=htons(22), sin_addr=inet_addr("10.10.0.5")}, 16) = 0 <0.031000>
+1757200011.100000 connect(4<TCP:[4]>, {sa_family=AF_INET, sin_port=htons(22), sin_addr=inet_addr("10.10.0.5")}, 16) = 0 <0.031000>
+1757200012.000000 sendto(4<UDP:[127.0.0.1:40123]>, "\x00\x01query", 9, MSG_DONTWAIT, {sa_family=AF_INET, sin_port=htons(53), sin_addr=inet_addr("10.10.0.2")}, 16) = 9 <0.000200>
+1757200013.000000 connect(5<TCP:[5]>, {sa_family=AF_INET, sin_port=htons(8080), sin_addr=inet_addr("127.0.0.1")}, 16) = 0 <0.000090>
+1757200014.000000 sendto(6<NETLINK:[6]>, {nlmsg_len=20, nlmsg_type=0x10}, 20, 0, {sa_family=AF_NETLINK, nl_pid=0}, 12) = 20 <0.000100>
+1757200015.000000 exit_group(0)     = 0
+1757200015.050000 +++ exited with 0 +++

@@ -1,0 +1,2 @@
+1757200008.000000 execve("/usr/bin/sh", ["/usr/bin/sh", "-c", "echo 3f2a9c4d7e81b0605aa3c7f2d1e4b8a6"], /* 5 vars */) = 0
+1757200008.500000 +++ exited with 0 +++

@@ -1,0 +1,9 @@
+{"event": "monitor_started", "interval_seconds": 1.0, "source": "socket-monitor", "timestamp": 1757200000.55}
+{"event": "connection_seen", "socket": "ESTAB 0 0 172.17.0.2:40122 10.10.1.1:80 users:((\"scan-child\",pid=101,fd=3))", "source": "socket-monitor", "timestamp": 1757200010.5}
+{"event": "connection_gone", "socket": "ESTAB 0 0 172.17.0.2:40122 10.10.1.1:80 users:((\"scan-child\",pid=101,fd=3))", "source": "socket-monitor", "timestamp": 1757200012.5}
+{"event": "connection_seen", "socket": "ESTAB 0 0 172.17.0.2:40123 10.10.1.2:80 users:((\"scan-child\",pid=101,fd=3))", "source": "socket-monitor", "timestamp": 1757200011.5}
+{"event": "connection_gone", "socket": "ESTAB 0 0 172.17.0.2:40123 10.10.1.2:80 users:((\"scan-child\",pid=101,fd=3))", "source": "socket-monitor", "timestamp": 1757200013.5}
+{"event": "connection_seen", "socket": "ESTAB 0 0 172.17.0.2:40124 10.10.1.3:80 users:((\"scan-child\",pid=101,fd=3))", "source": "socket-monitor", "timestamp": 1757200012.5}
+{"event": "connection_gone", "socket": "ESTAB 0 0 172.17.0.2:40124 10.10.1.3:80 users:((\"scan-child\",pid=101,fd=3))", "source": "socket-monitor", "timestamp": 1757200014.5}
+{"event": "connection_seen", "socket": "ESTAB 0 0 172.17.0.2:40125 10.10.1.4:80 users:((\"scan-child\",pid=101,fd=3))", "source": "socket-monitor", "timestamp": 1757200013.5}
+{"event": "connection_gone", "socket": "ESTAB 0 0 172.17.0.2:40125 10.10.1.4:80 users:((\"scan-child\",pid=101,fd=3))", "source": "socket-monitor", "timestamp": 1757200015.5}

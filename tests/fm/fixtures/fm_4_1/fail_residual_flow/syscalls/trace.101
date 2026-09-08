@@ -1,0 +1,5 @@
+1757300006.050000 execve("/usr/bin/verify-child", ["/usr/bin/verify-child", "--target", "10.10.0.5"], /* 5 vars */) = 0 <0.000400>
+1757300030.000000 connect(3<TCP:[3]>, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("10.10.0.5")}, 16) = 0 <0.031000>
+1757300065.000000 connect(4<TCP:[4]>, {sa_family=AF_INET, sin_port=htons(22), sin_addr=inet_addr("10.10.0.5")}, 16) = 0 <0.031000>
+1757300063.900000 exit_group(0)     = 0
+1757300063.950000 +++ exited with 0 +++

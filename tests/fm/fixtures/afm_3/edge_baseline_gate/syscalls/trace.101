@@ -1,0 +1,5 @@
+1757200010.000000 execve("/usr/bin/curl", ["/usr/bin/curl", "http://10.10.0.5/"], /* 5 vars */) = 0 <0.000400>
+1757200010.300000 connect(3<TCP:[3]>, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("10.10.0.5")}, 16) = 0 <0.031000>
+1757200012.300000 connect(4<TCP:[4]>, {sa_family=AF_INET, sin_port=htons(8080), sin_addr=inet_addr("10.10.0.5")}, 16) = 0 <0.031000>
+1757200014.000000 exit_group(0)     = 0
+1757200014.050000 +++ exited with 0 +++

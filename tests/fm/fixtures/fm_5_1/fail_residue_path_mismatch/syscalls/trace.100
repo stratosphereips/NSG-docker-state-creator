@@ -1,0 +1,4 @@
+1757200002.050000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "engagement triage"], /* 5 vars */) = 0 <0.000412>
+1757200009.000000 write(3</opt/lure/payload.sh.bak>, "#!/bin/sh\nMARK=3f2a9c4d7e81b0605aa3c7f2d1e4b8a6\n", 26) = 26
+1757200019.950000 exit_group(0)     = 0
+1757200019.960000 +++ exited with 0 +++

@@ -1,0 +1,7 @@
+1757200010.100000 connect(3<TCP:[3]>, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("10.10.0.5")}, 16) = 0 <0.031000>
+1757200010.200000 connect(4<TCP:[4]>, {sa_family=AF_INET, sin_port=htons(81), sin_addr=inet_addr("10.10.0.5")}, 16) = 0 <0.031000>
+1757200010.300000 connect(5<TCP:[5]>, {sa_family=AF_INET, sin_port=htons(82), sin_addr=inet_addr("10.10.0.5")}, 16) = 0 <0.031000>
+1757200010.400000 connect(6<TCP:[6]>, {sa_family=AF_INET, sin_port=htons(83), sin_addr=inet_addr("10.10.0.5")}, 16) = -1 ECONNREFUSED (Connection refused)
+1757200010.500000 connect(7<TCP:[7]>, {sa_family=AF_INET, sin_port=htons(84), sin_addr=inet_addr("10.10.0.5")}, 16) = -1 ECONNREFUSED (Connection refused)
+1757200012.000000 exit_group(0)     = 0
+1757200012.050000 +++ exited with 0 +++

@@ -1,0 +1,13 @@
+{
+  "contract_version": "2026-09-c",
+  "completion_ts": 1757300060.0,
+  "adversary_addresses": ["10.10.0.0/24", "172.17.0.2"],
+  "protected_targets": [
+    {"host": "10.10.0.5", "ports": [[22, 22], [53, 53], [8125, 8125]]}
+  ],
+  "grace_seconds": 30.0,
+  "static_allowlist": [
+    {"cidr": "0.0.0.0/0", "ports": [[8125, 8125]]}
+  ],
+  "dns_cap": 2
+}

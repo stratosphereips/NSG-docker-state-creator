@@ -1,0 +1,2 @@
+1757200003.100000 execve("/usr/bin/bash", ["/usr/bin/bash"], /* 5 vars */) = 0 <0.000180>
+1757200019.900000 +++ exited with 0 +++

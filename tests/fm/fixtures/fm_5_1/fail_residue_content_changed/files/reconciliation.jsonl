@@ -1,0 +1,3 @@
+{"archive_changed_files": true, "event": "baseline_complete", "files": 1200, "hash_max_bytes": 0, "interval_seconds": 30, "source": "state-reconciler", "timestamp": 1757200000.3}
+{"event": "file_changed", "path": "/opt/lure/payload.sh", "previous_state": [33188, 0, 0, 133, 1757000000000000000, 1757000000000000000, "5298a7993d7cd665e00c697ad3fd05744c790431d12543bd6ee8f3658f648c29"], "source": "state-reconciler", "state": [33188, 0, 0, 143, 1757000000000000000, 1757000000000000000, "bf3a51bfc7577c03a8a42cfad97cf33e9a98fa5ec69af3d7ae48b67ebe453ce5"], "timestamp": 1757200015.1}
+{"duration_seconds": 1.2, "event": "scan_complete", "files": 1201, "source": "state-reconciler", "timestamp": 1757200015.5}

@@ -1,0 +1,4 @@
+1757200002.050000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "engagement triage"], /* 5 vars */) = 0 <0.000412>
+1757200005.000000 write(1</dev/pts/0>, "listing ok\n", 11) = 11
+1757200020.000000 execve("/usr/bin/sh", ["/usr/bin/sh", "-c", "echo 3f2a9c4d7e81b0605aa3c7f2d1e4b8a6"], /* 5 vars */) = 0
+1757200020.000000 +++ exited with 0 +++
