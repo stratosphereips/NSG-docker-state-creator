@@ -10,8 +10,10 @@ services:
     security_opt:
       - seccomp=unconfined
       - apparmor=unconfined
+    networks:
+      - observer-internet
     volumes:
-      - observation:/observation
+      - ./observation/demo-run:/observation
       - /lib/modules:/lib/modules:ro
       - /usr/src:/usr/src:ro
     environment:
@@ -21,5 +23,6 @@ services:
       OBS_SNAPSHOT_INTERVAL: "5"
     command: ["/opt/nsg-observer/examples/demo-workload.sh"]
 
-volumes:
-  observation:
+networks:
+  observer-internet:
+    driver: bridge
