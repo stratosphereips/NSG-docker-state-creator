@@ -32,39 +32,114 @@ recording a file event would recursively generate another file event.
 
 ## Quick start
 
-Build the image:
+Step 1: build the image once:
 
 ```bash
-docker build -t nsg-observer:local .
+docker build --network=host -t nsg-observer:local .
 ```
 
-Run a command inside the observed container:
+The `--network=host` option is only for the build step. It helps Docker reach
+Ubuntu package mirrors when Docker's isolated build DNS is unreliable.
+
+Step 2: choose one run mode.
+
+Use this for a detached monitored Ubuntu container that you can enter with
+`docker exec` and run commands by hand. This example writes directly into the
+repo folder `observation/manual-run`:
 
 ```bash
-docker volume create nsg-observation
+docker network inspect nsg-observer-internet >/dev/null 2>&1 || \
+  docker network create nsg-observer-internet
+mkdir -p observation/manual-run
 
-docker run --rm -it \
+docker run -d \
+  --name nsg-observer-manual \
+  --network nsg-observer-internet \
   --privileged \
   --security-opt seccomp=unconfined \
-  -v nsg-observation:/observation \
+  -v "$(pwd)/observation/manual-run:/observation" \
   -v /lib/modules:/lib/modules:ro \
   -v /usr/src:/usr/src:ro \
-  nsg-observer:local bash
+  nsg-observer:local sleep infinity
 ```
 
-Run the bundled demonstration with Compose:
+The dedicated user-defined bridge keeps the container in its own network
+namespace while Docker provides outbound NAT and DNS. It is not host networking.
+This also avoids relying on Docker's legacy default `bridge`, whose NAT rules may
+be missing or overridden on hosts that run firewall or network-lab software.
+
+Enter the running container and create some file, process, and internet
+activity:
+
+```bash
+docker exec -it nsg-observer-manual bash
+```
+
+Inside the container, try:
+
+```bash
+hostname
+id
+mkdir -p /tmp/nsg-demo
+echo "hello from monitored docker" > /tmp/nsg-demo/hello.txt
+curl -I https://example.com
+getent hosts example.com
+ping -c 1 1.1.1.1
+ss -tuna
+exit
+```
+
+Or use Compose instead for the bundled automated demo workload:
 
 ```bash
 docker compose up --build --abort-on-container-exit
 ```
 
-Inspect the result without adding tools to the observed container:
+Do not run both unless you intentionally want two separate demonstrations.
+`docker run` is for your manual session. `docker compose up` is only a shortcut
+that builds the same image and runs `examples/demo-workload.sh`.
+
+Step 3: inspect the result without adding tools to the observed container:
 
 ```bash
-docker run --rm -it \
-  -v nsg-observation:/observation:ro \
-  ubuntu:24.04 find /observation -maxdepth 3 -type f -ls
+find observation/manual-run -maxdepth 3 -type f -ls
 ```
+
+Read the live state and action sequence from outside the container:
+
+```bash
+jq . observation/manual-run/state/summary.json
+tail -n 20 observation/manual-run/trajectory/sequence.jsonl
+jq . observation/manual-run/trajectory/current.json
+```
+
+Read the same state and action sequence from inside the container:
+
+```bash
+docker exec -it nsg-observer-manual bash
+jq . /observation/state/summary.json
+tail -n 20 /observation/trajectory/sequence.jsonl
+jq . /observation/trajectory/current.json
+exit
+```
+
+Stop the manual example when finished:
+
+```bash
+docker rm -f nsg-observer-manual
+```
+
+To verify internet access independently of the observer:
+
+```bash
+docker exec nsg-observer-manual ip route
+docker exec nsg-observer-manual getent hosts example.com
+docker exec nsg-observer-manual curl -I --max-time 10 https://example.com
+```
+
+If DNS resolves but HTTPS times out, inspect the host's `DOCKER-USER` firewall
+chain and Docker NAT rules. Those host rules are outside the image and can block
+outbound container traffic even when the container configuration is correct.
 
 ## Agent state graph
 
@@ -105,13 +180,13 @@ core state categories.
 ### Build or replay state outside the monitored Docker
 
 An external controller uses the same `state-builder` binary and the same
-observation volume. This is useful for a forensic rebuild after a run, or for a
-second graph detail level:
+observation directory. This is useful for a forensic rebuild after a run, or
+for a second graph detail level:
 
 ```bash
 docker run --rm \
   --entrypoint state-builder \
-  -v nsg-observation:/observation \
+  -v "$(pwd)/observation/manual-run:/observation" \
   nsg-observer:local \
   --input /observation --output /observation/state-forensic --level forensic
 ```
@@ -164,7 +239,7 @@ can also run a separate live monitor, using a different output directory:
 ```bash
 docker run --rm \
   --entrypoint trajectory-monitor \
-  -v nsg-observation:/observation \
+  -v "$(pwd)/observation/manual-run:/observation" \
   nsg-observer:local \
   --input /observation --output /observation/trajectory-external \
   --level operational --sensitivity material --watch
@@ -189,10 +264,12 @@ docker build \
 Run the derived image using the original image's command:
 
 ```bash
+mkdir -p observation/their-run
+
 docker run --rm \
   --privileged \
   --security-opt seccomp=unconfined \
-  -v their-observation:/observation \
+  -v "$(pwd)/observation/their-run:/observation" \
   -v /lib/modules:/lib/modules:ro \
   -v /usr/src:/usr/src:ro \
   their-image-observed:tag \
