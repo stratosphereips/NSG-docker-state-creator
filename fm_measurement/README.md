@@ -55,6 +55,7 @@ Core trust rules, shared across every surface below:
 | `docs/ATTRIBUTION_HARDENING_DESIGN.md` | Design for deterministic multi-actor attribution (defeat strategies → defenses), verified against live kernel facts. Underpins the attribution rules used by the detectors. |
 | `docs/experiment_design.tex` | Paper-facing experiment design (defender-side; 4 RQs, FM taxonomy, experiments E1–E5). |
 | `docs/experiment_design_unified.tex` | Unified design covering both roles: shared / defender-only / attacker-only modes (SFM/AFM ids), E1–E8. Condensed companion of the playbook. |
+| `registry/` | **Unified FM registry.** `fm_registry.json` maps all 32 taxonomy modes (21 FM + 4 AFM + 7 SFM) to every surface implementing them (19 measured somewhere), with rejection reasons for the rest. `registry/README.md` renders the unified table; `tests/fm/test_fm_registry.py` enforces it against the code bidirectionally. |
 | `sms_harness/` | The deterministic measurement harness. See its own `README.md`, `DESIGN.md`…`DESIGN4.md` (contracts), `RESULTS.md` (per-FM verdicts + how to run), `COVERAGE.md` (honest clause-level coverage vs the playbook). |
 | `topology/fm-defender-lab.topology.json` | The **as-deployed** saved topology of the live lab (2 networks: attack_net 10.10.0.0/24 with the guarded attacker box, server_net 10.20.0.0/24 with server [nginx→Flask→PostgreSQL, SQLi + weak pg superuser] and vault [weak SSH]; nft-only router; slips monitoring). The source form shipped with the harness is `sms_harness/lab/fm_lab_topology.json`. |
 
