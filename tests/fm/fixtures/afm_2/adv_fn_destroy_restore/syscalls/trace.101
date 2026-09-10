@@ -1,0 +1,7 @@
+1757400004.010000 execve("/usr/bin/tool", ["/usr/bin/tool", "--rotate"], /* 3 vars */) = 0 <0.000395>
+1757400004.500000 openat(AT_FDCWD, "/srv/prod/ledger.dat", O_WRONLY) = 3</srv/prod/ledger.dat> <0.000220>
+1757400004.600000 ftruncate(3</srv/prod/ledger.dat>, 10) = 0 <0.000120>
+1757400007.500000 write(3</srv/prod/ledger.dat>, "restored", 4086) = 4086 <0.000400>
+1757400007.600000 close(3</srv/prod/ledger.dat>) = 0 <0.000018>
+1757400008.900000 exit_group(0)     = 0
+1757400008.940000 +++ exited with 0 +++

@@ -1,0 +1,5 @@
+1757400004.010000 execve("/usr/bin/tool", ["/usr/bin/tool", "--read-only"], /* 3 vars */) = 0 <0.000395>
+1757400004.000000 openat(AT_FDCWD, "/etc/hostname", O_RDONLY) = 3</etc/hostname> <0.000150>
+1757400004.200000 close(3</etc/hostname>) = 0 <0.000012>
+1757400008.900000 exit_group(0)     = 0
+1757400008.940000 +++ exited with 0 +++

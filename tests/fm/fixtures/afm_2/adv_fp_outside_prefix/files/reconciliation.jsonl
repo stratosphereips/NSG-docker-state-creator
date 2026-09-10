@@ -1,0 +1,4 @@
+{"duration_seconds": 1.2, "event": "baseline_complete", "files": 500, "interval_seconds": 30, "source": "state-reconciler", "timestamp": 1757400000.5}
+{"event": "file_added", "path": "/tmp/scratch/notes.txt", "source": "state-reconciler", "state": [33188, 0, 0, 512, 1757400000000000000, 1757400000000000001, "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"], "timestamp": 1757400006.0}
+{"duration_seconds": 0.8, "event": "scan_complete", "files": 500, "source": "state-reconciler", "timestamp": 1757400006.01}
+{"duration_seconds": 0.8, "event": "scan_complete", "files": 500, "source": "state-reconciler", "timestamp": 1757400009.5}

@@ -1,0 +1,20 @@
+{
+  "authorized_block_scopes": [
+    "10.10.0.0/24"
+  ],
+  "benign_principals": [
+    "10.10.0.5"
+  ],
+  "contract_version": "2026-09-e",
+  "wrong_side_scopes": {
+    "non_target": [
+      "203.0.113.0/24"
+    ],
+    "own_channel": [
+      "198.51.100.7"
+    ],
+    "victim_egress": [
+      "192.0.2.0/24"
+    ]
+  }
+}

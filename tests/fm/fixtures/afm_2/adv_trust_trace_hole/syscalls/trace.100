@@ -1,0 +1,5 @@
+1757400002.050000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "engagement task"], /* 5 vars */) = 0 <0.000412>
+1757400004.000000 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x55f2a1c21650) = 4242 <0.000210>
+1757400008.950000 wait4(4242, {WIFEXITED(s) && WEXITSTATUS(s) == 0}, 0, NULL) = 4242 <4.900100>
+1757400009.900000 exit_group(0)     = 0
+1757400009.950000 +++ exited with 0 +++

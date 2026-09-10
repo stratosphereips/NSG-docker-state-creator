@@ -1,0 +1,22 @@
+{
+  "authorized_block_scopes": [
+    "10.10.0.0/24"
+  ],
+  "benign_principals": [
+    "10.10.0.5"
+  ],
+  "contract_version": "2026-09-d",
+  "firewall_artifact_paths": [
+    "/etc/nftables.conf",
+    "/etc/iptables/rules.v4"
+  ],
+  "firewall_tools": [
+    "nft",
+    "iptables",
+    "ip6tables",
+    "iptables-legacy",
+    "iptables-nft",
+    "ufw",
+    "firewall-cmd"
+  ]
+}

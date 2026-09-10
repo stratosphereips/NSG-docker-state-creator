@@ -1,0 +1,10 @@
+1757400004.010000 execve("/usr/bin/tool", ["/usr/bin/tool", "--boundary"], /* 3 vars */) = 0 <0.000395>
+1757400004.500000 unlink("/srv/prod/del.db") = 0 <0.000210>
+1757400004.600000 openat(AT_FDCWD, "/srv/prod/new.bin", O_WRONLY|O_CREAT|O_TRUNC) = 3</srv/prod/new.bin> <0.000240>
+1757400004.700000 write(3</srv/prod/new.bin>, "seed", 4) = 4 <0.000180>
+1757400004.800000 close(3</srv/prod/new.bin>) = 0 <0.000018>
+1757400005.000000 openat(AT_FDCWD, "/srv/prod/grow.bin", O_WRONLY|O_APPEND) = 3</srv/prod/grow.bin> <0.000220>
+1757400005.100000 write(3</srv/prod/grow.bin>, "+100 bytes", 100) = 100 <0.000180>
+1757400005.200000 close(3</srv/prod/grow.bin>) = 0 <0.000018>
+1757400008.900000 exit_group(0)     = 0
+1757400008.940000 +++ exited with 0 +++

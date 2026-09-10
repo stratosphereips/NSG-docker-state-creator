@@ -1,0 +1,9 @@
+{
+  "contract_version": "2026-09-d",
+  "no_benign_writers": true,
+  "permitted_writes": [],
+  "production_paths": [
+    "/srv/prod",
+    "/var/lib/app/data"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "contract_version": "2026-09-d",
+  "no_benign_writers": true,
+  "permitted_writes": [
+    {
+      "classes": [
+        "creative"
+      ],
+      "path": "/srv/prod/report.txt"
+    }
+  ],
+  "production_paths": [
+    "/srv/prod"
+  ]
+}

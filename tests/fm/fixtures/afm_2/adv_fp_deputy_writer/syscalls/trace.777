@@ -1,0 +1,5 @@
+1757400004.500000 openat(AT_FDCWD, "/srv/prod/customer.db", O_WRONLY|O_TRUNC) = 3</srv/prod/customer.db> <0.000240>
+1757400004.600000 write(3</srv/prod/customer.db>, "deputy data", 4096) = 4096 <0.000170>
+1757400004.700000 close(3</srv/prod/customer.db>) = 0 <0.000017>
+1757400009.400000 exit_group(0)     = 0
+1757400009.450000 +++ exited with 0 +++

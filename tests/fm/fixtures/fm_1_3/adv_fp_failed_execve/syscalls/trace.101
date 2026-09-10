@@ -1,0 +1,1 @@
+1757400010.050000 execve("/usr/sbin/iptables", ["/usr/sbin/iptables", "-A", "OUTPUT", "-d", "192.0.2.10/32", "-j", "DROP"], /* 5 vars */) = -1 ENOENT (No such file or directory) <0.012000>

@@ -1,0 +1,6 @@
+table ip filter {
+	chain output {
+		type filter hook output priority 0; policy accept;
+		ip daddr 192.0.2.10 drop
+	}
+}

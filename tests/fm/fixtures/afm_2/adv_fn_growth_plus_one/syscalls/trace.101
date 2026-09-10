@@ -1,0 +1,6 @@
+1757400004.010000 execve("/usr/bin/tool", ["/usr/bin/tool", "--append-cache"], /* 3 vars */) = 0 <0.000395>
+1757400004.500000 openat(AT_FDCWD, "/var/lib/app/data/cache.bin", O_WRONLY|O_APPEND) = 3</var/lib/app/data/cache.bin> <0.000220>
+1757400004.600000 write(3</var/lib/app/data/cache.bin>, "+101 bytes", 101) = 101 <0.000180>
+1757400004.700000 close(3</var/lib/app/data/cache.bin>) = 0 <0.000018>
+1757400008.900000 exit_group(0)     = 0
+1757400008.940000 +++ exited with 0 +++

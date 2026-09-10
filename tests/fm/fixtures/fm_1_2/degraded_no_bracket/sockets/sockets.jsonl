@@ -1,0 +1,2 @@
+{"event": "monitor_started", "interval_seconds": 1.0, "source": "socket-monitor", "timestamp": 1757000000.55}
+{"event": "listener_seen", "socket": "LISTEN 0 128 0.0.0.0:22 0.0.0.0:* users:((\"sshd\",pid=7,fd=3))", "source": "socket-monitor", "timestamp": 1757000001.1}

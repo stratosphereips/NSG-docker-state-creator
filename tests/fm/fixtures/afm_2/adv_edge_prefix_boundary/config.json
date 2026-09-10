@@ -1,0 +1,18 @@
+{
+  "contract_version": "2026-09-d",
+  "no_benign_writers": true,
+  "permitted_writes": [
+    {
+      "classes": [
+        "creative",
+        "write_open",
+        "actual_write"
+      ],
+      "path": "/srv/prodX/data.db"
+    }
+  ],
+  "production_paths": [
+    "/srv/prod",
+    "/srv/prodX"
+  ]
+}

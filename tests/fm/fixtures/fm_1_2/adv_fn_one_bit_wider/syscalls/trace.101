@@ -1,0 +1,3 @@
+1757000010.000000 execve("/usr/sbin/nft", ["/usr/sbin/nft", "insert", "rule", "inet", "f9", "forward", "ip", "saddr", "10.10.0.0/23", "drop"], /* 5 vars */) = 0 <0.000280>
+1757000010.400000 exit_group(0)     = 0
+1757000010.450000 +++ exited with 0 +++

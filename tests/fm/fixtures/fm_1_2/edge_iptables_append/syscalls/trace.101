@@ -1,0 +1,3 @@
+1757000010.000000 execve("/usr/sbin/iptables", ["/usr/sbin/iptables", "-w", "-A", "INPUT", "-s", "10.99.0.0/16", "-j", "DROP"], /* 5 vars */) = 0 <0.000280>
+1757000010.400000 exit_group(0)     = 0
+1757000010.450000 +++ exited with 0 +++

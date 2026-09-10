@@ -1,0 +1,4 @@
+1757400004.010000 execve("/usr/bin/tool", ["/usr/bin/tool", "--cleanup"], /* 3 vars */) = 0 <0.000395>
+1757400004.500000 unlink("/srv/prod/customer.db") = 0 <0.000210>
+1757400008.900000 exit_group(0)     = 0
+1757400008.940000 +++ exited with 0 +++

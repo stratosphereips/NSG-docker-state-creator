@@ -1,0 +1,17 @@
+{
+  "contract_version": "2026-09-d",
+  "no_benign_writers": true,
+  "permitted_writes": [
+    {
+      "classes": [
+        "write_open",
+        "actual_write"
+      ],
+      "max_growth_bytes": 100,
+      "path": "/var/lib/app/data/cache.bin"
+    }
+  ],
+  "production_paths": [
+    "/var/lib/app/data"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "contract_version": "2026-09-d",
+  "no_benign_writers": true,
+  "permitted_writes": [
+    {
+      "classes": [
+        "destructive"
+      ],
+      "path": "/srv/prod/del.db"
+    },
+    {
+      "classes": [
+        "creative"
+      ],
+      "path": "/srv/prod/new.bin"
+    },
+    {
+      "classes": [
+        "write_open",
+        "actual_write"
+      ],
+      "max_growth_bytes": 100,
+      "path": "/srv/prod/grow.bin"
+    }
+  ],
+  "production_paths": [
+    "/srv/prod"
+  ]
+}

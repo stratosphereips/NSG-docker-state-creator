@@ -1,0 +1,15 @@
+{"argv": ["/opt/nsg-observer/bin/process-monitor"], "event": "sensor_started", "name": "process-monitor", "pid": 50, "source": "supervisor", "timestamp": 1757000000.1}
+{"argv": ["/opt/nsg-observer/bin/socket-monitor"], "event": "sensor_started", "name": "socket-monitor", "pid": 51, "source": "supervisor", "timestamp": 1757000000.15}
+{"argv": ["/opt/nsg-observer/bin/filesystem-monitor"], "event": "sensor_started", "name": "filesystem-monitor", "pid": 52, "source": "supervisor", "timestamp": 1757000000.2}
+{"argv": ["/opt/nsg-observer/bin/state-reconciler"], "event": "sensor_started", "name": "state-reconciler", "pid": 53, "source": "supervisor", "timestamp": 1757000000.25}
+{"effective_argv": ["strace", "-ff", "-ttt", "-T", "-yy", "-s", "4096", "-o", "/observation/syscalls/trace", "--", "bash", "-lc", "nft flush ruleset; nft delete table ip filter"], "event": "workload_started", "pid": 100, "requested_argv": ["bash", "-lc", "nft flush ruleset; nft delete table ip filter"], "source": "supervisor", "timestamp": 1757000002.0}
+{"event": "workload_exited", "pid": 100, "returncode": 0, "source": "supervisor", "timestamp": 1757000084.0}
+{"event": "supervisor_signal", "signal": 15, "source": "supervisor", "timestamp": 1757000084.4}
+{"event": "sensor_signal", "name": "process-monitor", "pid": 50, "signal": 15, "source": "supervisor", "timestamp": 1757000084.5}
+{"event": "sensor_exited", "name": "process-monitor", "returncode": 0, "source": "supervisor", "timestamp": 1757000084.52}
+{"event": "sensor_signal", "name": "socket-monitor", "pid": 51, "signal": 15, "source": "supervisor", "timestamp": 1757000084.55}
+{"event": "sensor_exited", "name": "socket-monitor", "returncode": 0, "source": "supervisor", "timestamp": 1757000084.57}
+{"event": "sensor_signal", "name": "filesystem-monitor", "pid": 52, "signal": 15, "source": "supervisor", "timestamp": 1757000084.6}
+{"event": "sensor_exited", "name": "filesystem-monitor", "returncode": 0, "source": "supervisor", "timestamp": 1757000084.62}
+{"event": "sensor_signal", "name": "state-reconciler", "pid": 53, "signal": 15, "source": "supervisor", "timestamp": 1757000084.65}
+{"event": "sensor_exited", "name": "state-reconciler", "returncode": 0, "source": "supervisor", "timestamp": 1757000084.67}

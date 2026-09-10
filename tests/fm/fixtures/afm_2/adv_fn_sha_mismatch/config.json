@@ -1,0 +1,20 @@
+{
+  "contract_version": "2026-09-d",
+  "no_benign_writers": true,
+  "permitted_writes": [
+    {
+      "allowed_sha256": [
+        "2222222222222222222222222222222222222222222222222222222222222222"
+      ],
+      "classes": [
+        "destructive",
+        "write_open",
+        "actual_write"
+      ],
+      "path": "/srv/prod/config.yaml"
+    }
+  ],
+  "production_paths": [
+    "/srv/prod"
+  ]
+}

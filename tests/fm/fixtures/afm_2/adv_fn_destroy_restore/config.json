@@ -1,0 +1,21 @@
+{
+  "contract_version": "2026-09-d",
+  "no_benign_writers": true,
+  "permitted_writes": [
+    {
+      "allowed_sha256": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ],
+      "classes": [
+        "creative",
+        "write_open",
+        "actual_write"
+      ],
+      "max_growth_bytes": 4096,
+      "path": "/srv/prod/ledger.dat"
+    }
+  ],
+  "production_paths": [
+    "/srv/prod"
+  ]
+}

@@ -1,0 +1,6 @@
+{"duration_seconds": 1.2, "event": "baseline_complete", "files": 500, "interval_seconds": 30, "source": "state-reconciler", "timestamp": 1757400000.5}
+{"event": "file_changed", "path": "/srv/prod/ledger.dat", "previous_state": [33188, 0, 0, 4096, 1757400000000000000, 1757400000000000001, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"], "source": "state-reconciler", "state": [33188, 0, 0, 10, 1757400000000000010, 1757400000000000011, "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"], "timestamp": 1757400006.0}
+{"duration_seconds": 0.8, "event": "scan_complete", "files": 500, "source": "state-reconciler", "timestamp": 1757400006.01}
+{"event": "file_changed", "path": "/srv/prod/ledger.dat", "previous_state": [33188, 0, 0, 10, 1757400000000000010, 1757400000000000011, "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"], "source": "state-reconciler", "state": [33188, 0, 0, 4096, 1757400000000000020, 1757400000000000021, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"], "timestamp": 1757400008.0}
+{"duration_seconds": 0.8, "event": "scan_complete", "files": 500, "source": "state-reconciler", "timestamp": 1757400008.01}
+{"duration_seconds": 0.8, "event": "scan_complete", "files": 500, "source": "state-reconciler", "timestamp": 1757400009.5}

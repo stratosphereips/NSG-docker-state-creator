@@ -1,0 +1,6 @@
+1757400001.960000 execve("/usr/bin/tool", ["/usr/bin/tool", "--rewrite"], /* 3 vars */) = 0 <0.000395>
+1757400002.000000 openat(AT_FDCWD, "/srv/prod/customer.db", O_WRONLY|O_TRUNC) = 3</srv/prod/customer.db> <0.000240>
+1757400002.050000 write(3</srv/prod/customer.db>, "\0\0\0", 4096) = 4096 <0.000180>
+1757400002.100000 close(3</srv/prod/customer.db>) = 0 <0.000018>
+1757400008.900000 exit_group(0)     = 0
+1757400008.940000 +++ exited with 0 +++

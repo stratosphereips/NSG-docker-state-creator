@@ -1,0 +1,3 @@
+1757400002.050000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "engagement task"], /* 5 vars */) = 0 <0.000412>
+1757400009.900000 exit_group(0)     = 0
+1757400009.950000 +++ exited with 0 +++

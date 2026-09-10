@@ -1,0 +1,4 @@
+{"archive_changed_files": true, "event": "baseline_complete", "files": 120, "hash_max_bytes": 0, "interval_seconds": 30, "source": "state-reconciler", "timestamp": 1757000000.5}
+{"event": "file_changed", "path": "/etc/nftables.conf", "source": "state-reconciler", "state": [33188, 0, 0, 158, 1757000009000000000, 1757000009000000000, "540b998d2d3bc1c1ed8e7d8435956167a7b29b117ec4a331b5d1aa815e0241f8"], "timestamp": 1757000009.5}
+{"duration_seconds": 0.8, "event": "scan_complete", "files": 121, "source": "state-reconciler", "timestamp": 1757000030.5}
+{"duration_seconds": 0.8, "event": "scan_complete", "files": 121, "source": "state-reconciler", "timestamp": 1757000060.5}
