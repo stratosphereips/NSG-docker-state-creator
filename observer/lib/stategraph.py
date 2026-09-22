@@ -605,9 +605,18 @@ class StateCompiler:
             value = record.get(name, {})
             return value.get("data", []) if isinstance(value, dict) and value.get("ok") else []
 
-        for interface in payload("addresses"):
+        def list_payload(name: str) -> list[Any]:
+            """Ignore successful command output that was not actually structured JSON."""
+            value = payload(name)
+            return value if isinstance(value, list) else []
+
+        for interface in list_payload("addresses"):
+            if not isinstance(interface, dict):
+                continue
             ifname = interface.get("ifname", "")
             for address in interface.get("addr_info", []):
+                if not isinstance(address, dict):
+                    continue
                 local = str(address.get("local", ""))
                 prefix = address.get("prefixlen")
                 if not local or prefix is None:
@@ -622,7 +631,9 @@ class StateCompiler:
                                     {"interface": ifname, "address": local}, 1.0, evidence)
 
         for family in ("routes_v4", "routes_v6"):
-            for route in payload(family):
+            for route in list_payload(family):
+                if not isinstance(route, dict):
+                    continue
                 destination = route.get("dst", "default")
                 if destination == "default":
                     destination = "0.0.0.0/0" if family == "routes_v4" else "::/0"
@@ -638,7 +649,9 @@ class StateCompiler:
                 if gateway_id and target_id:
                     self.graph.edge(target_id, "VIA", gateway_id, confidence=0.98, evidence=evidence)
 
-        for neighbor in payload("neighbors"):
+        for neighbor in list_payload("neighbors"):
+            if not isinstance(neighbor, dict):
+                continue
             host_id = self._host(str(neighbor.get("dst", "")), "neighbor-table", 0.98, evidence,
                                  mac=neighbor.get("lladdr"), neighbor_state=neighbor.get("state"),
                                  interface=neighbor.get("dev"))
