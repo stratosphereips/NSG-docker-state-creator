@@ -33,13 +33,15 @@ def command(argv: list[str], parse_json: bool = False) -> dict[str, Any]:
         return {"ok": False, "argv": argv, "error": repr(exc)}
     value: Any = result.stdout
     error = result.stderr.strip()
+    parsed = True
     if parse_json and result.returncode == 0:
         try:
             value = json.loads(result.stdout or "[]")
         except json.JSONDecodeError as exc:
+            parsed = False
             error = f"invalid JSON: {exc}; {error}".strip("; ")
     return {
-        "ok": result.returncode == 0,
+        "ok": result.returncode == 0 and parsed,
         "returncode": result.returncode,
         "data": value,
         "error": error,
