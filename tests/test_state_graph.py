@@ -149,6 +149,32 @@ class StateGraphTest(unittest.TestCase):
         self.assertTrue(any(item.get("reason") == "local-firewall-rule"
                             for item in summary["known_blocks"]))
 
+    def test_plain_text_json_topology_payloads_are_ignored(self) -> None:
+        """Older iproute2 may accept -j but emit plain text with exit status zero."""
+        topology_path = self.root / "network" / "topology.jsonl"
+        topology = json.loads(topology_path.read_text(encoding="utf-8").splitlines()[-1])
+        topology["routes_v4"] = {
+            "ok": True,
+            "data": "default via 10.0.0.1 dev eth0\n10.0.0.0/24 dev eth0\n",
+            "error": "invalid JSON",
+        }
+        topology["routes_v6"] = {
+            "ok": True,
+            "data": "local ::1 dev lo table local\n",
+            "error": "invalid JSON",
+        }
+        topology["neighbors"] = {
+            "ok": True,
+            "data": "10.0.0.1 dev eth0 lladdr 00:11:22:33:44:55 REACHABLE\n",
+            "error": "invalid JSON",
+        }
+        self.jsonl("network/topology.jsonl", [topology])
+
+        graph = StateCompiler(self.root, "operational").compile()
+
+        self.assertTrue(any(item.get("cidr") == "10.0.0.0/24"
+                            for item in graph["summary"]["known_networks"]))
+
     def test_levels_reduce_graph_and_outputs_are_embedding_ready(self) -> None:
         graphs = {level: StateCompiler(self.root, level).compile()
                   for level in ("forensic", "operational", "strategic")}
