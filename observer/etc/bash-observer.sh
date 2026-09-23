@@ -13,6 +13,9 @@ if [[ $- == *i* ]] && [[ -n ${OBS_OUTPUT_DIR:-} ]]; then
     _nsg_previous_prompt_command="${PROMPT_COMMAND:-}"
     _nsg_uid=$(id -u)
     _nsg_tty=$(tty 2>/dev/null || true)
+    _nsg_ssh_connection=${SSH_CONNECTION:-}
+    _nsg_ssh_client=${SSH_CLIENT:-}
+    _nsg_remote_host=${REMOTEHOST:-}
     _nsg_command_log="${_nsg_history_dir}/commands-${_nsg_uid}-${PPID}-$$.jsonl"
     _nsg_json_escape() {
         local value=$1
@@ -33,15 +36,20 @@ if [[ $- == *i* ]] && [[ -n ${OBS_OUTPUT_DIR:-} ]]; then
     }
     _nsg_log_action_start() {
         local sequence=${HISTCMD:-0}
-        local command_text action_id escaped_command escaped_cwd escaped_tty
+        local command_text action_id escaped_command escaped_cwd escaped_tty escaped_hostname
+        local escaped_ssh_connection escaped_ssh_client escaped_remote_host
         command_text=$(_nsg_current_command)
         [[ -n "$command_text" ]] || return 0
         action_id="bash:${HOSTNAME:-container}:$$:${sequence}"
         escaped_command=$(_nsg_json_escape "$command_text")
         escaped_cwd=$(_nsg_json_escape "$PWD")
         escaped_tty=$(_nsg_json_escape "$_nsg_tty")
-        printf '{"ts":%s,"source":"bash-observer","event":"action_started","action_id":"%s","uid":%s,"pid":%s,"ppid":%s,"cwd":"%s","tty":"%s","sequence":%s,"command":"%s"}\n' \
-            "${EPOCHREALTIME}" "$action_id" "$_nsg_uid" "$$" "$PPID" "$escaped_cwd" "$escaped_tty" \
+        escaped_hostname=$(_nsg_json_escape "${HOSTNAME:-container}")
+        escaped_ssh_connection=$(_nsg_json_escape "$_nsg_ssh_connection")
+        escaped_ssh_client=$(_nsg_json_escape "$_nsg_ssh_client")
+        escaped_remote_host=$(_nsg_json_escape "$_nsg_remote_host")
+        printf '{"ts":%s,"source":"bash-observer","event":"action_started","action_id":"%s","container_hostname":"%s","ssh_connection":"%s","ssh_client":"%s","remote_host":"%s","uid":%s,"pid":%s,"ppid":%s,"cwd":"%s","tty":"%s","sequence":%s,"command":"%s"}\n' \
+            "${EPOCHREALTIME}" "$action_id" "$escaped_hostname" "$escaped_ssh_connection" "$escaped_ssh_client" "$escaped_remote_host" "$_nsg_uid" "$$" "$PPID" "$escaped_cwd" "$escaped_tty" \
             "$sequence" "$escaped_command" >> "$_nsg_command_log"
     }
     _nsg_save_history() {
@@ -52,13 +60,18 @@ if [[ $- == *i* ]] && [[ -n ${OBS_OUTPUT_DIR:-} ]]; then
             local command_text
             command_text=$(_nsg_current_command)
             if [[ -n "$command_text" ]]; then
-                local action_id escaped_command escaped_cwd escaped_tty
+                local action_id escaped_command escaped_cwd escaped_tty escaped_hostname
+                local escaped_ssh_connection escaped_ssh_client escaped_remote_host
                 action_id="bash:${HOSTNAME:-container}:$$:${sequence}"
                 escaped_command=$(_nsg_json_escape "$command_text")
                 escaped_cwd=$(_nsg_json_escape "$PWD")
                 escaped_tty=$(_nsg_json_escape "$_nsg_tty")
-                printf '{"ts":%s,"source":"bash-observer","event":"command_completed","action_id":"%s","uid":%s,"pid":%s,"ppid":%s,"cwd":"%s","tty":"%s","sequence":%s,"exit_status":%s,"command":"%s"}\n' \
-                    "${EPOCHREALTIME}" "$action_id" "$_nsg_uid" "$$" "$PPID" "$escaped_cwd" "$escaped_tty" \
+                escaped_hostname=$(_nsg_json_escape "${HOSTNAME:-container}")
+                escaped_ssh_connection=$(_nsg_json_escape "$_nsg_ssh_connection")
+                escaped_ssh_client=$(_nsg_json_escape "$_nsg_ssh_client")
+                escaped_remote_host=$(_nsg_json_escape "$_nsg_remote_host")
+                printf '{"ts":%s,"source":"bash-observer","event":"command_completed","action_id":"%s","container_hostname":"%s","ssh_connection":"%s","ssh_client":"%s","remote_host":"%s","uid":%s,"pid":%s,"ppid":%s,"cwd":"%s","tty":"%s","sequence":%s,"exit_status":%s,"command":"%s"}\n' \
+                    "${EPOCHREALTIME}" "$action_id" "$escaped_hostname" "$escaped_ssh_connection" "$escaped_ssh_client" "$escaped_remote_host" "$_nsg_uid" "$$" "$PPID" "$escaped_cwd" "$escaped_tty" \
                     "$sequence" "$command_status" "$escaped_command" >> "$_nsg_command_log"
             fi
             _nsg_last_history_sequence=$sequence
