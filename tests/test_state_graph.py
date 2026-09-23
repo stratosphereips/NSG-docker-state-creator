@@ -135,6 +135,12 @@ class StateGraphTest(unittest.TestCase):
                             for item in summary["known_hosts"]))
         self.assertTrue(any("10.0.0.20" in item.get("addresses", [])
                             for item in summary["controlled_hosts"]))
+        controlled_id = next(item["id"] for item in summary["controlled_hosts"]
+                             if "10.0.0.20" in item.get("addresses", []))
+        self.assertTrue(any(edge.get("source") == "host:local"
+                            and edge.get("type") == "CAN_CONTROL"
+                            and edge.get("target") == controlled_id
+                            for edge in graph["edges"]))
         all_data = [item for values in summary["known_data"].values() for item in values]
         self.assertTrue(any(item.get("locator") == "/tmp/report.json" for item in all_data))
         self.assertTrue(any(item.get("locator") == "/var/tmp/manual-secret.json" for item in all_data))
