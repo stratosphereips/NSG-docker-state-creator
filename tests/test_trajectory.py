@@ -143,6 +143,110 @@ class TrajectoryTest(unittest.TestCase):
         self.assertEqual(action["command"]["argv"], ["nmap", "-sV", "10.10.0.0/24"])
         self.assertEqual(action["targets"], ["10.10.0.0/24"])
 
+    def test_actions_record_local_remote_and_chained_host_context(self) -> None:
+        output = self.root / "trajectory-host-context"
+        monitor = PassiveTrajectoryMonitor(self.root, output, "strategic", sensitivity="material")
+        self.append("tty/commands-hosts.jsonl", {
+            "ts": 10, "event": "command_completed", "action_id": "bash:hosts:1",
+            "container_hostname": "bastion", "ssh_connection": "",
+            "uid": 0, "pid": 80, "ppid": 1, "tty": "/dev/pts/2", "cwd": "/",
+            "sequence": 1, "exit_status": 0, "command": "id",
+        })
+        self.append("tty/commands-hosts.jsonl", {
+            "ts": 11, "event": "command_completed", "action_id": "bash:hosts:2",
+            "container_hostname": "bastion",
+            "ssh_connection": "10.10.0.5 50000 10.10.0.2 22",
+            "uid": 0, "pid": 81, "ppid": 1, "tty": "/dev/pts/3", "cwd": "/",
+            "sequence": 2, "exit_status": 0, "command": "cat /etc/hostname",
+        })
+        self.append("tty/commands-hosts.jsonl", {
+            "ts": 12, "event": "command_completed", "action_id": "bash:hosts:3",
+            "container_hostname": "bastion",
+            "ssh_connection": "10.10.0.5 50000 10.10.0.2 22",
+            "uid": 0, "pid": 81, "ppid": 1, "tty": "/dev/pts/3", "cwd": "/",
+            "sequence": 3, "exit_status": 0,
+            "command": "ssh root@10.10.0.25 'touch /tmp/pivoted'",
+        })
+
+        monitor.run(once=True)
+        actions = {item["id"]: item for item in self.actions(output)}
+
+        local = actions["bash:hosts:1"]
+        self.assertEqual(local["source_host"]["hostname"], "bastion")
+        self.assertEqual(local["execution_host"]["hostname"], "bastion")
+        self.assertEqual(len(local["host_chain"]), 1)
+
+        inbound = actions["bash:hosts:2"]
+        self.assertEqual(inbound["agent_origin_host"]["address"], "10.10.0.5")
+        self.assertEqual(inbound["source_host"]["hostname"], "bastion")
+        self.assertEqual(inbound["execution_host"]["hostname"], "bastion")
+        self.assertEqual([item["host"] for item in inbound["host_chain"]],
+                         ["10.10.0.5", "bastion"])
+
+        pivot = actions["bash:hosts:3"]
+        self.assertEqual(pivot["agent_origin_host"]["address"], "10.10.0.5")
+        self.assertEqual(pivot["source_host"]["hostname"], "bastion")
+        self.assertEqual(pivot["execution_host"]["address"], "10.10.0.25")
+        self.assertEqual([item["host"] for item in pivot["host_chain"]],
+                         ["10.10.0.5", "bastion", "10.10.0.25"])
+        self.assertEqual(pivot["remote_session"]["server_host"]["address"], "10.10.0.2")
+
+    def test_remote_access_accepts_short_names_and_proxy_jump_chain(self) -> None:
+        output = self.root / "trajectory-proxy-jump"
+        monitor = PassiveTrajectoryMonitor(self.root, output, "strategic", sensitivity="material")
+        self.append("tty/commands-proxy.jsonl", {
+            "ts": 20, "event": "command_completed", "action_id": "bash:proxy:1",
+            "container_hostname": "workstation", "uid": 0, "pid": 90, "ppid": 1,
+            "tty": "/dev/pts/4", "cwd": "/", "sequence": 1, "exit_status": 0,
+            "command": "ssh -J user@bastion root@database hostname",
+        })
+
+        monitor.run(once=True)
+        action = self.actions(output)[0]
+
+        self.assertEqual([item["hostname"] for item in action["execution_hosts"]],
+                         ["bastion", "database"])
+        self.assertEqual([item["host"] for item in action["host_chain"]],
+                         ["workstation", "bastion", "database"])
+
+        self.assertEqual(monitor._remote_targets(
+            "scp local-report.txt root@fileserver:/srv/report.txt"
+        ), ["fileserver"])
+
+    def test_noninteractive_ssh_child_keeps_inbound_source(self) -> None:
+        output = self.root / "trajectory-noninteractive-ssh"
+        monitor = PassiveTrajectoryMonitor(self.root, output, "strategic", sensitivity="material")
+        self.append("processes.jsonl", {
+            "ts": 30, "event": "process_seen", "container_hostname": "database",
+            "pid": 100, "host_pid": 1000, "ppid": 1, "start_ticks": "200",
+            "name": "sshd", "cmdline": "sshd: root@notty", "uid": ["0"],
+            "username": "root", "tty_nr": "0",
+        })
+        self.append("processes.jsonl", {
+            "ts": 31, "event": "process_seen", "container_hostname": "database",
+            "pid": 101, "host_pid": 1001, "ppid": 100, "start_ticks": "201",
+            "name": "touch", "cmdline": "touch /tmp/from-bastion", "uid": ["0"],
+            "username": "root", "tty_nr": "0",
+            "remote_session": {
+                "ssh_connection": "10.10.0.2 51000 10.10.0.25 22",
+                "ssh_client": "10.10.0.2 51000 22",
+            },
+        })
+        self.append("processes.jsonl", {
+            "ts": 32, "event": "process_gone", "container_hostname": "database",
+            "pid": 101, "start_ticks": "201", "name": "touch",
+            "cmdline": "touch /tmp/from-bastion", "uid": ["0"],
+        })
+
+        monitor.run(once=True)
+        action = self.actions(output)[0]
+
+        self.assertEqual(action["agent_origin_host"]["address"], "10.10.0.2")
+        self.assertEqual(action["source_host"]["hostname"], "database")
+        self.assertEqual(action["execution_host"]["hostname"], "database")
+        self.assertEqual([item["host"] for item in action["host_chain"]],
+                         ["10.10.0.2", "database"])
+
 
 if __name__ == "__main__":
     unittest.main()
