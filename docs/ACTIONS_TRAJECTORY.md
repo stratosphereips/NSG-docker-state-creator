@@ -108,6 +108,23 @@ text), actor/process identity, targets, paths, effects, start/end/detection/
 recording times, completion reason, exit status when known, evidence pointers,
 children, concurrency, and state references.
 
+Every new action also records execution location explicitly:
+
+- `agent_origin_host` is the inbound client from `SSH_CONNECTION`/`SSH_CLIENT`
+  when the shell is remote, otherwise the observed local host;
+- `source_host` is the observed host that launched the command;
+- `execution_host` and `execution_hosts` identify where its effects occur;
+- `host_chain` orders the known immediate path from inbound origin, through
+  the current host, to any SSH-family destination;
+- `remote_session` preserves the inbound client/server addresses and ports.
+
+For example, a command typed through an A-to-B SSH session and launching
+`ssh C command` on B records `agent_origin_host=A`, `source_host=B`, and
+`execution_hosts=[C]`, with `host_chain=[A,B,C]`. Each observed destination
+records its own immediate inbound hop. Combining those per-host records
+reconstructs longer pivot chains without claiming visibility into encrypted
+SSH payloads on a host that was not itself observed.
+
 When state changes, the corresponding delta contains added, removed, and
 changed node/edge IDs plus `changed_domains`. It also contains:
 
@@ -229,3 +246,6 @@ window, or maximum duration records the corresponding completion reason.
   evidence volume as sensitive data.
 - State changes are correlated to actions, not proven causal. Concurrent
   actions are represented explicitly instead of inventing a single cause.
+- Remote execution attribution requires observation on the destination or a
+  recognized remote-access command on the source. Network traffic alone does
+  not reveal commands carried inside SSH or another encrypted protocol.
