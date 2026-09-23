@@ -125,6 +125,11 @@ def compact_action(root: Path, index: dict[str, Any], maximum: int = 8) -> dict[
         "actor": {key: actor.get(key) for key in
                   ("username", "uid", "pid", "host_pid", "tty", "root_command")
                   if actor.get(key) is not None},
+        "agent_origin_host": action.get("agent_origin_host", index.get("agent_origin_host")),
+        "source_host": action.get("source_host", index.get("source_host")),
+        "execution_hosts": action.get("execution_hosts", index.get("execution_hosts", [])),
+        "host_chain": action.get("host_chain", []),
+        "remote_session": action.get("remote_session"),
         "targets": limited(action.get("targets", []), maximum),
         "paths": limited(action.get("paths", []), maximum),
         "effects": limited(action.get("effects", []), maximum),
@@ -202,6 +207,9 @@ def render_text(transition: dict[str, Any]) -> str:
         f"  time: {action.get('started_at')} -> {action.get('ended_at')}",
         f"  command: {action.get('command') or '<not available>'}",
         f"  actor: {one_line(action.get('actor', {}))}",
+        f"  host_chain: {one_line(action.get('host_chain', []))}",
+        f"  source_host: {one_line(action.get('source_host', {}))}",
+        f"  execution_hosts: {one_line(action.get('execution_hosts', []))}",
         f"  scope/result: {action.get('scope')} exit={action.get('exit_status')} "
         f"completion={action.get('completion')}",
         f"  targets: {one_line(action.get('targets', []))}",
