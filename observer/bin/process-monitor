@@ -33,6 +33,22 @@ def link(path: Path) -> str:
         return ""
 
 
+def selected_environment(path: Path) -> dict[str, str]:
+    """Read only session-provenance variables, never the process's full environment."""
+    try:
+        entries = path.read_bytes().split(b"\0")
+    except (OSError, PermissionError):
+        return {}
+    allowed = {"SSH_CONNECTION", "SSH_CLIENT", "SSH_TTY", "REMOTEHOST"}
+    result = {}
+    for entry in entries:
+        key, separator, value = entry.partition(b"=")
+        name = key.decode("utf-8", "replace")
+        if separator and name in allowed:
+            result[name.lower()] = value.decode("utf-8", "replace")
+    return result
+
+
 def process_info(pid: int) -> dict:
     base = Path("/proc") / str(pid)
     status = {}
@@ -78,6 +94,7 @@ def process_info(pid: int) -> dict:
         "cgroup": text(base / "cgroup"),
         "tty_nr": stat_fields[6] if len(stat_fields) > 6 else "",
         "start_ticks": stat_fields[21] if len(stat_fields) > 21 else "",
+        "remote_session": selected_environment(base / "environ"),
     }
 
 
