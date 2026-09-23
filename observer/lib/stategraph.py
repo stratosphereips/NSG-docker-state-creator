@@ -419,8 +419,19 @@ class StateCompiler:
             return
         threshold = float(self.config["control_inference"]["minimum_confidence"])
         relation = "CONTROLS" if confidence >= threshold else "POSSIBLE_ACCESS"
-        self.graph.edge(AGENT_ID, relation, host_id, {"mechanism": mechanism, **attributes},
+        control_attributes = {
+            "mechanism": mechanism,
+            "source_host_id": LOCAL_HOST_ID,
+            **attributes,
+        }
+        self.graph.edge(AGENT_ID, relation, host_id, control_attributes,
                         confidence, evidence)
+        if host_id != LOCAL_HOST_ID:
+            # Preserve the immediate pivot hop as well as the agent's aggregate
+            # control relation. Federated per-host graphs can then reconstruct
+            # A -> B -> C movement without pretending encrypted traffic was read.
+            self.graph.edge(LOCAL_HOST_ID, "CAN_CONTROL", host_id, control_attributes,
+                            confidence, evidence)
         if confidence >= threshold:
             self.graph.node(host_id, "host", self.graph.nodes[host_id]["label"],
                             {"controlled": True, "control_mechanism": mechanism},
@@ -491,6 +502,8 @@ class StateCompiler:
                 targets.extend(remaining[index + 1:])
                 break
             if token in consumes:
+                if token == "-J" and index + 1 < len(remaining):
+                    targets.extend(remaining[index + 1].split(","))
                 if token == "-p" and index + 1 < len(remaining):
                     try:
                         port = int(remaining[index + 1])
@@ -506,6 +519,8 @@ class StateCompiler:
                 break
             index += 1
         for target in targets:
+            if tool in {"scp", "rsync"} and "@" not in target and ":" not in target:
+                continue
             remote_path = ""
             if ":" in target and not target.startswith("/"):
                 target, remote_path = target.split(":", 1)
