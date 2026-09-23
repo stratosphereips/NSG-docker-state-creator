@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Iterable
 from urllib.parse import urlsplit
 
-from stategraph import StateCompiler, json_key, load_config, write_outputs
+from stategraph import LOCAL_HOST_ID, StateCompiler, json_key, load_config, write_outputs
 
 
 CORE_DOMAINS = (
@@ -327,6 +327,9 @@ class TrajectoryStore:
             self._append_sequence({
                 "sequence": self._next_sequence(), "kind": "action", "id": action["id"],
                 "actor_id": action["actor_id"], "action_type": action["type"],
+                "agent_origin_host": action["agent_origin_host"],
+                "source_host": action["source_host"],
+                "execution_hosts": action["execution_hosts"],
                 "started_at": action["started_at"], "ended_at": action["ended_at"],
                 "state_before": action["state_before"], "state_after": action["state_after"],
                 "state_changed": action["state_changed"], "record": relative,
@@ -413,6 +416,48 @@ class PassiveTrajectoryMonitor:
                 targets.add(possible_host.lower())
         return sorted(targets), sorted(paths)
 
+    def _remote_targets(self, command: str) -> list[str]:
+        """Extract ordered execution hosts from supported remote-access clients."""
+        _executable, argv = command_parts(command)
+        commands = set(self.config["control_inference"].get("successful_commands", []))
+        command_index = next((index for index, token in enumerate(argv)
+                              if Path(token).name in commands), None)
+        if command_index is None:
+            return []
+        tool = Path(argv[command_index]).name
+        remaining = argv[command_index + 1:]
+        consumes = {"-b", "-c", "-D", "-E", "-e", "-F", "-i", "-J", "-L", "-l",
+                    "-m", "-O", "-o", "-p", "-Q", "-R", "-S", "-W", "-w"}
+        targets: list[str] = []
+        positional: list[str] = []
+        index = 0
+        while index < len(remaining):
+            token = remaining[index]
+            if token == "--":
+                positional.extend(remaining[index + 1:])
+                break
+            if token in consumes:
+                if token == "-J" and index + 1 < len(remaining):
+                    positional.extend(remaining[index + 1].split(","))
+                index += 2
+                continue
+            if token.startswith("-"):
+                index += 1
+                continue
+            positional.append(token)
+            if tool in {"ssh", "rsh", "mosh", "sftp"}:
+                break
+            index += 1
+        for value in positional:
+            if tool in {"scp", "rsync"} and "@" not in value and ":" not in value:
+                continue
+            candidate = value.rsplit("@", 1)[-1]
+            if ":" in candidate and not candidate.startswith("/"):
+                candidate = candidate.split(":", 1)[0]
+            if candidate and "/" not in candidate and candidate not in {".", ".."}:
+                targets.append(candidate.lower())
+        return list(dict.fromkeys(targets))
+
     def _actor(self, pid: int, record: dict[str, Any] | None = None) -> tuple[str, dict[str, Any]]:
         info = record or self.processes.get(pid, {})
         tty = str(info.get("tty") or info.get("tty_nr") or "")
@@ -433,16 +478,93 @@ class PassiveTrajectoryMonitor:
         }
         return actor_id, actor
 
+    @staticmethod
+    def _host_reference(value: str, *, local: bool = False) -> dict[str, Any]:
+        value = value.strip()
+        reference: dict[str, Any] = {"host": value or "unknown"}
+        try:
+            reference["address"] = str(ipaddress.ip_address(value.split("%", 1)[0]))
+        except ValueError:
+            reference["hostname"] = value or "unknown"
+        if local:
+            reference["local"] = True
+            reference["state_graph_id"] = LOCAL_HOST_ID
+        return reference
+
+    def _local_host(self, record: dict[str, Any] | None = None) -> dict[str, Any]:
+        record = record or {}
+        hostname = str(record.get("container_hostname") or "")
+        graph = self.store.current_graph or {}
+        local_node = next(
+            (node for node in graph.get("nodes", []) if node.get("id") == LOCAL_HOST_ID), {}
+        )
+        hostname = hostname or str(local_node.get("label") or "container")
+        reference = self._host_reference(hostname, local=True)
+        addresses = local_node.get("attributes", {}).get("addresses", [])
+        if addresses:
+            reference["addresses"] = sorted(str(item) for item in addresses)
+        return reference
+
+    @staticmethod
+    def _remote_session(record: dict[str, Any] | None) -> dict[str, Any] | None:
+        record = record or {}
+        environment = record.get("remote_session")
+        environment = environment if isinstance(environment, dict) else {}
+        connection = str(record.get("ssh_connection") or environment.get("ssh_connection") or "")
+        client = str(record.get("ssh_client") or environment.get("ssh_client") or "")
+        remote_host = str(record.get("remote_host") or environment.get("remotehost") or "")
+        values = connection.split()
+        client_values = client.split()
+        source = values[0] if len(values) >= 4 else client_values[0] if client_values else remote_host
+        if not source:
+            return None
+        result: dict[str, Any] = {
+            "transport": "ssh" if connection or client else "remote-shell",
+            "client_host": PassiveTrajectoryMonitor._host_reference(source),
+        }
+        if len(values) >= 4:
+            result.update({
+                "client_port": int(values[1]) if values[1].isdigit() else values[1],
+                "server_host": PassiveTrajectoryMonitor._host_reference(values[2]),
+                "server_port": int(values[3]) if values[3].isdigit() else values[3],
+            })
+        return result
+
+    @staticmethod
+    def _deduplicated_hosts(hosts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        result = []
+        seen = set()
+        for host in hosts:
+            key = str(host.get("address") or host.get("hostname") or host.get("host"))
+            if key and key not in seen:
+                seen.add(key)
+                result.append(host)
+        return result
+
     def _new_action(self, action_id: str, source: str, confidence: float, command: str,
                     actor_pid: int, start_ns: int, evidence: dict[str, Any],
-                    actor_record: dict[str, Any] | None = None) -> dict[str, Any]:
+                    actor_record: dict[str, Any] | None = None,
+                    context_record: dict[str, Any] | None = None) -> dict[str, Any]:
         action_type, scope = self._classify(command)
         executable, argv = command_parts(command)
         targets, paths = self._targets(command, scope)
         actor_id, actor = self._actor(actor_pid, actor_record)
+        context = context_record or actor_record
+        local_host = self._local_host(context)
+        remote_session = self._remote_session(context)
+        origin_host = remote_session["client_host"] if remote_session else local_host
+        remote_execution = action_type == "remote_access"
+        remote_targets = self._remote_targets(command) if remote_execution else []
+        if remote_targets:
+            targets = sorted(set(targets) | set(remote_targets))
+        execution_hosts = ([self._host_reference(target) for target in remote_targets]
+                           if remote_targets else [local_host])
+        host_chain = self._deduplicated_hosts(
+            [origin_host, local_host, *execution_hosts]
+        )
         detected_ns = time.time_ns()
-        return {
-            "schema_version": "nsg-action/1.0",
+        action = {
+            "schema_version": "nsg-action/1.1",
             "id": action_id,
             "actor_id": actor_id,
             "type": action_type,
@@ -451,6 +573,11 @@ class PassiveTrajectoryMonitor:
             "confidence": confidence,
             "command": {"executable": executable, "argv": argv, "shell_text": command},
             "actor": actor,
+            "agent_origin_host": origin_host,
+            "source_host": local_host,
+            "execution_host": execution_hosts[0],
+            "execution_hosts": execution_hosts,
+            "host_chain": host_chain,
             "targets": targets,
             "paths": paths,
             "child_processes": [],
@@ -463,6 +590,9 @@ class PassiveTrajectoryMonitor:
             "state_before": self.store.current_state["id"] if self.store.current_state else None,
             "last_activity_ns": start_ns,
         }
+        if remote_session:
+            action["remote_session"] = remote_session
+        return action
 
     def _finish(self, action_id: str, end_ns: int, exit_status: int | None = None,
                 completion: str = "observed") -> None:
@@ -635,7 +765,7 @@ class PassiveTrajectoryMonitor:
                     continue
                 action = self._new_action(action_id, "process-lifecycle", 0.94, command,
                                           actor_pid, timestamp, evidence,
-                                          self.processes.get(actor_pid))
+                                          self.processes.get(actor_pid), info)
                 action["process"] = child
                 self.pending[action_id] = action
                 self.process_action[pid] = action_id
@@ -677,7 +807,7 @@ class PassiveTrajectoryMonitor:
             action_id = hash_id("action:inferred", f"{pid}\0{kind}\0{timestamp}")
             action = self._new_action(action_id, f"syscall-{kind}-inference", 0.75,
                                       command, actor_pid, timestamp, evidence,
-                                      self.processes.get(actor_pid))
+                                      self.processes.get(actor_pid), info)
             action["type"] = "network_activity" if kind == "network" else "file_activity"
             action["scope"] = "network" if kind == "network" else "local"
             action["inference"] = True
