@@ -140,6 +140,12 @@ detection and recording time, concurrent action IDs, evidence references, and
 before/after state IDs. When overlapping actions precede one graph update, the
 delta names every contributing action and marks causal isolation false.
 
+Actions also carry host provenance. Selected non-secret session variables
+(`SSH_CONNECTION`, `SSH_CLIENT`, `SSH_TTY`, and `REMOTEHOST`) identify an
+inbound client without recording the process's full environment. The current
+container is the action source; recognized SSH-family targets are execution
+hosts. This yields explicit immediate hop chains across observed containers.
+
 The semantic change detector projects only configured graph domains, removes
 volatile timestamps and evidence counters, and buckets confidence. Therefore
 collecting another copy of identical evidence does not create a fake new
