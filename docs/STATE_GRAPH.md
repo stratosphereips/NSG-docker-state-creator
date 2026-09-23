@@ -153,6 +153,11 @@ Remote control is intentionally conservative:
   zero is 0.95 confidence;
 - an explicit assertion uses the supplied confidence.
 
+Every inferred control relation records `source_host_id`. For a remote target,
+the graph additionally contains `local-host --CAN_CONTROL--> remote-host`, so
+per-host graphs preserve immediate pivot edges such as A→B and B→C. The agent's
+aggregate `CONTROLS` edge remains available for existing consumers.
+
 A TCP handshake alone only means that a host/service is known. An exploit over
 an encrypted or custom protocol cannot be proven from local network metadata;
 use an assertion or add a protocol-specific extractor when the agent reports
