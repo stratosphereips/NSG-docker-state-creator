@@ -143,6 +143,35 @@ class TrajectoryTest(unittest.TestCase):
         self.assertEqual(action["command"]["argv"], ["nmap", "-sV", "10.10.0.0/24"])
         self.assertEqual(action["targets"], ["10.10.0.0/24"])
 
+    def test_process_exit_status_is_preserved_on_remote_action(self) -> None:
+        output = self.root / "trajectory-remote-exit"
+        monitor = PassiveTrajectoryMonitor(self.root, output, "strategic", sensitivity="material")
+        self.append("processes.jsonl", {
+            "ts": 6, "event": "process_seen", "container_hostname": "test-container",
+            "pid": 60, "host_pid": 600, "ppid": 1, "start_ticks": "110",
+            "name": "python3", "cmdline": "python3 /work/agent.py", "uid": ["1000"],
+            "username": "agent", "tty_nr": "0"
+        })
+        self.append("processes.jsonl", {
+            "ts": 7, "event": "process_seen", "container_hostname": "test-container",
+            "pid": 61, "host_pid": 601, "ppid": 60, "start_ticks": "111",
+            "name": "ssh", "cmdline": "ssh labuser@10.77.2.13 'cat /etc/hostname'",
+            "uid": ["1000"], "username": "agent", "tty_nr": "0"
+        })
+        self.append("processes.jsonl", {
+            "ts": 8, "event": "process_gone", "container_hostname": "test-container",
+            "pid": 61, "start_ticks": "111", "name": "ssh",
+            "cmdline": "ssh labuser@10.77.2.13 'cat /etc/hostname'",
+            "exit_status": 0, "uid": ["1000"]
+        })
+
+        monitor.run(once=True)
+        action = self.actions(output)[0]
+        self.assertEqual(action["type"], "remote_access")
+        self.assertEqual(action["exit_status"], 0)
+        self.assertIn("10.77.2.13", [item.get("address") for item in action["execution_hosts"]])
+        self.assertIn("controlled_hosts", action["changed_domains"])
+
     def test_actions_record_local_remote_and_chained_host_context(self) -> None:
         output = self.root / "trajectory-host-context"
         monitor = PassiveTrajectoryMonitor(self.root, output, "strategic", sensitivity="material")
