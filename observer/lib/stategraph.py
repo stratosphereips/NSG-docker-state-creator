@@ -474,6 +474,12 @@ class StateCompiler:
             tokens = shlex.split(command)
         except ValueError:
             tokens = command.split()
+        # A shell wrapper's status may belong to a trailing pipeline command
+        # (for example ``ssh ... | tail``), not to the remote client.  The
+        # directly observed ssh/sshpass child supplies the trustworthy status.
+        command_exit_status = exit_status
+        if tokens and Path(tokens[0]).name in {"sh", "bash", "dash", "zsh", "fish"}:
+            command_exit_status = None
         for token in tokens[1:]:
             candidate = token.strip("[](),;'")
             try:
@@ -531,9 +537,9 @@ class StateCompiler:
             self._service(host_id, "tcp", port, "ssh", "targeted", 0.9, evidence)
             if host_id and remote_path:
                 self._data(host_id, remote_path, f"{tool}-command", 0.9, evidence)
-            if exit_status == 0:
+            if command_exit_status == 0:
                 self._control(host_id, f"successful-{tool}", 0.95, evidence,
-                              command_exit_status=exit_status)
+                              command_exit_status=command_exit_status)
 
     def _prepare(self) -> None:
         # Learn the local hostname before assigning labels to host observations.
@@ -740,12 +746,18 @@ class StateCompiler:
             event = record.get("event")
             if event not in {"process_seen", "process_changed", "process_gone"}:
                 continue
-            command = str(record.get("cmdline", ""))
+            previous = record.get("previous")
+            previous = previous if isinstance(previous, dict) else {}
+            command = str(record.get("cmdline") or previous.get("cmdline") or "")
             if self._is_observer(command):
                 continue
             ts = self._ts(record)
             pid = int(record.get("pid", -1))
-            self._extract_command(command, evidence)
+            try:
+                exit_status = int(record["exit_status"])
+            except (KeyError, TypeError, ValueError):
+                exit_status = None
+            self._extract_command(command, evidence, exit_status)
             username = str(record.get("username", record.get("uid", ["unknown"])[0]))
             uid_value = record.get("uid", ["unknown"])
             uid = uid_value[0] if isinstance(uid_value, list) and uid_value else uid_value
