@@ -65,7 +65,7 @@ def process_info(pid: int) -> dict:
         username = pwd.getpwuid(uid).pw_name
     except KeyError:
         username = str(uid)
-    return {
+    result = {
         "pid": pid,
         "tid_count": len(list((base / "task").glob("[0-9]*"))),
         "name": status.get("Name", ""),
@@ -96,6 +96,15 @@ def process_info(pid: int) -> dict:
         "start_ticks": stat_fields[21] if len(stat_fields) > 21 else "",
         "remote_session": selected_environment(base / "environ"),
     }
+    # Linux exposes the wait status for a zombie in field 52 of /proc/PID/stat.
+    # Capture it before the parent reaps the process; once process_gone is
+    # emitted there is no reliable way to distinguish success from failure.
+    if len(stat_fields) > 51 and status.get("State", "").startswith("Z"):
+        try:
+            result["exit_status"] = os.waitstatus_to_exitcode(int(stat_fields[51]))
+        except (ValueError, OverflowError):
+            pass
+    return result
 
 
 def main() -> None:
@@ -117,7 +126,8 @@ def main() -> None:
         for key, info in known.items():
             if key not in current:
                 log.write("process_gone", pid=info["pid"], start_ticks=info["start_ticks"],
-                          name=info["name"], cmdline=info["cmdline"], uid=info["uid"])
+                          name=info["name"], cmdline=info["cmdline"], uid=info["uid"],
+                          exit_status=info.get("exit_status"))
         known = current
         time.sleep(interval)
 
