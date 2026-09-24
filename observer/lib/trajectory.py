@@ -730,6 +730,8 @@ class PassiveTrajectoryMonitor:
             if event in {"process_seen", "process_changed"}:
                 previous = self.processes.get(pid, {})
                 info = {**previous, **record}
+                if not info.get("cmdline") and previous.get("cmdline"):
+                    info["cmdline"] = previous["cmdline"]
                 self.processes[pid] = info
                 host_pid = int(info.get("host_pid", pid) or pid)
                 self.host_to_pid[host_pid] = pid
@@ -775,6 +777,10 @@ class PassiveTrajectoryMonitor:
                 if action_id:
                     action = self.pending.get(action_id)
                     if action:
+                        try:
+                            action["process_exit_status"] = int(record["exit_status"])
+                        except (KeyError, TypeError, ValueError):
+                            pass
                         action["process_exit_observed_ns"] = timestamp
                         action["last_activity_ns"] = max(action["last_activity_ns"], timestamp)
                 if pid in self.actor_pids:
@@ -952,7 +958,7 @@ class PassiveTrajectoryMonitor:
                     end_ns = int(action["process_exit_observed_ns"])
                 elif force and (inferred or action["source"] == "process-lifecycle"):
                     end_ns = int(action.get("last_activity_ns", now))
-                self._finish(action_id, end_ns, None, completion)
+                self._finish(action_id, end_ns, action.get("process_exit_status"), completion)
 
     def poll(self) -> None:
         # Shell events come first so child process observations attach to the
