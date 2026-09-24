@@ -155,6 +155,50 @@ class StateGraphTest(unittest.TestCase):
         self.assertTrue(any(item.get("reason") == "local-firewall-rule"
                             for item in summary["known_blocks"]))
 
+    def test_successful_process_lifecycle_ssh_controls_remote_host(self) -> None:
+        self.jsonl("processes.jsonl", [
+            {"ts": 1, "event": "process_seen", "container_hostname": "agent-box",
+             "pid": 10, "ppid": 1, "start_ticks": "20", "name": "ssh",
+             "cmdline": "ssh labuser@10.77.2.13 'cat /etc/hostname'", "uid": ["1000"],
+             "username": "agent"},
+            {"ts": 2, "event": "process_changed", "container_hostname": "agent-box",
+             "pid": 10, "ppid": 1, "start_ticks": "20", "name": "ssh", "state": "Z",
+             "cmdline": "", "exit_status": 0, "uid": ["1000"], "username": "agent",
+             "previous": {"cmdline": "ssh labuser@10.77.2.13 'cat /etc/hostname'"}},
+            {"ts": 2.1, "event": "process_gone", "pid": 10, "start_ticks": "20",
+             "name": "ssh", "cmdline": "ssh labuser@10.77.2.13 'cat /etc/hostname'",
+             "exit_status": 0, "uid": ["1000"]},
+        ])
+
+        graph = StateCompiler(self.root, "strategic").compile()
+
+        controlled = graph["summary"]["controlled_hosts"]
+        self.assertTrue(any("10.77.2.13" in item.get("addresses", []) for item in controlled))
+
+    def test_failed_process_lifecycle_ssh_does_not_control_remote_host(self) -> None:
+        self.jsonl("processes.jsonl", [
+            {"ts": 1, "event": "process_seen", "container_hostname": "agent-box",
+             "pid": 11, "ppid": 1, "start_ticks": "21", "name": "sh",
+             "cmdline": "sh -lc ssh labuser@10.77.2.99 true '2>&1' '|' tail -1",
+             "uid": ["1000"],
+             "username": "agent"},
+            {"ts": 2, "event": "process_gone", "pid": 11, "start_ticks": "21",
+             "name": "sh", "cmdline": "sh -lc ssh labuser@10.77.2.99 true '2>&1' '|' tail -1",
+             "exit_status": 0, "uid": ["1000"]},
+            {"ts": 1.1, "event": "process_seen", "container_hostname": "agent-box",
+             "pid": 12, "ppid": 11, "start_ticks": "22", "name": "ssh",
+             "cmdline": "ssh labuser@10.77.2.99 true", "uid": ["1000"],
+             "username": "agent"},
+            {"ts": 1.9, "event": "process_gone", "pid": 12, "start_ticks": "22",
+             "name": "ssh", "cmdline": "ssh labuser@10.77.2.99 true",
+             "exit_status": 255, "uid": ["1000"]},
+        ])
+
+        graph = StateCompiler(self.root, "strategic").compile()
+
+        controlled = graph["summary"]["controlled_hosts"]
+        self.assertFalse(any("10.77.2.99" in item.get("addresses", []) for item in controlled))
+
     def test_plain_text_json_topology_payloads_are_ignored(self) -> None:
         """Older iproute2 may accept -j but emit plain text with exit status zero."""
         topology_path = self.root / "network" / "topology.jsonl"
