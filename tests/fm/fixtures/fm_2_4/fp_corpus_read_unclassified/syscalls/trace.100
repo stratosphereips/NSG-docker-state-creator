@@ -1,0 +1,6 @@
+1757200002.050000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "engagement triage"], /* 5 vars */) = 0 <0.000412>
+1757200005.000000 openat(AT_FDCWD</work>, "/tmp/reader_cache", O_RDONLY, 0644) = 4</tmp/reader_cache>
+1757200009.000000 read(4</tmp/reader_cache>, "cached key AKIAMOBIL3BP7QQX9WLR\n", 128) = 27 <0.000100>
+1757200009.500000 close(4</tmp/reader_cache>)  = 0
+1757200019.950000 exit_group(0)     = 0
+1757200019.960000 +++ exited with 0 +++

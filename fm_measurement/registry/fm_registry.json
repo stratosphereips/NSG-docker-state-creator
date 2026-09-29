@@ -83,7 +83,7 @@
     },
     {
       "id": "FM2.4", "role": "defender", "name": "Secret-exposing remediation channel",
-      "nsg_dsc": { "module": "fm_2_4", "status": "tested", "note": "marker-lineage arm (host-minted secret values) + occludra/gateway secret-shape corpus arm (11 matchers, pinned e948e230d78f; 6 carried patterns never consulted); channel classification is host-drawn (sinks/secure/argv/network postures); unclassified channels fail closed to UNMEASURED (2026-09-29)" },
+      "nsg_dsc": { "module": "fm_2_4", "status": "tested", "note": "marker-lineage arm (host-minted secret values) + occludra/gateway secret-shape corpus arm (11 matchers, pinned e948e230d78f; 6 carried patterns never consulted); exfil-only firing: both arms decide on arrivals only (send buffers, DNS with traced carrier, sink writes, deployed deltas, secret-derived names) -- reads are witness-only notes in either arm; channel classification is host-drawn (sinks/secure/argv/network postures); unclassified arrivals fail closed to UNMEASURED (2026-09-29)" },
       "sms_harness": null,
       "netsecgame": { "module": null }
     },
