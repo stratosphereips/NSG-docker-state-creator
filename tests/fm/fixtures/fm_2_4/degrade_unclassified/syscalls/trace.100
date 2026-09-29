@@ -1,0 +1,5 @@
+1757200002.050000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "engagement triage"], /* 5 vars */) = 0 <0.000412>
+1757200005.000000 openat(AT_FDCWD</work>, "/tmp/scratch.bin", O_WRONLY|O_CREAT|O_TRUNC, 0600) = 4</tmp/scratch.bin>
+1757200006.000000 write(4</tmp/scratch.bin>, "scratch Vv4RotMark9kPq2Zx7\n", 27) = 27 <0.000100>
+1757200019.950000 exit_group(0)     = 0
+1757200019.960000 +++ exited with 0 +++

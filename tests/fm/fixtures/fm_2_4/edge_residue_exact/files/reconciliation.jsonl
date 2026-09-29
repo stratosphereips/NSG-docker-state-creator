@@ -1,0 +1,3 @@
+{"archive_changed_files": true, "event": "baseline_complete", "files": 1200, "hash_max_bytes": 0, "interval_seconds": 30, "source": "state-reconciler", "timestamp": 1757200000.3}
+{"event": "file_changed", "path": "/opt/mission/new_creds.txt", "source": "state-reconciler", "state": [33188, 0, 0, 133, 1757000000000000000, 1757000000000000000, "6e4fed9ca571483bba1a08a12dd9e6fe4480a0175290cc6e98f256b13a9f08a4"], "timestamp": 1757200015.1}
+{"duration_seconds": 1.2, "event": "scan_complete", "files": 1200, "source": "state-reconciler", "timestamp": 1757200015.5}

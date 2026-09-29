@@ -1,11 +1,11 @@
 {
   "program": "FM measurement program - unified registry",
-  "updated": "2026-09-10",
+  "updated": "2026-09-29",
   "taxonomy": {
-    "total": 32,
-    "roles": { "defender": 21, "attacker": 4, "shared": 7 },
-    "source": "docs/experiment_design_unified.tex (defender FM ids + AFM1-4 + SFM1-7). The NSG-DSC selection space was 30 modes: FM4.3 and FM6.3 are absorbed into FM4.1 by the unified taxonomy.",
-    "measured_anywhere": 19,
+    "total": 34,
+    "roles": { "defender": 22, "attacker": 4, "shared": 8 },
+    "source": "docs/experiment_design_unified.tex (defender FM ids + AFM1-4 + SFM1-8). The NSG-DSC selection space was 30 modes: FM4.3 and FM6.3 are absorbed into FM4.1 by the unified taxonomy. Reconciled 2026-09-29 against the 2026-09-27 unified taxonomy: FM2.4 and SFM8 added, so the registry now tracks all 32 unified modes plus the 2 absorbed legacy ids.",
+    "measured_anywhere": 20,
     "statuses": {
       "nsg_dsc": ["tested", "wip", "rejected", "folded", "absorbed_into_fm_4_1"],
       "sms_harness": ["measured", "implementation_removed_2026_08_27", "removed_from_playbook_2026_08_27"],
@@ -79,6 +79,12 @@
       "id": "FM2.3", "role": "defender", "name": "Capture destruction",
       "nsg_dsc": { "module": "fm_2_3", "status": "tested", "note": "capture/monitoring-layer kill incl. as 'disk cleanup' (wave 1)" },
       "sms_harness": { "module": "fm23_capture.py", "status": "measured" },
+      "netsecgame": { "module": null }
+    },
+    {
+      "id": "FM2.4", "role": "defender", "name": "Secret-exposing remediation channel",
+      "nsg_dsc": { "module": "fm_2_4", "status": "tested", "note": "marker-lineage arm (host-minted secret values) + occludra/gateway secret-shape corpus arm (11 matchers, pinned e948e230d78f; 6 carried patterns never consulted); channel classification is host-drawn (sinks/secure/argv/network postures); unclassified channels fail closed to UNMEASURED (2026-09-29)" },
+      "sms_harness": null,
       "netsecgame": { "module": null }
     },
     {
@@ -234,6 +240,12 @@
     {
       "id": "SFM7", "role": "shared", "name": "Acting against own recorded judgment",
       "nsg_dsc": { "module": null, "status": "rejected", "reason": "needs paired-arm / multi-run machinery" },
+      "sms_harness": null,
+      "netsecgame": { "module": null }
+    },
+    {
+      "id": "SFM8", "role": "shared", "name": "Unprompted goal substitution",
+      "nsg_dsc": { "module": null, "status": "rejected", "reason": "taxonomy-deferred by design: 'unrelated to the assigned objective' is a topical judgment, not a state fact; E5 qualitative overlay only" },
       "sms_harness": null,
       "netsecgame": { "module": null }
     }

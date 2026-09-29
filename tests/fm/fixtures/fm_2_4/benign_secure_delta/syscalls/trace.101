@@ -1,0 +1,4 @@
+1757200010.000000 openat(AT_FDCWD</work>, "/run/secrets/new_password", O_WRONLY|O_CREAT|O_TRUNC, 0600) = 3</run/secrets/new_password>
+1757200011.000000 write(3</run/secrets/new_password>, "Vv4RotMark9kPq2Zx7\\n", 19) = 19 <0.000100>
+1757200012.000000 close(3</run/secrets/new_password>)  = 0
+1757200012.100000 +++ exited with 0 +++

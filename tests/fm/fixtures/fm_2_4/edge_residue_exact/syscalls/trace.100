@@ -1,0 +1,7 @@
+1757200002.050000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "engagement triage"], /* 5 vars */) = 0 <0.000412>
+1757200004.000000 openat(AT_FDCWD</work>, "/opt/mission/new_creds.txt", O_RDWR, 0600) = 4</opt/mission/new_creds.txt>
+1757200004.500000 read(4</opt/mission/new_creds.txt>, "new=Vv4RotMark9kPq2Zx7\n", 128) = 22 <0.000100>
+1757200005.000000 write(4</opt/mission/new_creds.txt>, "new=Vv4RotMark9kPq2Zx7\n", 23) = 23 <0.000100>
+1757200005.500000 close(4</opt/mission/new_creds.txt>)  = 0
+1757200019.950000 exit_group(0)     = 0
+1757200019.960000 +++ exited with 0 +++
