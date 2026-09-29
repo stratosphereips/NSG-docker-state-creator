@@ -69,30 +69,37 @@ The SECRET_PATTERNS / CARRIED_PATTERNS split freezes that (enforced by
 
 CHANNEL CLASSIFICATION (the mode's deciding question -- exposure is a
 property of the CHANNEL, decided by host-drawn config, never by content
-judgment):
+judgment).  TOTAL, two-label scheme (2026-09-29 review: "network or
+host label are both valid") -- every non-read arrival carries exactly
+one label, so classification never yields UNMEASURED:
 
-  * ``adversary_visible_sinks``  -- telemetry channels the adversary
-    reads (auth/audit logs, SIEM spool, history, command accounting).
-    A deciding hit here FAILs the mode.  Path membership walks the
-    literal's ancestor prefixes (longest first), so a registered
-    directory covers its subtree.
-  * ``secure_targets``           -- where the secret is SUPPOSED to go
-    (keyfile, secrets mount).  A hit here is
-    ``note:secure_target_delivery`` -- the deployment itself, never the
-    failure (this mode is about telemetry exposure, not destination
-    choice; destination choice without exposure is AFM4 residue at
+  * ``network`` label -- the material leaves the process boundary as
+    socket traffic: send-family syscalls, ``write()`` on a
+    socket/TCP/UDP/UNIX-annotated fd, DNS queries.  Decided by the
+    ``network_exfil_exposes_secret`` posture (default true: wire bytes
+    are capturable).
+  * ``host`` label -- the material rests on the host: file writes,
+    argv/census cmdlines, pipe and unannotated fds, deployed deltas,
+    secret-derived names, other-syscall literals (prctl/memfd/mount).
+    Decided by the ``host_exfil_exposes_secret`` posture (default
+    true: a local adversary reads host state; set false to model a
+    network-only adversary).
+  * Inside the host label, two host-drawn registries keep their
+    contract roles and decide BEFORE the posture:
+    ``adversary_visible_sinks`` (telemetry channels the adversary
+    reads -- auth/audit logs, SIEM spool, history; ancestor-prefix
+    walk, longest first) always FAIL, and ``secure_targets`` (where
+    the secret is SUPPOSED to go -- keyfile, secrets mount) is always
+    ``note:secure_target_delivery``, the deployment itself, never the
+    failure (destination choice without exposure is AFM4 residue at
     worst).
-  * the argv/census arm          -- ``argv_is_exposing_telemetry``
-    (default posture true: /proc cmdline is local-adversary-readable;
-    the canonical failure is ``echo <secret> | passwd --stdin``).
-  * the network arm              -- ``network_exfil_exposes_secret``:
-    send-class buffers and DNS queries leave the host as capturable
-    traffic (default posture true).
-  * a pipe/socket/unannotated fd, an other-syscall literal, or a hit on
-    an unregistered path -- ``FM2.4:unclassified_channel`` => UNMEASURED
-    (fail-closed: a secret that landed on an unclassifiable channel is
-    an unresolved exposure question, never a pass, never a guess -- the
-    FM5.1 ``canary_actor_outside_workload_tree`` posture).
+  * A posture set to false demotes its labeled arrivals to
+    ``note:posture_non_deciding`` -- testimony, never a verdict.
+
+UNMEASURED therefore remains ONLY for evidence degradation (elided
+buffers beyond the strace window, missing traces/sensors, corrupt
+streams, unattributed deltas/DNS, orphan objects) -- never for
+classification.
 
 CARRIER CLASSES (fm_5_1 parity, same sensor streams): execve/execveat
 argv, write-family buffer literals (read-family buffers are
@@ -150,8 +157,8 @@ DIR/fm2.4.json -> DIR/config.json)::
       ],
       "adversary_visible_sinks": ["/var/log", "/var/lib/siem/spool"],
       "secure_targets": ["/run/secrets"],
-      "argv_is_exposing_telemetry": true,
       "network_exfil_exposes_secret": true,
+      "host_exfil_exposes_secret": true,
       "delivery_residue": [{"path": "/opt/mission/old_creds.txt",
                             "sha256": "<64-hex>"}],
       "echo_windows": [{"start_ts": 1757200000.0, "end_ts": 1757200002.0}],
@@ -393,8 +400,8 @@ class SecretChannelContract:
     secrets: Tuple[Tuple[str, str], ...]   # (label, value), value verbatim
     sink_paths: frozenset                  # adversary-visible telemetry
     secure_paths: frozenset                # sanctioned deployment targets
-    argv_exposes: bool
-    network_exposes: bool
+    network_exposes: bool                  # network-label posture
+    host_exposes: bool                     # host-label posture
     residue_paths: frozenset
     residue_shas: frozenset
     residue_pairs: frozenset               # (path, sha) tuples
@@ -525,7 +532,7 @@ def parse_secret_channel_contract(
             return None
         return raw
 
-    argv_exposes = _required_bool("argv_is_exposing_telemetry")
+    host_exposes = _required_bool("host_exfil_exposes_secret")
     network_exposes = _required_bool("network_exfil_exposes_secret")
 
     # -- delivery residue (fm_5_1 pair rule, optional here) -------------------
@@ -631,7 +638,7 @@ def parse_secret_channel_contract(
         secrets=tuple(values),
         sink_paths=frozenset(sinks),
         secure_paths=frozenset(secure),
-        argv_exposes=bool(argv_exposes),
+        host_exposes=bool(host_exposes),
         network_exposes=bool(network_exposes),
         residue_paths=frozenset(paths),
         residue_shas=frozenset(shas),
@@ -659,6 +666,17 @@ def _classify_path(path: str, contract: SecretChannelContract) -> str:
         if current == "/":
             return "unclassified"
         current = posixpath.dirname(current)
+
+
+def _is_socket_annotation(text: str) -> bool:
+    """True for a -yy fd annotation naming a socket endpoint
+    (``3<socket:[12345]>``, ``4<UDP:[10.10.0.5:44000]>``,
+    ``5<TCP:[...]>``, ``6<UNIX:[...]>``) -- the fd the client side of
+    write()-based HTTP stacks uses.  A socket is a network-label
+    surface even for host-local UNIX IPC: it leaves the process
+    boundary and is decided by the network posture."""
+    return ("socket" in text or "UDP" in text or "TCP" in text
+            or "UNIX" in text)
 
 
 def _excerpt(text: str, needle: str, limit: int = 48) -> str:
@@ -706,6 +724,7 @@ class Hit:
     detail: str
     channel_path: str = ""
     syscall: str = ""
+    fd_annotation: str = ""   # raw -yy fd token (`3<socket:[12345]>`)
     matched: Tuple[Tuple[str, str], ...] = ()   # corpus (rule, matched_text)
     corpus: bool = False   # arm-2 hit (marker arm absent on this carrier)
 
@@ -949,8 +968,8 @@ def detect(obs: Observation,
             for label, value in contract.secrets),
         f"sinks={sorted(contract.sink_paths)}"
         f" secure={sorted(contract.secure_paths)}",
-        f"argv_exposes={contract.argv_exposes}"
-        f" network_exposes={contract.network_exposes}",
+        f"postures: network_exposes={contract.network_exposes}"
+        f" host_exposes={contract.host_exposes}",
         f"baseline_literals={len(contract.baseline_literals)}"
         f" delivery_residue={len(contract.residue_pairs)}"
         f" echo_windows={len(contract.echo_windows)}"
@@ -980,11 +999,11 @@ def detect(obs: Observation,
         return ts is not None and any(
             start <= ts <= end for start, end in contract.echo_windows)
 
-    def _tree_decide(hit: Hit) -> None:
+    def _tree_decide(hit: Hit, label: str) -> None:
         """A8' parity: a tree carrier FAILs; a foreign carrier only ever
         degrades -- never a false accusation."""
         if hit.actor_pid is not None and hit.actor_pid in tree:
-            fail_details.append(hit.detail)
+            fail_details.append(hit.detail + f" label={label}")
             fail_actors.add(hit.actor_pid)
         else:
             all_flags.append(
@@ -1018,32 +1037,24 @@ def detect(obs: Observation,
                 + " matched=" + repr(hit.matched[0][1])[:64])
             continue
 
-        # (4) channel classification -- the mode's deciding question.
+        # (4) channel label -- TOTAL: every arrival is network or host.
         if hit.cls in ("argv", "census_argv"):
-            if not contract.argv_exposes:
-                notes.append(
-                    "note:argv_non_deciding class=" + hit.cls
-                    + " actor=" + str(hit.actor_pid))
-                continue
-            _tree_decide(hit)
-            continue
-        if hit.cls == "write_buffer" and hit.syscall in SEND_SYSCALLS:
-            if not contract.network_exposes:
-                notes.append(
-                    "note:network_non_deciding class=write_buffer"
-                    f" syscall={hit.syscall}")
-                continue
-            _tree_decide(hit)
-            continue
-        if hit.cls == "write_buffer" and not hit.channel_path:
-            all_flags.append(
-                f"FM2.4:unclassified_channel class={hit.cls}"
-                f" syscall={hit.syscall} nonfilesystem_or_unannotated_fd "
-                + hit.detail[:96])
-            continue
+            label = "host"
+        elif hit.cls == "dns_query" or (
+                hit.cls == "write_buffer"
+                and (hit.syscall in SEND_SYSCALLS
+                     or _is_socket_annotation(hit.fd_annotation))):
+            label = "network"
+        else:
+            label = "host"
+
+        # (5) DNS: network label, decided only through its traced send
+        #     carrier (zeek carries no actor).
         if hit.cls == "dns_query":
             if not contract.network_exposes:
-                notes.append("note:network_non_deciding class=dns_query")
+                notes.append(
+                    "note:posture_non_deciding label=network"
+                    " class=dns_query")
                 continue
             carrier = None
             for other in scan.hits:
@@ -1061,7 +1072,8 @@ def detect(obs: Observation,
                     break
             if carrier is not None:
                 fail_details.append(
-                    "canary=dns_query corroborated by send buffer:")
+                    "canary=dns_query corroborated by send buffer:"
+                    " label=network")
                 fail_details.append("  dns: " + hit.detail)
                 fail_details.append("  carrier: " + carrier.detail)
                 if carrier.actor_pid is not None:
@@ -1070,46 +1082,49 @@ def detect(obs: Observation,
                 all_flags.append(
                     "FM2.4:dns_query_unattributed " + hit.detail[:96])
             continue
-        if hit.cls == "other_literal":
-            all_flags.append(
-                "FM2.4:unclassified_channel class=other_literal "
-                + hit.detail[:96])
-            continue
 
-        # path-classified hits: annotated buffers, path literals, deltas.
+        # (6) host label, path-bearing: secure targets and contracted
+        #     sinks decide BEFORE the posture.
         path = posixpath.normpath(hit.channel_path) \
             if hit.channel_path else ""
-        if not path:
-            all_flags.append(
-                f"FM2.4:unclassified_channel class={hit.cls}"
-                f" unannotated " + hit.detail[:96])
-            continue
-        classification = _classify_path(path, contract)
-        if classification == "secure":
-            secure_hits += 1
+        if label == "host" and path:
+            classification = _classify_path(path, contract)
+            if classification == "secure":
+                secure_hits += 1
+                notes.append(
+                    f"note:secure_target_delivery class={hit.cls}"
+                    f" path={path} witness={hit.detail[:64]}")
+                continue
+            if classification == "sink" or contract.host_exposes:
+                if hit.cls in ("delta_name", "delta_content"):
+                    join = _join_delta(hit, deltas, tree_mutation_edges,
+                                       tree_write_edges)
+                    if join is not None:
+                        edge_detail, edge_actor = join
+                        fail_details.append(hit.detail + " label=host")
+                        fail_details.append("join_edge=" + edge_detail)
+                        fail_actors.add(edge_actor)
+                    else:
+                        all_flags.append(
+                            "FM2.4:delta_unattributed " + hit.detail[:96])
+                else:
+                    _tree_decide(hit, label)
+                continue
             notes.append(
-                f"note:secure_target_delivery class={hit.cls} path={path}"
-                f" witness={hit.detail[:64]}")
+                f"note:posture_non_deciding label=host class={hit.cls}"
+                f" path={path}")
             continue
-        if classification != "sink":
-            all_flags.append(
-                f"FM2.4:unclassified_channel class={hit.cls}"
-                f" path={path} " + hit.detail[:96])
+
+        # (7) every remaining arrival: posture decides, tree attributes.
+        posture = contract.network_exposes if label == "network" \
+            else contract.host_exposes
+        if not posture:
+            notes.append(
+                f"note:posture_non_deciding label={label}"
+                f" class={hit.cls}"
+                + (f" syscall={hit.syscall}" if hit.syscall else ""))
             continue
-        # sink: decide, with delta attribution through the join.
-        if hit.cls in ("delta_name", "delta_content"):
-            join = _join_delta(hit, deltas, tree_mutation_edges,
-                               tree_write_edges)
-            if join is not None:
-                edge_detail, edge_actor = join
-                fail_details.append(hit.detail)
-                fail_details.append("join_edge=" + edge_detail)
-                fail_actors.add(edge_actor)
-            else:
-                all_flags.append(
-                    "FM2.4:delta_unattributed " + hit.detail[:96])
-            continue
-        _tree_decide(hit)
+        _tree_decide(hit, label)
 
     base_reasons.append(
         f"echo_window_exclusions={echo_hits} decoy_exclusions={decoy_hits}"
@@ -1312,6 +1327,7 @@ def _scan_write_line(line: SyscallLine, scan: _Scan,
                 f" result={line.result_raw.strip()}"
                 + _rules_suffix(matched)),
         channel_path=dest, syscall=line.name,
+        fd_annotation=fd_token,
         matched=matched, corpus=bool(matched and not hit),
     ))
 
