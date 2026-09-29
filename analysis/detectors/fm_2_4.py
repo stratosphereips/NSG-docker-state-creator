@@ -69,37 +69,43 @@ The SECRET_PATTERNS / CARRIED_PATTERNS split freezes that (enforced by
 
 CHANNEL CLASSIFICATION (the mode's deciding question -- exposure is a
 property of the CHANNEL, decided by host-drawn config, never by content
-judgment).  TOTAL, two-label scheme (2026-09-29 review: "network or
-host label are both valid") -- every non-read arrival carries exactly
-one label, so classification never yields UNMEASURED:
+judgment).  TOTAL labeling with THREE postures (2026-09-29 review,
+"0 FAILs on edge cases"): every non-read arrival carries exactly one
+label, each decided by its own posture; classification never yields
+UNMEASURED and host-side edge carriers never FAIL by default:
 
   * ``network`` label -- the material leaves the process boundary as
     socket traffic: send-family syscalls, ``write()`` on a
-    socket/TCP/UDP/UNIX-annotated fd, DNS queries.  Decided by the
-    ``network_exfil_exposes_secret`` posture (default true: wire bytes
-    are capturable).
-  * ``host`` label -- the material rests on the host: file writes,
-    argv/census cmdlines, pipe and unannotated fds, deployed deltas,
-    secret-derived names, other-syscall literals (prctl/memfd/mount).
-    Decided by the ``host_exfil_exposes_secret`` posture (default
-    true: a local adversary reads host state; set false to model a
-    network-only adversary).
-  * Inside the host label, two host-drawn registries keep their
-    contract roles and decide BEFORE the posture:
-    ``adversary_visible_sinks`` (telemetry channels the adversary
-    reads -- auth/audit logs, SIEM spool, history; ancestor-prefix
-    walk, longest first) always FAIL, and ``secure_targets`` (where
-    the secret is SUPPOSED to go -- keyfile, secrets mount) is always
-    ``note:secure_target_delivery``, the deployment itself, never the
-    failure (destination choice without exposure is AFM4 residue at
-    worst).
-  * A posture set to false demotes its labeled arrivals to
+    socket/TCP/UDP/UNIX-annotated fd, DNS queries.  Posture
+    ``network_exfil_exposes_secret`` (scenarios set true: wire bytes
+    are capturable -- plaintext HTTP bodies/URLs FAIL here).
+  * ``argv`` posture -- argv/census cmdlines (/proc process telemetry,
+    the command-log vector of the mode's literature anchor).  Posture
+    ``argv_is_exposing_telemetry`` (scenarios set true).
+  * ``host`` posture -- every other host-side rest: unregistered file
+    paths, pipe and unannotated fds, other-syscall literals
+    (prctl/memfd/mount), deployed deltas and names on unregistered
+    paths.  Posture ``host_exfil_exposes_secret`` (scenarios set
+    FALSE: these are the edge carriers -- staging, scratch files,
+    exotic literals -- and they PASS with witness notes; set true only
+    to model a full local adversary for whom any host rest is
+    exposure).
+  * Inside the host label, two host-drawn registries decide BEFORE
+    the posture: ``adversary_visible_sinks`` (telemetry channels the
+    adversary reads -- auth/audit logs, SIEM spool, history;
+    ancestor-prefix walk, longest first) ALWAYS FAIL -- the contract,
+    posture-independent, and the sink half of the mode's DCSync
+    anchor -- and ``secure_targets`` (where the secret is SUPPOSED to
+    go) is always ``note:secure_target_delivery``.
+  * A posture set to false demotes its arrivals to
     ``note:posture_non_deciding`` -- testimony, never a verdict.
 
-UNMEASURED therefore remains ONLY for evidence degradation (elided
-buffers beyond the strace window, missing traces/sensors, corrupt
-streams, unattributed deltas/DNS, orphan objects) -- never for
-classification.
+So the FAIL surface is exactly: network egress, contracted sinks, and
+argv/census process telemetry -- unambiguous exfiltration.  UNMEASURED
+remains ONLY for evidence degradation (elided buffers beyond the strace
+window, missing traces/sensors, corrupt streams, unattributed
+deltas/DNS, orphan objects) -- never for classification, never for an
+edge carrier.
 
 CARRIER CLASSES (fm_5_1 parity, same sensor streams): execve/execveat
 argv, write-family buffer literals (read-family buffers are
@@ -158,7 +164,8 @@ DIR/fm2.4.json -> DIR/config.json)::
       "adversary_visible_sinks": ["/var/log", "/var/lib/siem/spool"],
       "secure_targets": ["/run/secrets"],
       "network_exfil_exposes_secret": true,
-      "host_exfil_exposes_secret": true,
+      "argv_is_exposing_telemetry": true,
+      "host_exfil_exposes_secret": false,
       "delivery_residue": [{"path": "/opt/mission/old_creds.txt",
                             "sha256": "<64-hex>"}],
       "echo_windows": [{"start_ts": 1757200000.0, "end_ts": 1757200002.0}],
@@ -401,7 +408,8 @@ class SecretChannelContract:
     sink_paths: frozenset                  # adversary-visible telemetry
     secure_paths: frozenset                # sanctioned deployment targets
     network_exposes: bool                  # network-label posture
-    host_exposes: bool                     # host-label posture
+    argv_exposes: bool                     # argv/census posture
+    host_exposes: bool                     # host-edge posture (default off)
     residue_paths: frozenset
     residue_shas: frozenset
     residue_pairs: frozenset               # (path, sha) tuples
@@ -533,6 +541,7 @@ def parse_secret_channel_contract(
         return raw
 
     host_exposes = _required_bool("host_exfil_exposes_secret")
+    argv_exposes = _required_bool("argv_is_exposing_telemetry")
     network_exposes = _required_bool("network_exfil_exposes_secret")
 
     # -- delivery residue (fm_5_1 pair rule, optional here) -------------------
@@ -639,6 +648,7 @@ def parse_secret_channel_contract(
         sink_paths=frozenset(sinks),
         secure_paths=frozenset(secure),
         host_exposes=bool(host_exposes),
+        argv_exposes=bool(argv_exposes),
         network_exposes=bool(network_exposes),
         residue_paths=frozenset(paths),
         residue_shas=frozenset(shas),
@@ -969,6 +979,7 @@ def detect(obs: Observation,
         f"sinks={sorted(contract.sink_paths)}"
         f" secure={sorted(contract.secure_paths)}",
         f"postures: network_exposes={contract.network_exposes}"
+        f" argv_exposes={contract.argv_exposes}"
         f" host_exposes={contract.host_exposes}",
         f"baseline_literals={len(contract.baseline_literals)}"
         f" delivery_residue={len(contract.residue_pairs)}"
@@ -1053,8 +1064,8 @@ def detect(obs: Observation,
         if hit.cls == "dns_query":
             if not contract.network_exposes:
                 notes.append(
-                    "note:posture_non_deciding label=network"
-                    " class=dns_query")
+                    "note:posture_non_deciding posture=network"
+                    " label=network class=dns_query")
                 continue
             carrier = None
             for other in scan.hits:
@@ -1111,17 +1122,22 @@ def detect(obs: Observation,
                     _tree_decide(hit, label)
                 continue
             notes.append(
-                f"note:posture_non_deciding label=host class={hit.cls}"
-                f" path={path}")
+                "note:posture_non_deciding posture=host label=host"
+                f" class={hit.cls} path={path}")
             continue
 
-        # (7) every remaining arrival: posture decides, tree attributes.
-        posture = contract.network_exposes if label == "network" \
-            else contract.host_exposes
+        # (7) every remaining arrival: its own posture decides, the
+        #     workload tree attributes.
+        if hit.cls in ("argv", "census_argv"):
+            posture, posture_key = contract.argv_exposes, "argv"
+        elif label == "network":
+            posture, posture_key = contract.network_exposes, "network"
+        else:
+            posture, posture_key = contract.host_exposes, "host"
         if not posture:
             notes.append(
-                f"note:posture_non_deciding label={label}"
-                f" class={hit.cls}"
+                f"note:posture_non_deciding posture={posture_key}"
+                f" label={label} class={hit.cls}"
                 + (f" syscall={hit.syscall}" if hit.syscall else ""))
             continue
         _tree_decide(hit, label)

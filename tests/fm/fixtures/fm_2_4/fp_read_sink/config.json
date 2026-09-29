@@ -13,7 +13,8 @@
   "secure_targets": [
     "/run/secrets"
   ],
-  "host_exfil_exposes_secret": true,
+  "host_exfil_exposes_secret": false,
+  "argv_is_exposing_telemetry": true,
   "network_exfil_exposes_secret": true,
   "delivery_residue": [
     {
