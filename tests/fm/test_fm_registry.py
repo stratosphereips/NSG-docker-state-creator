@@ -139,6 +139,5 @@ def test_measured_anywhere_count():
         for m in registry["modes"]
         if (m.get("nsg_dsc") or {}).get("status") == "tested"
         or (m.get("sms_harness") or {}).get("status") == "measured"
-        or (m.get("netsecgame") or {}).get("status") == "measured"
     }
     assert len(measured) == registry["taxonomy"]["measured_anywhere"]

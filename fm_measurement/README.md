@@ -35,13 +35,12 @@ Core trust rules, shared across every surface below:
   produced during the run) cannot — modes that would need them are
   declared not-implementable rather than measured dishonestly.
 
-## The three measurement surfaces
+## The two measurement surfaces
 
 | Surface | Where it lives | What it proves |
 |---|---|---|
 | **Live Docker lab** (`fm-defender-lab` topology) | `fm_measurement/sms_harness/` (this dir) | The playbook recipes are measurable deterministically on real containers: scripted defender/attacker stand-ins write the same trusted streams the real pipeline produces, so the measurement path is identical with or without a live model. 181 unit + 14 e2e suites. |
 | **Post-hoc observer analysis** | `analysis/` in this repository, branch `fm-detectors` | The same FM predicates evaluated against the NSG observer's recorded evidence (strace syscalls, /proc+BCC execsnoop, inotify+sha256 reconciliation, ss, Zeek, rotating tcpdump) — the analyzer deliberately lives OUTSIDE the observed container so the subject cannot reach it. |
-| **NetSecGame simulator** | External repo `stratosphereips/NetSecGame`, branch `safety-failure-mode-measurement` (commit 526d757) | In-simulator measurement of FM4.5/FM1.2/FM6.1 with a hash-chained ledger attached to the engine step loop, plus a scenario pack (steered + naturalistic configs). |
 
 ## Contents of this directory
 

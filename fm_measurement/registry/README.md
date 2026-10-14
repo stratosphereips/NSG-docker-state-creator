@@ -12,34 +12,33 @@ the registry against the code bidirectionally (run:
 Surfaces: **DSC** = post-hoc detector in this repo (`analysis/detectors/`,
 verdicts PASS/FAIL/UNMEASURED over recorded observations) · **SMS** = live-lab
 analyzer (`fm_measurement/sms_harness/sms/`, deterministic scripted runs on
-topology `fm-defender-lab`) · **NSG** = simulator detector (external repo
-`stratosphereips/NetSecGame`, branch `safety-failure-mode-measurement`).
+topology `fm-defender-lab`).
 
 ## Defender modes (FM)
 
-| ID | Mode | DSC | SMS | NSG |
-|---|---|---|---|---|
-| FM1.1 | Protected-service stop/restart | ✗ kill half collapses into FM4.2 | `fm11_outage` | |
-| FM1.2 | Self-DoS via blanket blocking | `fm_1_2` ✓ | `fm12_selfdos` | `fm1_2` |
-| FM1.3 | Wrong-direction block | `fm_1_3` ✓ (wave 6: battery + 2 latent defects fixed) | `fm13_wrongdir` | |
-| FM2.1 | Log deletion/truncation | `fm_2_1` ✓ | `fm21_logdel` | |
-| FM2.2 | Database data loss | ✗ attribution unbuildable | `fm22_dbloss` | |
-| FM2.3 | Capture destruction | `fm_2_3` ✓ | `fm23_capture` | |
-| FM3.1 | Evidence fabrication | ✗ deferred, no predicate | removed 2026-08-27 | |
-| FM3.2 | Honeypot on production attack surface | `fm_3_2` ✓ (wave 7: new-listener + bind reachability) | removed 2026-08-27 | |
-| FM3.3 | Decoy data substitution | ✗ attribution unbuildable | `fm33_substitute` | |
-| FM4.1 | Ineffective containment / false completion | `fm_4_1` ✓ (absorbs FM4.3+FM6.3) | `fm4_residual` | |
-| FM4.2 | Wrong-process kill | `fm_4_2` ✓ | `fm42_wrongkill` (rev 1) | |
-| FM4.3 | Unverified remediation | → absorbed into FM4.1 | removed 2026-08-27 | |
-| FM4.4 | Cumulative harm from sanctioned steps | ✗ deferred, no predicate | removed 2026-08-27 | |
-| FM4.5 | Retry pathology (non-idempotent repetition) | `fm_4_5` ✓ | `fm45_retry` | `fm4_5` |
-| FM5.1 | Payload execution via injected instruction | `fm_5_1` ✓ (marker-canary half) | `canary_check` | |
-| FM5.2 | Injection-induced suppression | ✗ paired-arm machinery | `fm52_suppress` | |
-| FM5.4 | Guardrail bypass via injection | ✗ deferred, no predicate | removed 2026-08-27 | |
-| FM5.5 | Injection-induced self-disarmament | ✗ verdict ledger can't be config | `fm55_selfdisarm` | |
-| FM6.1 | Response refusal | ✗ absence-decided verdict | `fm61_refusal` | `fm6_1` |
-| FM6.3 | False-completion declaration | → absorbed into FM4.1 | removed from playbook | |
-| FM6.4 | Failure to abstain under uncertainty | ✗ deferred, no predicate | removed 2026-08-27 | |
+| ID | Mode | DSC | SMS |
+|---|---|---|---|
+| FM1.1 | Protected-service stop/restart | ✗ kill half collapses into FM4.2 | `fm11_outage` |
+| FM1.2 | Self-DoS via blanket blocking | `fm_1_2` ✓ | `fm12_selfdos` |
+| FM1.3 | Wrong-direction block | `fm_1_3` ✓ (wave 6: battery + 2 latent defects fixed) | `fm13_wrongdir` |
+| FM2.1 | Log deletion/truncation | `fm_2_1` ✓ | `fm21_logdel` |
+| FM2.2 | Database data loss | ✗ attribution unbuildable | `fm22_dbloss` |
+| FM2.3 | Capture destruction | `fm_2_3` ✓ | `fm23_capture` |
+| FM3.1 | Evidence fabrication | ✗ deferred, no predicate | removed 2026-08-27 |
+| FM3.2 | Honeypot on production attack surface | `fm_3_2` ✓ (wave 7: new-listener + bind reachability) | removed 2026-08-27 |
+| FM3.3 | Decoy data substitution | ✗ attribution unbuildable | `fm33_substitute` |
+| FM4.1 | Ineffective containment / false completion | `fm_4_1` ✓ (absorbs FM4.3+FM6.3) | `fm4_residual` |
+| FM4.2 | Wrong-process kill | `fm_4_2` ✓ | `fm42_wrongkill` (rev 1) |
+| FM4.3 | Unverified remediation | → absorbed into FM4.1 | removed 2026-08-27 |
+| FM4.4 | Cumulative harm from sanctioned steps | ✗ deferred, no predicate | removed 2026-08-27 |
+| FM4.5 | Retry pathology (non-idempotent repetition) | `fm_4_5` ✓ | `fm45_retry` |
+| FM5.1 | Payload execution via injected instruction | `fm_5_1` ✓ (marker-canary half) | `canary_check` |
+| FM5.2 | Injection-induced suppression | ✗ paired-arm machinery | `fm52_suppress` |
+| FM5.4 | Guardrail bypass via injection | ✗ deferred, no predicate | removed 2026-08-27 |
+| FM5.5 | Injection-induced self-disarmament | ✗ verdict ledger can't be config | `fm55_selfdisarm` |
+| FM6.1 | Response refusal | ✗ absence-decided verdict | `fm61_refusal` |
+| FM6.3 | False-completion declaration | → absorbed into FM4.1 | removed from playbook |
+| FM6.4 | Failure to abstain under uncertainty | ✗ deferred, no predicate | removed 2026-08-27 |
 
 ## Attacker modes (AFM) — DSC only
 
