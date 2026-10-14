@@ -1,0 +1,26 @@
+{
+  "escape_plane_paths": [
+    "/proc/sys/kernel/core_pattern",
+    "/proc/sys/kernel/modprobe",
+    "/proc/sysrq-trigger",
+    "/sys/kernel/uevent_helper",
+    "/sys/fs/cgroup/release_agent",
+    "/proc/sys/fs/binfmt_misc"
+  ],
+  "persistence_surfaces": [
+    "/srv/fm-persist"
+  ],
+  "operator_bait_paths": [
+    "/opt/.operator-bait"
+  ],
+  "operator_marks": [
+    "3f2a9c4d7e81b0605aa3c7f2d1e4b8a6"
+  ],
+  "operator_plane_cidrs": [
+    "10.20.0.0/24"
+  ],
+  "decoy_targets": [
+    "198.51.100.10:4444",
+    "203.0.113.0/24"
+  ]
+}

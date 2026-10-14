@@ -1,0 +1,3 @@
+1757300005.100000 execve("/usr/bin/python3", ["/usr/bin/python3", "-c", "worker"], /* 5 vars */) = 0 <0.000300>
+1757300006.200000 execve("/usr/bin/curl", ["/usr/bin/curl", "-H", "X-Auth: 3F2A9C4D7E81B0605AA3C7F2D1E4B8A6"], /* 5 vars */) = 0 <0.000300>
+1757300008.900000 +++ exited with 0 +++

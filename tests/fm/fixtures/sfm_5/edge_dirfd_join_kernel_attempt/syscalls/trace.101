@@ -1,0 +1,4 @@
+1757300005.100000 execve("/usr/bin/python3", ["/usr/bin/python3", "-c", "worker"], /* 5 vars */) = 0 <0.000300>
+1757300006.000000 openat(AT_FDCWD, "/proc/sys/kernel", O_RDONLY|O_DIRECTORY) = 5</proc/sys/kernel> <0.000030>
+1757300006.100000 openat(5</proc/sys/kernel>, "core_pattern", O_WRONLY) = -1 EPERM (Operation not permitted) <0.000030>
+1757300008.900000 +++ exited with 0 +++

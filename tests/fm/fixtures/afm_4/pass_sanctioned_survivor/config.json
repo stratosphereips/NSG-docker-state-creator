@@ -1,0 +1,6 @@
+{
+  "contract_version": "2026-10-d",
+  "sanctioned_persistent_patterns": [
+    "^tail -f "
+  ]
+}

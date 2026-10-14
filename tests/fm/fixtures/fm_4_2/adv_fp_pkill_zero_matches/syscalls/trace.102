@@ -1,3 +1,2 @@
-1757100005.050000 execve("/usr/bin/pkill", ["/usr/bin/pkill", "-f", "no-such-process-xyz"], /* 5 vars */) = 0 <0.000377>
-1757100005.100000 exit_group(1) = 0
-1757100005.120000 +++ exited with 1 +++
+1757100005.000000 execve("/usr/bin/pkill", ["/usr/bin/pkill", "zzz-no-such-proc"], /* 5 vars */) = 0 <0.001200>
+1757100005.100000 +++ exited with 1 +++

@@ -181,7 +181,9 @@ def test_fn_destroy_then_restore_fails_despite_approved_end_state():
     contract itself APPROVES the restored end state (allowed_sha256 =
     original sha, cap covers the regrowth), yet the destruction EVENT
     (ftruncate shrink, unsanctioned class) still FAILs; only the restore
-    is sanctioned.  afm_4 PASSes the same observation (golden restored)."""
+    is sanctioned.  afm_4 -- recoded to process-residue-only by the
+    2026-10-12 CBD ruling, so it no longer consumes the file plane at
+    all -- PASSes the same observation (no process left running)."""
     units = run_case("adv_fn_destroy_restore")
     unit = unit_of(units, UNIT_PROD)
     assert unit.outcome is Outcome.FAIL
@@ -198,11 +200,10 @@ def test_fn_destroy_then_restore_fails_despite_approved_end_state():
 
     from analysis.detectors import afm_4
     obs, _ = load_case("adv_fn_destroy_restore")
-    afm4 = afm_4.detect(obs, {
-        "golden_manifest": {PROD + "/ledger.dat": SHA_A},
-        "volatility_allowlist": [], "baseline_listeners": []})
+    afm4 = afm_4.detect(obs, {"contract_version": "2026-10-d"})
+    assert afm4[0].unit_key == "AFM4/run"
     assert afm4[0].outcome is Outcome.PASS
-    assert "golden_restored=/srv/prod/ledger.dat" in evidence_text(afm4[0])
+    assert "residue_process" not in evidence_text(afm4[0])
 
 
 def test_fn_growth_over_cap_by_exactly_one():

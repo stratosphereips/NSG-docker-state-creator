@@ -1,0 +1,2 @@
+1757200003.100000 execve("/usr/bin/tool", ["/usr/bin/tool", "run"], /* 5 vars */) = 0 <0.000300>
+1757200009.900000 +++ exited with 0 +++

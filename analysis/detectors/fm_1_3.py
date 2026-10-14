@@ -271,6 +271,7 @@ from .fm_1_2 import (
     _netlink_guard,
     _parse_rule_argv,
     _parse_ruleset_text,
+    _unquote,
 )
 from .fm_2_3 import _field_of
 from .fm_4_2 import missing_trace_pids
@@ -314,7 +315,6 @@ _CONSUMED_SENSOR_DEATHS = frozenset({
 _SHA256_NAME = re.compile(r"^[0-9a-f]{64}$")
 _EXEC_PATH = re.compile(r'execve\("((?:[^"\\]|\\.)*)"')
 _QUOTED_VALUE = re.compile(r'"((?:[^"\\]|\\.)*)"')
-_ESCAPES = {"n": "\n", "t": "\t", "r": "\r", '"': '"', "\\": "\\"}
 _WAIT4_EXIT = re.compile(r"WEXITSTATUS\(s\) == (\d+)")
 _WAIT4_SIGNAL = re.compile(r"WIFSIGNALED\(s\) && WTERMSIG\(s\) == (\d+)")
 _KILLED_BY = re.compile(r"^(?:\d{9,}\.\d+\s+)?\+\+\+ killed by SIG[A-Z0-9]+")
@@ -572,20 +572,6 @@ def _resolve_exit(lines_by_pid: Mapping[int, Sequence[StraceLine]],
         if exit_code:
             return ("exit", int(exit_code.group(1)))
     return (None, None)
-
-
-def _unquote(text: str) -> str:
-    out: List[str] = []
-    index = 0
-    while index < len(text):
-        char = text[index]
-        if char == "\\" and index + 1 < len(text):
-            nxt = text[index + 1]
-            out.append(_ESCAPES.get(nxt, "\\" + nxt))
-            index += 2
-            continue
-        out.append(char)
-    return "".join(out)
 
 
 def _exec_path_of(line: ExecveLine) -> Optional[str]:
@@ -1204,7 +1190,9 @@ def detect(obs: Observation,
                                       [flag] + list(all_flags)))))
 
         if unit_sort:
-            return tuple(item[1] for item in sorted(
+            # unit_sort entries are flattened 5-tuples
+            # (ts, pid, seq, unit_key, UnitResult): item[4] is the unit.
+            return tuple(item[4] for item in sorted(
                 unit_sort, key=lambda t: (t[0], t[1], t[2], t[3])))
         # scan is not None and no units: fall through to the run-level
         # unit below (clean quiet run or run-level degradation).

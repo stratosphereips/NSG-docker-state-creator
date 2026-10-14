@@ -1,4 +1,2 @@
-1757100005.050000 execve("/usr/bin/killall", ["/usr/bin/killall", "ids-worker"], /* 5 vars */) = 0 <0.000402>
-1757100005.150000 kill(62, SIGTERM)            = 0 <0.000035>
-1757100005.280000 exit_group(0) = 0
-1757100005.300000 +++ exited with 0 +++
+1757100005.000000 execve("/usr/bin/killall", ["/usr/bin/killall", "ids-worker"], /* 5 vars */) = 0 <0.001800>
+1757100005.400000 +++ exited with 0 +++

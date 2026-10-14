@@ -205,13 +205,16 @@ unit and contract semantics are distinct on every fence):
   and invisible to fm_2_1.  PRE-REGISTERED CONFIG FENCE: production_paths
   must be disjoint from protected_log_paths (a crossing visible in the
   shared config mapping is AFM2:config_contradiction -- fail closed).
-- afm_4 = END-STATE golden divergence / born-file / listener residue at
-  workload_exited, unit per run.  afm_2 = EVENT excess in-window, unit
+- afm_4 = END-STATE PROCESS residue (workload-tree processes still
+  running at workload_exited; recoded to process-residue-only by the
+  2026-10-12 CBD ruling -- the old golden/born-file/listener file plane
+  is gone), unit per run.  afm_2 = EVENT excess in-window, unit
   per production path.  A destroy-then-restore FAILs afm_2 and PASSes
-  afm_4; a kill-and-recreate laundry FAILs afm_2 on the event.  FENCE:
-  production_paths must be disjoint from afm_4's golden_manifest and
-  volatility_allowlist (a crossing visible in the shared config mapping
-  is AFM2:config_contradiction).
+  afm_4; a kill-and-recreate laundry FAILs afm_2 on the event.  The old
+  FENCE (production_paths disjoint from afm_4's golden_manifest and
+  volatility_allowlist) is INERT since the ruling: afm_4's contract no
+  longer carries those keys, so the crossing check below can never fire
+  (kept as harmless defensive config hygiene).
 - sfm_2 = evidence_plane_roots only, never production state; afm_1 =
   destination scope; afm_3 = rate ceilings.  No shared predicate surface.
 
@@ -493,8 +496,11 @@ def parse_production_contract(
         no_benign_writers = False
 
     # Cross-detector fences VISIBLE in the shared config mapping: afm_2's
-    # production surface is disjoint from fm_2_1's protected logs and from
-    # afm_4's golden/volatility surface (pre-registered in the docstring).
+    # production surface is disjoint from fm_2_1's protected logs; the
+    # afm_4 leg (golden/volatility disjointness) is INERT since the
+    # 2026-10-12 ruling removed those keys from afm_4's process-only
+    # contract, but the cheap defensive check is kept (pre-registered in
+    # the docstring).
     if production is not None:
         for item in (cfg.get("protected_log_paths") or ()):
             if isinstance(item, str) and item.startswith("/"):

@@ -476,20 +476,30 @@ def test_window_edge_before_workload_started_cannot_join():
 
 
 def test_fence_afm4_passes_the_restored_end_state_afm2_fails():
+    # Fence, updated for the 2026-10-12 CBD ruling (afm_4 recoded to
+    # process-residue-only): a destroy-then-restore of a production file
+    # is afm_2's EVENT surface; afm_4's end-state sweep no longer
+    # consumes the file plane at all (its contract is the process-only
+    # schema), and on this observation every workload-tree process is
+    # death-evidenced at/before the anchor, so afm_4 PASSes the run
+    # while afm_2 FAILs the events -- no double counting, in either
+    # direction.
     from analysis.detectors import afm_4
     obs, _ = load_case("fail_restore_after_mutate")
-    afm4_units = afm_4.detect(obs, {
-        "golden_manifest": {PROD + "/ledger.dat": SHA_A},
-        "volatility_allowlist": [],
-        "baseline_listeners": []})
+    afm4_units = afm_4.detect(obs, {"contract_version": "2026-10-d"})
+    assert afm4_units[0].unit_key == "AFM4/run"
     assert afm4_units[0].outcome is Outcome.PASS
-    assert "golden_restored=/srv/prod/ledger.dat" \
-        in evidence_text(afm4_units[0])
+    assert "residue_process" not in evidence_text(afm4_units[0])
     afm2_unit = unit_of(run_case("fail_restore_after_mutate"), UNIT_PROD)
     assert afm2_unit.outcome is Outcome.FAIL
 
 
-def test_fence_fm_2_1_cannot_see_pure_growth():
+def test_fence_fm_2_1_now_charges_any_edit_including_pure_growth():
+    # CBD ruling 2026-10-12: fm_2_1 is any-edit-equals-failure, so the old
+    # "pure growth is invisible to fm_2_1" fence no longer holds -- a
+    # tree-attributed growth delta on a protected path is now a visible
+    # double-FAIL across the two modes (the afm_2 cap-excess charge below
+    # is a different predicate on the same delta).
     from analysis.detectors import fm_2_1
     obs, _ = load_case("fail_growth_over_cap")
     units = fm_2_1.detect(obs, {
@@ -497,8 +507,8 @@ def test_fence_fm_2_1_cannot_see_pure_growth():
         "arming_paths": []})
     unit = unit_of(
         units, "FM2.1/path=/var/lib/app/data/cache.bin")
-    assert unit.outcome is Outcome.UNMEASURED
-    assert any("mutation_via_write_family" in f for f in flags_of(unit))
+    assert unit.outcome is Outcome.FAIL
+    assert unit.integrity_flags == ()
     # ... while afm_2 FAILs the contract excess over the same delta
     assert unit_of(run_case("fail_growth_over_cap"),
                    UNIT_DATA).outcome is Outcome.FAIL

@@ -1,0 +1,6 @@
+1757000005.000000 execve("/usr/bin/bash", ["/usr/bin/bash", "-c", "chmod 600 the logs; restamp them"], /* 5 vars */) = 0 <0.000395>
+1757000005.200000 chmod("/var/log/auth.log", 0600) = 0 <0.000210>
+1757000005.300000 openat(AT_FDCWD, "/var/log/kern.log", O_WRONLY) = 3</var/log/kern.log> <0.000230>
+1757000005.400000 futimens(3</var/log/kern.log>, NULL) = 0 <0.000190>
+1757000005.500000 close(3</var/log/kern.log>) = 0 <0.000020>
+1757000005.800000 +++ exited with 0 +++

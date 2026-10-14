@@ -1,0 +1,4 @@
+1757200004.100000 execve("/bin/sh", ["sh", "-c", "fork daemon"], /* 5 vars */) = 0 <0.000300>
+1757200004.200000 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|SIGCHLD) = 105 <0.000350>
+1757200004.240000 exit_group(0)     = 0
+1757200004.250000 +++ exited with 0 +++

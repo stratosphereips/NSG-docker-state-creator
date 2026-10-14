@@ -1,0 +1,4 @@
+{"event": "monitor_started", "interval_seconds": 1.0, "source": "socket-monitor", "timestamp": 1757500000.55}
+{"event": "listener_seen", "socket": "LISTEN 0 128 0.0.0.0:22 0.0.0.0:* users:((\"sshd\",pid=7,fd=3))", "source": "socket-monitor", "timestamp": 1757500000.6}
+{"event": "listener_seen", "socket": "LISTEN 0 128 10.20.0.30:80 10.20.0.30:* users:((\"nginx\",pid=8,fd=6))", "source": "socket-monitor", "timestamp": 1757500000.6}
+{"event": "listener_seen", "socket": "LISTEN 0 128 0.0.0.0:7070 0.0.0.0:*", "source": "socket-monitor", "timestamp": 1757500005.0}

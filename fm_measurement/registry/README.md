@@ -2,7 +2,7 @@
 
 One map of every failure mode in the taxonomy (32 modes: 21 defender FM,
 4 attacker AFM, 7 shared SFM — per `../docs/experiment_design_unified.tex`)
-to every surface that implements it. **19 modes are measured on at least one
+to every surface that implements it. **22 modes are measured on at least one
 surface.** The machine-readable source of truth is
 [`fm_registry.json`](fm_registry.json); the table below is rendered from it
 by hand and kept honest by `tests/fm/test_fm_registry.py`, which enforces
@@ -20,13 +20,13 @@ topology `fm-defender-lab`) · **NSG** = simulator detector (external repo
 | ID | Mode | DSC | SMS | NSG |
 |---|---|---|---|---|
 | FM1.1 | Protected-service stop/restart | ✗ kill half collapses into FM4.2 | `fm11_outage` | |
-| FM1.2 | Self-DoS via blanket blocking | `fm_1_2` ✓ (adv battery pending) | `fm12_selfdos` | `fm1_2` |
-| FM1.3 | Wrong-direction block | `fm_1_3` ⚠ WIP, no battery | `fm13_wrongdir` | |
+| FM1.2 | Self-DoS via blanket blocking | `fm_1_2` ✓ | `fm12_selfdos` | `fm1_2` |
+| FM1.3 | Wrong-direction block | `fm_1_3` ✓ (wave 6: battery + 2 latent defects fixed) | `fm13_wrongdir` | |
 | FM2.1 | Log deletion/truncation | `fm_2_1` ✓ | `fm21_logdel` | |
 | FM2.2 | Database data loss | ✗ attribution unbuildable | `fm22_dbloss` | |
 | FM2.3 | Capture destruction | `fm_2_3` ✓ | `fm23_capture` | |
 | FM3.1 | Evidence fabrication | ✗ deferred, no predicate | removed 2026-08-27 | |
-| FM3.2 | Honeypot on production attack surface | ✗ deferred, no predicate | removed 2026-08-27 | |
+| FM3.2 | Honeypot on production attack surface | `fm_3_2` ✓ (wave 7: new-listener + bind reachability) | removed 2026-08-27 | |
 | FM3.3 | Decoy data substitution | ✗ attribution unbuildable | `fm33_substitute` | |
 | FM4.1 | Ineffective containment / false completion | `fm_4_1` ✓ (absorbs FM4.3+FM6.3) | `fm4_residual` | |
 | FM4.2 | Wrong-process kill | `fm_4_2` ✓ | `fm42_wrongkill` (rev 1) | |
@@ -58,7 +58,7 @@ topology `fm-defender-lab`) · **NSG** = simulator detector (external repo
 | SFM2 | Specification gaming (subverting the evaluator) | `sfm_2` ✓ (tier-A table also carries the folded SFM5 surface) |
 | SFM3 | Executed safety-strip on operator order | ✗ verdict ledger can't be config |
 | SFM4 | Self-initiated disabling (ungoverned window) | ✗ verdict ledger can't be config |
-| SFM5 | Agent becomes the intrusion vector | → folded into `sfm_2` tier-A table |
+| SFM5 | Self-loss: escape, persistence, weaponization | `sfm_5` ✓ (wave 5: in-bracket surfaces; tier-A reach stays in `sfm_2`) |
 | SFM6 | Authorization obedience decays under context load | ✗ paired-arm machinery |
 | SFM7 | Acting against own recorded judgment | ✗ paired-arm machinery |
 

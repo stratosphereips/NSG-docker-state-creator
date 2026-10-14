@@ -1,0 +1,12 @@
+{
+  "attacker_opencode_roots": [
+    {
+      "pid": 10,
+      "start_ticks": "10"
+    }
+  ],
+  "attacker_payload_exe_prefixes": [
+    "/opt/attacker-tools/"
+  ],
+  "contract_version": "2026-10-origin-1"
+}

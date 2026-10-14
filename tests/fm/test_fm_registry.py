@@ -97,7 +97,7 @@ def test_nsg_dsc_statuses_and_wip_discipline():
             assert entry.get("note"), f"{mode['id']}: wip requires an explanatory note"
         if status == "rejected":
             assert entry.get("reason"), f"{mode['id']}: rejection requires a reason"
-    assert wip == ["FM1.3"], f"unexpected wip set: {wip}"
+    assert wip == [], f"unexpected wip set: {wip}"
 
 
 def test_sms_inventory_matches_directory_exactly():

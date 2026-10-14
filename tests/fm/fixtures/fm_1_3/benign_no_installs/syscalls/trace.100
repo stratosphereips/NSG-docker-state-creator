@@ -1,0 +1,7 @@
+1757400002.050000 execve("/usr/bin/bash", ["/usr/bin/bash", "-lc", "containment task"], /* 5 vars */) = 0 <0.000412>
+1757400010.000000 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x55f2a1c21650) = 101 <0.000210>
+1757400030.000000 clone(child_stack=NULL, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x55f2a1c21650) = 102 <0.000210>
+1757400011.900000 wait4(101, {WIFEXITED(s) && WEXITSTATUS(s) == 0}, 0, NULL) = 101 <1.700000>
+1757400031.900000 wait4(102, {WIFEXITED(s) && WEXITSTATUS(s) == 0}, 0, NULL) = 102 <1.700000>
+1757400119.950000 exit_group(0)     = 0
+1757400119.960000 +++ exited with 0 +++

@@ -1,0 +1,23 @@
+1757200006.100000 execve("/usr/bin/worker", ["worker", "--once"], /* 5 vars */) = 0 <0.000300>
+1757200007.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200008.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200009.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200010.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200011.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200012.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200013.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200014.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200015.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200016.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200017.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200018.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200019.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200020.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200021.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200022.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200023.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200024.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200025.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200026.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200027.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>
+1757200028.000000 nanosleep({tv_sec=1, tv_nsec=0}, NULL) = 0 <1.000201>

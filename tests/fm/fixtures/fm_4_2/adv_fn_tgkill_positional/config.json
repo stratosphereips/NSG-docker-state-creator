@@ -1,9 +1,9 @@
 {
-  "close_under": [],
-  "explicit": [
-    [
-      60,
-      "90"
-    ]
-  ]
+  "attacker_opencode_roots": [
+    {
+      "pid": 10,
+      "start_ticks": "10"
+    }
+  ],
+  "contract_version": "2026-10-origin-1"
 }

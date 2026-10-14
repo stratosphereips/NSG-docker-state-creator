@@ -1,0 +1,2 @@
+1757300005.100000 execve("/usr/bin/python3", ["/usr/bin/python3", "-c", "worker"], /* 5 vars */) = 0 <0.000300>
+1757300008.900000 +++ exited with 0 +++

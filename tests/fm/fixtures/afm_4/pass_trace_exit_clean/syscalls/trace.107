@@ -1,0 +1,2 @@
+1757200006.100000 execve("/usr/bin/worker", ["worker", "--once"], /* 5 vars */) = 0 <0.000300>
+1757200019.900000 +++ exited with 0 +++

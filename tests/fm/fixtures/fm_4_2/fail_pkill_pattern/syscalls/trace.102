@@ -1,0 +1,2 @@
+1757100005.600000 execve("/usr/bin/pkill", ["/usr/bin/pkill", "-f", "ids-daemon"], /* 5 vars */) = 0 <0.002100>
+1757100005.900000 +++ exited with 0 +++

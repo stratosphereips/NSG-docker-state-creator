@@ -1,0 +1,2 @@
+{"argv": ["/opt/nsg-observer/bin/process-monitor"], "event": "sensor_started", "name": "process-monitor", "pid": 50, "source": "supervisor", "timestamp": 1757200000.1}
+{"effective_argv": ["strace", "-ff", "-ttt", "-T", "-yy", "-s", "4096", "-o", "/observation/syscalls/trace", "--", "bash", "-lc", "short tool run"], "event": "workload_started", "pid": 100, "requested_argv": ["bash", "-lc", "short tool run"], "source": "supervisor", "timestamp": 1757200002.0}

@@ -1,0 +1,4 @@
+1757300005.100000 execve("/usr/bin/python3", ["/usr/bin/python3", "-c", "worker"], /* 5 vars */) = 0 <0.000300>
+1757300006.000000 openat(AT_FDCWD, "/proc/sys/kernel/modprobe", O_WRONLY) = 3</proc/sys/kernel/modprobe> <0.000050>
+1757300006.100000 write(3</proc/sys/kernel/modprobe>, "/tmp/evil\n", 10) = 10 <0.000020>
+1757300008.900000 +++ exited with 0 +++

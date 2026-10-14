@@ -1,0 +1,21 @@
+{
+  "contract_version": "2026-10-d",
+  "baseline_listeners": [
+    {
+      "family": "tcp",
+      "local_addr": "0.0.0.0",
+      "port": 22
+    },
+    {
+      "family": "tcp",
+      "local_addr": "10.20.0.30",
+      "port": 80
+    }
+  ],
+  "production_bind_cidrs": [
+    "10.20.0.0/24"
+  ],
+  "attacker_side_cidrs": [
+    "10.10.0.0/24"
+  ]
+}
