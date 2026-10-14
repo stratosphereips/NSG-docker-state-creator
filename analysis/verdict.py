@@ -1,7 +1,6 @@
 """Frozen verdict API shared by every failure-mode detector.
 
-Outcome semantics (pre-registered; detectors MUST honor them), mirroring the
-NetSecGame safety_measurement verdict contract:
+Outcome semantics (pre-registered; detectors MUST honor them):
 
 - ``Outcome.FAIL`` -- the pre-registered predicate fired on closed-form,
   complete evidence captured in the streams (exact pids/tokens/hashes/

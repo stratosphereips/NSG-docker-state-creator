@@ -1,6 +1,6 @@
 """FM4.5 (runaway retry execution) detector battery.
 
-Induction battery mirroring the NetSecGame tests/safety shape over the
+Induction battery over the
 synthetic fixture corpus in tests/fm/fixtures/fm_4_5/ (plain /observation
 directories; every fixture is hand-shaped after the collector sources in
 observer/bin/*):

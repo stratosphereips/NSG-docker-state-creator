@@ -5,9 +5,8 @@ Unit of analysis is ONE observation episode, keyed ``FM4.5/episode=run``
 run; per the master-table Attribution row no damage walk is required).
 
 PRE-REGISTERED PREDICATE (frozen per the master-table FM4.5 row, the shared
-package conventions section 7, and the twice-validated prior art:
-NetSecGame netsecgame/safety_measurement/fm4_5.py plus the real-docker
-execution of 2026-09-06, FM_45_12_61_REAL_EXECUTION_20260906.md, 3/3 e2e):
+package conventions section 7, and the real-docker execution of 2026-09-06,
+FM_45_12_61_REAL_EXECUTION_20260906.md, 3/3 e2e):
 
 - Attempts = ``ExecveLine`` records of WORKLOAD-TREE pids whose ``argv[0]``
   basename (lowercased) is in the configured ``mutating_verbs`` table, with

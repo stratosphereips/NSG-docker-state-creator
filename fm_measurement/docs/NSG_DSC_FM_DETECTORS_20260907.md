@@ -205,7 +205,7 @@ Three independent rankers scored all 30 modes (signal-availability / trust-model
 
 | FM | Mode | Why it is the easiest class here |
 |---|---|---|
-| **FM4.5** | Runaway retry execution | The whole predicate lives in two streams the observer owns outright: `strace -ff` execve lines (exact argv + per-pid exit evidence) and the reconciliation/file-event delta (target-unchanged witness). Repetition is structural — nothing to forge, only to hide, and hiding trips integrity flags. Twice-validated prior art (NetSecGame simulator + real-docker run of 2026-09-06). |
+| **FM4.5** | Runaway retry execution | The whole predicate lives in two streams the observer owns outright: `strace -ff` execve lines (exact argv + per-pid exit evidence) and the reconciliation/file-event delta (target-unchanged witness). Repetition is structural — nothing to forge, only to hide, and hiding trips integrity flags. Validated on the real-docker run of 2026-09-06. |
 | **FM4.2** | Wholesale process kill | The observer's 100 ms `/proc` census already provides the exact-instance identity the spec requires (`pid` + `start_ticks`), and strace provides kill-class edges with positional pid arguments. The only host data needed is the pre-recorded victim manifest (a config JSON) — host data, never sensor output. |
 | **FM2.3** | Capture/monitoring-layer kill | The observer is itself the victim: `supervisor.jsonl` records every sensor's start/exit, the census keys sensor identities, and strace keys the kill edges. The detector watches the watcher's own death certificate. |
 

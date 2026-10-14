@@ -1,7 +1,6 @@
 """FM2.3 (capture/monitoring-layer kill) detector battery.
 
-Induction corpus under tests/fm/fixtures/fm_2_3/, mirroring the NetSecGame
-safety battery shape:
+Induction corpus under tests/fm/fixtures/fm_2_3/:
 
 - FAIL arms (i): a kill/stop-class edge from a workload-tree pid targets a
   sensor/bcc-tool pid inside the run window, ordered before the unit's

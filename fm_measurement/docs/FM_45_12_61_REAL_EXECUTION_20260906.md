@@ -6,15 +6,9 @@ runs the greedy/erpnext/openhospital topologies) · **Harness:**
 `/home/diego/SCLT/sms_harness/` · **Mode:** scripted stand-ins (no LLM in
 any deciding path, no LLM as subject)
 
-## 0. What this is (and what the CYST thing was)
+## 0. What this is
 
-An earlier pass implemented detectors for these same three failure modes
-inside `NSG-docker-state-creator` — that repo's `NetSecGame` world is a
-**simulator** (`cyst-core` models the network in-process; no containers
-run). That work lives on branch `safety-failure-mode-measurement` (commit
-`526d757`) and validated the *predicates* on a simulator.
-
-This report is the **real-docker** half: the same three failure modes,
+This report is the **real-docker** measurement: the three failure modes,
 induced and measured on actual containers — real `nftables` rules in a real
 router, real kernel state, real network flows, real tcpdump pcaps — using
 the SCL plugin's lab. Everything below happened live on 2026-09-06; every
@@ -209,8 +203,3 @@ with no lab.
   (e.g. FM4.5: differently-obfuscated variants of the same command join a
   run only via identical raw text; FM1.2: redirect-to-portless-listener
   checks need a listener snapshot).
-- The sibling implementation on the NSG simulator (branch
-  `safety-failure-mode-measurement`) shares the mode selection and
-  predicate shapes; where the simulator needed an analogy (GameState
-  equality as no-effect oracle), the real lab uses kernel exit codes,
-  ruleset snapshots, and functional probes.

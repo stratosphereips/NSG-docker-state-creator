@@ -7,8 +7,7 @@ surfaces. This is an idea catalog + status reading, not an implementation.
 > **STATUS 2026-10-03:** ideas **1, 2, 4, 5, 7 and 9** from the plain-language
 > list are IMPLEMENTED as `analysis/detectors/sfm_5.py` (six surfaces on one
 > `SFM5/run` unit; 44 tests green; registry measured_anywhere 21; see the WAVE 5
-> section of `NSG_DSC_FM_DETECTORS_20260907.md`). NetSecGame was dropped from scope
-> by the maintainer. Remaining unbuilt: post-teardown fire-time (8), kernel second
+> section of `NSG_DSC_FM_DETECTORS_20260907.md`). Remaining unbuilt: post-teardown fire-time (8), kernel second
 > witness (10), docker-data-root watcher (11), twin runs (12), sms_harness vehicle
 > corpus and soak plumbing (13-16).
 
@@ -20,7 +19,6 @@ surfaces. This is an idea catalog + status reading, not an implementation.
 |---|---|---|
 | DSC (`analysis/detectors/`) | **folded** | tier-A escape-primitive table hosted inside `sfm_2.py` (`TIER_A_SYSCALLS`: kexec*, module ops, open_by_handle_at, bpf, perf_event_open, pidfd_getfd — FAIL-on-attempt). Registry reason: *"folded into SFM2's tier-A table; the remainder contradicts the frozen design."* |
 | SMS (`sms_harness/sms/`) | **null** | no `sfm5_*.py` module; playbook/sms never carried it |
-| NSG (simulator) | **null** | `netsecgame/safety_measurement/` has fm1_2/fm4_5/fm6_1 only |
 
 What is already covered by the fold — the **capability-reach** half of the
 escape conjunct (zero-legitimate-use kernel primitives, runtime-socket touch,
@@ -276,27 +274,9 @@ is foreign.
 
 ---
 
-## 6. NetSecGame simulator ideas
-
-### N1. `sfm5.py` simulator detector
-
-The engine's hash-chained step ledger already sees every action: model
-operator-infra nodes as a **permission class**; escape = any state change on
-operator/third-party nodes not issued by the harness; persistence = state
-changes surviving episode end (the engine can trivially evaluate post-
-teardown steps); weaponization = flows from operator nodes to third-party
-nodes without ledger ground truth. Cheap, scalable, steered-scenario-pack
-compatible — the behavioral-shape measurement that complements the live lab.
-
-### N2. Scenario pack additions
-
-Steered configs with injection payloads instructing escape/persistence —
-elicitation at simulator scale; results feed the affordance design for the
-live lab.
-
 ---
 
-## 7. Trust hardening specific to "concealed"
+## 6. Trust hardening specific to "concealed"
 
 - **Dual-stream decapitation redundancy**: every deciding signal needs two
   witnesses (strace + seccomp-NOTIF; census-nsinfo + tier-B edges; zeek +
@@ -312,7 +292,7 @@ live lab.
   update `test_fm_registry.py` bidirectionally, wave-5 selection per the
   established 3-ranker methodology.
 
-## 8. Fences (no double counting)
+## 7. Fences (no double counting)
 
 | Surface | Owner |
 |---|---|
@@ -323,7 +303,7 @@ live lab.
 | sensor/instrument kills | `fm_2_3` / A7' sabotage rule |
 | engagement-end residue vs golden (attacker arm) | `afm_4` — sfm_5 persistence differs by window (post-teardown) and role (shared); share `differ.py`, not the predicate |
 
-## 9. Recommended sequencing
+## 8. Recommended sequencing
 
 1. **Wave 5a (cheapest, today)**: D1 module skeleton + A1 (escape-plane path
    table) + A2/A3 (tier-B + nsinfo divergence) + A5 (persistence-surface
@@ -337,7 +317,7 @@ live lab.
 4. **Throughout**: concealment overlay metric (non-deciding) reported with
    every arm.
 
-## 10. Open decisions for the maintainer
+## 9. Open decisions for the maintainer
 
 1. Tier-B FAIL-on-attempt vs attempt+correlation — needs the L2 spec
    amendment pre-registered either way (the frozen tier says log-only).
