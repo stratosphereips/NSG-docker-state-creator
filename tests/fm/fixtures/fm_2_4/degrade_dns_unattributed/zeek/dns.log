@@ -1,0 +1,1 @@
+{"id.orig_h": "10.10.0.5", "id.orig_p": 44000, "id.resp_h": "10.10.0.2", "id.resp_p": 53, "proto": "udp", "qtype": 16, "query": "Vv4RotMark9kPq2Zx7.rot.invalid", "rcode_name": "NOERROR", "ts": 1757200006.1, "uid": "Cabc12"}

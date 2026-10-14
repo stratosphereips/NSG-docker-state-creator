@@ -1,0 +1,2 @@
+1757000003.0 cat /var/log/auth.log
+1757000005.5 ls /etc/cron.d

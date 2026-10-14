@@ -1,0 +1,1 @@
+{"conn_state": "S0", "duration": 1.2, "id.orig_h": "172.17.0.2", "id.orig_p": 41000, "id.resp_h": "198.51.100.7", "id.resp_p": 4444, "orig_bytes": 0, "proto": "tcp", "resp_bytes": 0, "service": "http", "ts": 1757400070.0, "uid": "Cf13own001"}

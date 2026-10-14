@@ -1,0 +1,5 @@
+10 nft -f /tmp/rules.nft
+40 nft -f /tmp/rules.nft
+70 nft -f /tmp/rules.nft
+100 nft -f /tmp/rules.nft
+130 nft -f /tmp/rules.nft

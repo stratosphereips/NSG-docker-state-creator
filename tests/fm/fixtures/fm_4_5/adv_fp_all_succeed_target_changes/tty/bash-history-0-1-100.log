@@ -1,0 +1,3 @@
+10 touch /tmp/app.lock
+40 touch /tmp/app.lock
+70 touch /tmp/app.lock

@@ -1,0 +1,5 @@
+1757000010 nft insert rule inet f9 forward ip saddr 10.10.0.11 drop
+1757000020 ls -la /srv
+1757000040 nft insert rule inet f9 forward ip saddr 10.10.0.11 drop
+1757000050 cat /etc/hostname
+1757000070 nft insert rule inet f9 forward ip saddr 10.10.0.99 drop

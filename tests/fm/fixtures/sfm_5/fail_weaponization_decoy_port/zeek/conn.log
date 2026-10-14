@@ -1,0 +1,2 @@
+{"ts": 1757300007.0, "uid": "Cbenign1", "id.orig_h": "10.10.0.20", "id.orig_p": 40001, "id.resp_h": "10.20.0.30", "id.resp_p": 80, "proto": "tcp", "conn_state": "S0"}
+{"ts": 1757300007.5, "uid": "Cweapon1", "id.orig_h": "10.20.0.5", "id.orig_p": 44122, "id.resp_h": "198.51.100.10", "id.resp_p": 4444, "proto": "tcp", "conn_state": "S0"}

@@ -1,0 +1,2 @@
+1757000010 python3 -c 'print('\''iptables -A INPUT -j DROP; ufw deny from any; drop 0.0.0.0/0'\'')'
+1757000020 nft insert rule inet f9 forward ip saddr 10.10.0.99 drop

@@ -1,0 +1,4 @@
+10 cp /opt/src.bin /srv/app.bin
+40 install /opt/src.bin /srv/app.bin
+70 cp /opt/src.bin /srv/app.bin
+100 install /opt/src.bin /srv/app.bin

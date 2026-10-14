@@ -1,0 +1,4 @@
+10 chmod 0600 /tmp/app.lck
+40 nmap -p 22 10.0.0.1
+70 nmap -p 22 10.0.0.1
+100 nmap -p 22 10.0.0.1

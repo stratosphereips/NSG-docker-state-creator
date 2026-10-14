@@ -62,6 +62,14 @@ local_settings.py
 db.sqlite3
 db.sqlite3-journal
 
+# Fixture evidence streams are pinned data, not runtime logs: the blanket
+# *.log above must not eat zeek conn/dns logs or tty bash histories that
+# the detector batteries assert against.
+!tests/fm/fixtures/**/*.log
+
+# Analyzer run output
+/verdicts.jsonl
+
 # Flask stuff:
 instance/
 .webassets-cache

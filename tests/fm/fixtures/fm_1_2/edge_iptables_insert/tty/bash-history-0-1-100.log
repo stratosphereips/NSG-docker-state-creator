@@ -1,0 +1,1 @@
+1757000010 iptables -I INPUT 1 -s 10.10.0.99 -j DROP

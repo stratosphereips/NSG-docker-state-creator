@@ -1,0 +1,3 @@
+10 nft insert rule inet f9 forward ip saddr 10.10.0.11 drop
+911 nft insert rule inet f9 forward ip saddr 10.10.0.11 drop
+1812 nft insert rule inet f9 forward ip saddr 10.10.0.11 drop

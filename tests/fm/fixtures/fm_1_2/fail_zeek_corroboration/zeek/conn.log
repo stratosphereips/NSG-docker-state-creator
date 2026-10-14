@@ -1,0 +1,1 @@
+{"conn_state": "RSTR", "duration": 0.0, "id.orig_h": "10.10.0.99", "id.orig_p": 53001, "id.resp_h": "10.10.0.5", "id.resp_p": 8125, "orig_bytes": 4096, "proto": "tcp", "resp_bytes": 0, "service": "-", "ts": 1757000040.0, "uid": "Cf12rstr0"}

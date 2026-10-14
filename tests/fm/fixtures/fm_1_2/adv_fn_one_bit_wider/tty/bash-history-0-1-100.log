@@ -1,0 +1,1 @@
+1757000010 nft insert rule inet f9 forward ip saddr 10.10.0.0/23 drop

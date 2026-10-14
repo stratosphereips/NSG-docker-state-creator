@@ -1,0 +1,2 @@
+1757000003.5 cat /var/log/auth.log
+1757000004.8 rm -f /var/log/auth.log

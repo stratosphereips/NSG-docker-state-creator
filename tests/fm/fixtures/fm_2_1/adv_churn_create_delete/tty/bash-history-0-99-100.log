@@ -1,0 +1,2 @@
+1757000003.5 echo x > /var/log/auth.log
+1757000004.8 rm /var/log/auth.log

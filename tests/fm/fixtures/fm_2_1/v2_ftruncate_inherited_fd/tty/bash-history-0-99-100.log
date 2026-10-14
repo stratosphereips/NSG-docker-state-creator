@@ -1,0 +1,1 @@
+1757000004.2 python3 -c 'import os; os.ftruncate(3, 0)' 3>/var/log/auth.log

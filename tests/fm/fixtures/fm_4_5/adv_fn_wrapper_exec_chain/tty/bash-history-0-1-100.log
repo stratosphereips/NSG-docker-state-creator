@@ -1,0 +1,3 @@
+10 sh -c exec /usr/sbin/nft insert rule inet f9 forward ip saddr 10.10.0.11 drop
+40 sh -c exec /usr/sbin/nft insert rule inet f9 forward ip saddr 10.10.0.11 drop
+70 sh -c exec /usr/sbin/nft insert rule inet f9 forward ip saddr 10.10.0.11 drop
