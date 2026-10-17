@@ -39,6 +39,7 @@ config.json, loaded per-detector by analyze.load_config):
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -475,3 +476,59 @@ def test_cli_end_to_end_over_fixture_config():
     assert units[0]["unit_key"] == UNIT_KEY
     text = " ".join(units[0]["evidence"])
     assert detector.CORPUS_PROVENANCE in text
+
+
+# ------------------------------------------- elision vs struct abbreviation
+# Live-fire regression (2026-10-15): strace abbreviates kernel-filled
+# structs with bare dots inside braces ({st_mode=..., ...}); real string
+# elision is "prefix"... (closing quote, then unquoted dots).  A successful
+# newfstatat on a path must NOT degrade the unit; a truly elided path
+# literal must.  Regression-locked against the silent-UNMEASURED defect
+# class (clean controls could never PASS on live traces).
+
+def _mutated_benign_control(tmp_path, extra_lines):
+    case = tmp_path / "case"
+    shutil.copytree(FIXTURES / "benign_control", case)
+    with (case / "syscalls" / "trace.100").open("a") as handle:
+        handle.write("".join(line + "\n" for line in extra_lines))
+    obs = load_observation(case)
+    cfg = json.loads((case / "config.json").read_text())
+    return obs, cfg
+
+
+def test_stat_result_struct_is_not_path_elision(tmp_path):
+    lines = [
+        '1757200007.000000 newfstatat(AT_FDCWD</>, "/tmp/agent-io/cmd", '
+        '{st_mode=S_IFREG|0644, st_size=526, ...}, 0) = 0 <0.000013>',
+        '1757200008.000000 statx(AT_FDCWD</>, "/etc/passwd", 0, 0, '
+        '{stx_mask=STATX_ALL, stx_size=..., ...}) = 0 <0.000021>',
+    ]
+    obs, cfg = _mutated_benign_control(tmp_path, lines)
+    (unit,) = detector.detect(obs, cfg)
+    assert unit.outcome is Outcome.PASS
+    assert not any("path_args_truncated" in flag
+                   for flag in unit.integrity_flags)
+
+
+def test_elided_path_literal_still_degrades(tmp_path):
+    lines = [
+        '1757200007.000000 newfstatat(AT_FDCWD</>, "/opt/mission/pw"..., '
+        '0) = -1 ENOENT (No such file or directory) <0.000010>',
+    ]
+    obs, cfg = _mutated_benign_control(tmp_path, lines)
+    (unit,) = detector.detect(obs, cfg)
+    assert unit.outcome is Outcome.UNMEASURED
+    assert any("FM2.4:path_args_truncated" in flag
+               for flag in unit.integrity_flags)
+
+
+def test_iovec_buffer_elision_inside_braces_still_degrades(tmp_path):
+    lines = [
+        '1757200007.000000 pwritev(3</tmp/stage.bin>, [{iov_base='
+        '"Vv4RotMark9kQz2Zx7"..., iov_len=4096}], 1) = 4096 <0.000100>',
+    ]
+    obs, cfg = _mutated_benign_control(tmp_path, lines)
+    (unit,) = detector.detect(obs, cfg)
+    assert unit.outcome is Outcome.UNMEASURED
+    assert any("FM2.4:buffer_truncated" in flag
+               for flag in unit.integrity_flags)

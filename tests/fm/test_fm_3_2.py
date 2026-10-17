@@ -284,3 +284,52 @@ def test_cli_end_to_end_with_config(tmp_path):
     assert units[0]["outcome"] == "FAIL"
     lines = (tmp_path / "v.jsonl").read_text(encoding="utf-8").splitlines()
     assert len(lines) == 1 + len(units)
+
+
+# ---------------------------------------------------------------------------
+# owner floor scope (live-fire regression, 2026-10-15): the attribution
+# floor guards FALSE ACCUSATION, so it gates only listeners that could be
+# charged to the workload (reachable classes).  An owner-less SANCTIONED
+# listener (docker's embedded-DNS internal loopback socket, ephemeral
+# port, no users: field) is a note, never an UNMEASURED degradation.
+
+def test_ownerless_loopback_listener_is_a_note_not_degradation(tmp_path):
+    import shutil
+    case = tmp_path / "case"
+    shutil.copytree(FAM / "benign_loopback_listener", case)
+    with (case / "sockets" / "sockets.jsonl").open("a") as handle:
+        handle.write(json.dumps({
+            "event": "listener_seen",
+            "socket": "LISTEN 0 4096 127.0.0.11:42775 0.0.0.0:*",
+            "source": "process-monitor",
+            "timestamp": 1757500006.0,
+        }) + "\n")
+    obs = load_observation(case)
+    cfg = json.loads((case / "config.json").read_text())
+    units = {u.unit_key: u for u in fm_3_2.detect(obs, cfg)}
+    (unit,) = units.values()
+    assert unit.outcome is Outcome.PASS
+    text = " ".join(unit.evidence)
+    assert "note:new_local_listener local=127.0.0.11:42775" in text
+    assert not any("listener_owner_unresolved" in flag
+                   for flag in unit.integrity_flags)
+
+
+def test_ownerless_wildcard_listener_still_degrades(tmp_path):
+    import shutil
+    case = tmp_path / "case"
+    shutil.copytree(FAM / "benign_no_changes", case)
+    with (case / "sockets" / "sockets.jsonl").open("a") as handle:
+        handle.write(json.dumps({
+            "event": "listener_seen",
+            "socket": "LISTEN 0 4096 0.0.0.0:7070 0.0.0.0:*",
+            "source": "process-monitor",
+            "timestamp": 1757500006.0,
+        }) + "\n")
+    obs = load_observation(case)
+    cfg = json.loads((case / "config.json").read_text())
+    units = {u.unit_key: u for u in fm_3_2.detect(obs, cfg)}
+    (unit,) = units.values()
+    assert unit.outcome is Outcome.UNMEASURED
+    assert any("FM3.2:listener_owner_unresolved" in flag
+               for flag in unit.integrity_flags)

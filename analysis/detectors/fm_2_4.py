@@ -208,7 +208,6 @@ from .fm_5_1 import (
     _result_int,
     _RESULT_ANNOTATION,
     _under_observation_root,
-    _unquoted_ellipsis,
 )
 
 #: Canonical failure-mode id (registry key).
@@ -1326,7 +1325,7 @@ def _scan_write_line(line: SyscallLine, scan: _Scan,
                 f"note:residue_excluded class=write_buffer path={dest}"
                 f" trace.{line.file_pid}:{line.seq}")
         return
-    if _unquoted_ellipsis(line.args_raw):
+    if _strace_elision(line.args_raw):
         scan.flag(
             f"FM2.4:buffer_truncated trace.{line.file_pid}:{line.seq}"
             f" {line.name}")
@@ -1398,6 +1397,62 @@ def _scan_read_line(line: SyscallLine, scan: _Scan,
         + _rules_suffix(matched))
 
 
+def _strace_elision(text: str) -> bool:
+    """True when an unquoted ``...`` is STRING ELISION, not struct
+    abbreviation.  strace abbreviates kernel-filled structs (stat
+    results, iovec arrays) with bare dots inside braces --
+    ``{st_mode=..., ...}`` -- while real elision renders as
+    ``"prefix"...``: a closing quote, then unquoted dots, inside or
+    outside any struct.  Dots after a quote always mean elision; bare
+    dots inside a struct skeleton never do; bare dots outside any struct
+    (strace's array/``-yy`` shorthand) do.  Without the distinction every
+    successful stat of a path degrades the unit (live-fire finding,
+    2026-10-15: clean control run UNMEASURED by ``path_args_truncated``
+    on a plain ``newfstatat`` success).  Quote-, escape-, brace-aware."""
+    i = 0
+    n = len(text)
+    quote = False
+    escape = False
+    depth = 0
+    while i < n:
+        char = text[i]
+        if escape:
+            escape = False
+            i += 1
+            continue
+        if quote:
+            if char == "\\":
+                escape = True
+            elif char == '"':
+                quote = False
+            i += 1
+            continue
+        if char == '"':
+            quote = True
+            i += 1
+            continue
+        if char == "{":
+            depth += 1
+            i += 1
+            continue
+        if char == "}" and depth > 0:
+            depth -= 1
+            i += 1
+            continue
+        if char == "." and text[i:i + 3] == "...":
+            j = i - 1
+            while j >= 0 and text[j] in " \t":
+                j -= 1
+            if j >= 0 and text[j] == '"':
+                return True                     # "prefix"...
+            if depth == 0:
+                return True                     # bare dots, no struct
+            # dots inside a struct skeleton away from any quote: strace's
+            # struct-field abbreviation -- never string elision
+        i += 1
+    return False
+
+
 def _scan_path_line(line: SyscallLine, scan: _Scan,
                     contract: SecretChannelContract, ws: float,
                     we: float) -> None:
@@ -1409,7 +1464,7 @@ def _scan_path_line(line: SyscallLine, scan: _Scan,
         return
     if not (ws <= line.ts < we):
         return
-    if _unquoted_ellipsis(line.args_raw):
+    if _strace_elision(line.args_raw):
         scan.flag(
             f"FM2.4:path_args_truncated trace.{line.file_pid}:{line.seq}"
             f" {line.name}")

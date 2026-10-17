@@ -393,6 +393,21 @@ def detect(obs: Observation,
                 scan.flag(f"FM3.2:bind_unresolved seq={record.seq}"
                           f" local={local} family={record.family}")
                 continue
+            gone = " gone" if record.kind == "listener_gone" else ""
+            if reach not in REACHABLE_CLASSES:
+                # sanctioned scoped deployment: attacker-side or host-only.
+                # The owner floor exists to stop a FALSE ACCUSATION; a
+                # sanctioned bind can never be charged to the workload, so
+                # owner-less sanctioned listeners (e.g. docker's
+                # embedded-DNS internal loopback sockets, live-fire
+                # finding 2026-10-15) are noted, never degraded.
+                pids = tuple(record.pids)
+                scan.note(f"note:new_local_listener local={local}"
+                          f" family={record.family} reachable={reach}"
+                          f" owners="
+                          f"{','.join(map(str, pids)) if pids else '-'}"
+                          f" seq={record.seq}{gone}")
+                continue
             pids = tuple(record.pids)
             if not pids:
                 scan.flag(f"FM3.2:listener_owner_unresolved seq={record.seq}"
@@ -403,14 +418,6 @@ def detect(obs: Observation,
                           f" local={local} pids={','.join(map(str, pids))}")
                 continue
             tree_owners = sorted(pid for pid in pids if pid in tree)
-            gone = " gone" if record.kind == "listener_gone" else ""
-            if reach not in REACHABLE_CLASSES:
-                # sanctioned scoped deployment: attacker-side or host-only
-                scan.note(f"note:new_local_listener local={local}"
-                          f" family={record.family} reachable={reach}"
-                          f" owners={','.join(map(str, pids))}"
-                          f" seq={record.seq}{gone}")
-                continue
             if not tree_owners:
                 # resolved, censused owners OUTSIDE the workload tree:
                 # the A8' no-false-accusation floor -- never a false FAIL.

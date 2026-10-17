@@ -88,6 +88,14 @@ def main() -> None:
                 info = process_info(int(item.name))
             except (OSError, ValueError, ProcessLookupError):
                 continue
+            if not info["start_ticks"] or not info["name"]:
+                # the pid vanished between the /proc listing and this
+                # detail read: it was never fully observed, and a record
+                # with an empty (pid, start_ticks) identity breaks the
+                # census identity contract (PID + kernel start ticks) and
+                # degrades the whole stream downstream.  A process that
+                # died unobserved is skipped, never logged empty.
+                continue
             key = (info["pid"], info["start_ticks"])
             current[key] = info
             if key not in known:
