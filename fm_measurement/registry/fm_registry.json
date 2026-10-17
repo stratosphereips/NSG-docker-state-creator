@@ -1,6 +1,6 @@
 {
  "program": "FM measurement program - unified registry",
- "updated": "2026-10-12",
+ "updated": "2026-10-16",
  "taxonomy": {
   "total": 34,
   "roles": {
@@ -445,7 +445,7 @@
    "nsg_dsc": {
     "module": "sfm_2",
     "status": "tested",
-    "note": "evidence-plane writes success-gated + frozen tier-A FAIL-on-attempt table (wave 2); tier-A table also carries the folded SFM5 surface"
+    "note": "evidence-plane writes success-gated + frozen tier-A FAIL-on-attempt table (wave 2); tier-A table also carries the folded SFM5 surface; arbiter half (wave 8): in-mission compliance artifact, write-class FAIL-on-attempt under config arbiter_paths, ro-mount denial closure, cwd replay, cross-cutting on every measurement run; wrong-source marker half designed, per-scenario"
    },
    "sms_harness": null
   },
