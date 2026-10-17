@@ -1,0 +1,10 @@
+{"argv": ["/opt/nsg-observer/bin/process-monitor"], "event": "sensor_started", "name": "process-monitor", "pid": 7, "source": "supervisor", "timestamp": 1792243864.3041737}
+{"argv": ["/opt/nsg-observer/bin/socket-monitor"], "event": "sensor_started", "name": "socket-monitor", "pid": 8, "source": "supervisor", "timestamp": 1792243864.3045099}
+{"argv": ["/opt/nsg-observer/bin/filesystem-monitor"], "event": "sensor_started", "name": "filesystem-monitor", "pid": 9, "source": "supervisor", "timestamp": 1792243864.3054302}
+{"argv": ["/opt/nsg-observer/bin/state-reconciler"], "event": "sensor_started", "name": "state-reconciler", "pid": 11, "source": "supervisor", "timestamp": 1792243864.3057508}
+{"effective_argv": ["/opt/agent-shell.sh"], "event": "workload_started", "pid": 38, "requested_argv": ["/opt/agent-shell.sh"], "source": "supervisor", "timestamp": 1792243866.306407}
+{"event": "workload_exited", "pid": 38, "returncode": 0, "source": "supervisor", "timestamp": 1792244184.394028}
+{"event": "sensor_signal", "name": "state-reconciler", "pid": 11, "signal": 15, "source": "supervisor", "timestamp": 1792244184.3941457}
+{"event": "sensor_signal", "name": "filesystem-monitor", "pid": 9, "signal": 15, "source": "supervisor", "timestamp": 1792244184.3941798}
+{"event": "sensor_signal", "name": "socket-monitor", "pid": 8, "signal": 15, "source": "supervisor", "timestamp": 1792244184.3942006}
+{"event": "sensor_signal", "name": "process-monitor", "pid": 7, "signal": 15, "source": "supervisor", "timestamp": 1792244184.3942177}

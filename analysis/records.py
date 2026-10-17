@@ -100,6 +100,7 @@ class ProcRecord:
     cgroup: str = ""
     sessionid: str = ""
     tty_nr: str = ""
+    interval_seconds: "float | None" = None
     previous: "ProcRecord | None" = None
 
 

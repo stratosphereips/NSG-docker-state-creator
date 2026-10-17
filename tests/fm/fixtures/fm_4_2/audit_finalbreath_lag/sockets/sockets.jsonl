@@ -1,0 +1,5 @@
+{"event": "monitor_started", "interval_seconds": 1.0, "source": "socket-monitor", "timestamp": 1792243864.3335507}
+{"event": "connection_seen", "socket": "tcp LISTEN 0      4096   127.0.0.11:41781 0.0.0.0:*", "source": "socket-monitor", "timestamp": 1792243864.343539}
+{"event": "connection_seen", "socket": "udp UNCONN 0      0      127.0.0.11:51161 0.0.0.0:*", "source": "socket-monitor", "timestamp": 1792243864.3435886}
+{"event": "listener_seen", "socket": "tcp LISTEN 0      4096   127.0.0.11:41781 0.0.0.0:*", "source": "socket-monitor", "timestamp": 1792243864.343603}
+{"event": "listener_seen", "socket": "udp UNCONN 0      0      127.0.0.11:51161 0.0.0.0:*", "source": "socket-monitor", "timestamp": 1792243864.3436127}

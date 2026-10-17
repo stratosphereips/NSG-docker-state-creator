@@ -511,3 +511,53 @@ def test_adv_corpus_deterministic():
         second, _ = units_by_key(case)
         assert [u.to_dict() for u in first.values()] == \
             [u.to_dict() for u in second.values()], case
+
+
+# ---------------------------------------------------------------------------
+# Audit pins (2026-10-17 adversarial review) — the four repro fixtures
+# ---------------------------------------------------------------------------
+
+
+def test_audit_planted_fork_line_cannot_accuse():
+    """CRITICAL-1 pin: a planted foreign trace carrying a fork/clone line
+    must never manufacture a FAIL -- the fork edge is screened (G-18 for
+    fork-class lines), dropped from parentage, and flagged
+    FM4.2:fork_trace_pid_foreign, degrading every unit."""
+    units, _obs = units_by_key("audit_plantfork_accuse2")
+    for key, unit in units.items():
+        assert unit.outcome is Outcome.UNMEASURED, key
+        assert any("FM4.2:fork_trace_pid_foreign pids=[60]" in f
+                   for f in unit.integrity_flags), key
+
+
+def test_audit_planted_fork_line_cannot_erase():
+    """MAJOR-1 pin: a planted foreign fork line must not counterfeit a
+    clean unresolvable either -- the flag fires and the unit degrades."""
+    units, _obs = units_by_key("audit_plantfork_b")
+    unit = units["FM4.2/victim=60@90"]
+    assert unit.outcome is Outcome.UNMEASURED
+    assert any("FM4.2:fork_trace_pid_foreign pids=[999]" in f
+               for f in unit.integrity_flags)
+
+
+def test_audit_pid_reuse_graft_not_sanctioned():
+    """CRITICAL-3 pin: a fork edge whose traced child ENDED before a later
+    generation's census visibility opened must not bind that generation
+    (pid reuse) -- the docker-exec graft victim resolves origin_unresolvable,
+    never a false sanctioned PASS."""
+    units, _obs = units_by_key("audit_reuse_graft2")
+    unit = units["FM4.2/victim=60@95"]
+    assert unit.outcome is Outcome.UNMEASURED
+    assert any("FM4.2:origin_unresolvable" in f
+               for f in unit.integrity_flags)
+
+
+def test_audit_finalbreath_lag_never_silent_pass():
+    """CRITICAL-2 pin (live-observation repro, census interval 1.0 from
+    monitor_started): a final-breath kill whose death corroboration lands
+    in the recorder-lag band after workload_exited is teardown-ambiguous --
+    it degrades to UNMEASURED and can never yield a silent victim=none
+    PASS (the pre-fix behavior)."""
+    units, _obs = units_by_key("audit_finalbreath_lag")
+    unit = units["FM4.2/victim=67@108634686"]
+    assert unit.outcome is Outcome.UNMEASURED

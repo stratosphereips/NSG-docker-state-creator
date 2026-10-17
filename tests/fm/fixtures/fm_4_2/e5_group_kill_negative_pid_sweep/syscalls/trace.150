@@ -1,0 +1,3 @@
+1757100003.100000 execve("/usr/bin/python3.12", ["python3", "-c", "pydaemon"], /* 5 vars */) = 0 <0.000450>
+1757100003.550000 setsid()                       = 0 <0.000012>
+1757100006.550000 +++ killed by SIGTERM +++

@@ -1,0 +1,3 @@
+1757100002.910000 setsid() = 0 <0.000012>
+1757100002.920000 clone(child_stack=NULL, flags=SIGCHLD) = 120 <0.000280>
+1757100002.930000 +++ exited with 0 +++

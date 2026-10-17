@@ -1,0 +1,79 @@
+1792243871.921193 set_robust_list(0xffffa1bcd100, 24) = 0 <0.000023>
+1792243871.921296 getpid()              = 94 <0.000009>
+1792243871.921343 close(255</opt/agent-shell.sh>) = 0 <0.000017>
+1792243871.921409 rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0 <0.000015>
+1792243871.921449 rt_sigaction(SIGTSTP, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000011>
+1792243871.921484 rt_sigaction(SIGTTIN, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000008>
+1792243871.921517 rt_sigaction(SIGTTOU, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000008>
+1792243871.921558 rt_sigaction(SIGHUP, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, NULL, 8) = 0 <0.000009>
+1792243871.921609 rt_sigaction(SIGILL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, NULL, 8) = 0 <0.000010>
+1792243871.921645 rt_sigaction(SIGTRAP, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, NULL, 8) = 0 <0.000008>
+1792243871.921678 rt_sigaction(SIGABRT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, NULL, 8) = 0 <0.000009>
+1792243871.921711 rt_sigaction(SIGFPE, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, NULL, 8) = 0 <0.000008>
+1792243871.921744 rt_sigaction(SIGBUS, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, NULL, 8) = 0 <0.000008>
+1792243871.921778 rt_sigaction(SIGSEGV, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, NULL, 8) = 0 <0.000008>
+1792243871.921811 rt_sigaction(SIGSYS, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, NULL, 8) = 0 <0.000008>
+1792243871.921844 rt_sigaction(SIGPIPE, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, NULL, 8) = 0 <0.000008>
+1792243871.921877 rt_sigaction(SIGALRM, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, NULL, 8) = 0 <0.000008>
+1792243871.921909 rt_sigaction(SIGTERM, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, NULL, 8) = 0 <0.000008>
+1792243871.921943 rt_sigaction(SIGXCPU, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, NULL, 8) = 0 <0.000008>
+1792243871.921976 rt_sigaction(SIGXFSZ, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, NULL, 8) = 0 <0.000008>
+1792243871.922008 rt_sigaction(SIGVTALRM, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, NULL, 8) = 0 <0.000009>
+1792243871.922069 rt_sigaction(SIGUSR1, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, NULL, 8) = 0 <0.000012>
+1792243871.922110 rt_sigaction(SIGUSR2, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, NULL, 8) = 0 <0.000009>
+1792243871.922150 rt_sigaction(SIGINT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, {sa_handler=0xaaaae661efc0, sa_mask=[], sa_flags=0}, 8) = 0 <0.000009>
+1792243871.922191 rt_sigaction(SIGQUIT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, {sa_handler=SIG_IGN, sa_mask=[], sa_flags=0}, 8) = 0 <0.000008>
+1792243871.922227 rt_sigaction(SIGCHLD, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTART}, {sa_handler=0xaaaae65f7d20, sa_mask=[], sa_flags=SA_RESTART}, 8) = 0 <0.000009>
+1792243871.922275 execve("/usr/bin/rm", ["rm", "-f", "/tmp/agent-io/cmd.0", "/tmp/agent-io/out"], 0xaaab0e305f70 /* 22 vars */) = 0 <0.000225>
+1792243871.922566 brk(NULL)             = 0xaaaae570b000 <0.000009>
+1792243871.922619 mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xffff98738000 <0.000010>
+1792243871.922656 faccessat(AT_FDCWD</>, "/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory) <0.000013>
+1792243871.922710 openat(AT_FDCWD</>, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 4</etc/ld.so.cache> <0.000015>
+1792243871.922764 fstat(4</etc/ld.so.cache>, {st_mode=S_IFREG|0644, st_size=11831, ...}) = 0 <0.000010>
+1792243871.922805 mmap(NULL, 11831, PROT_READ, MAP_PRIVATE, 4</etc/ld.so.cache>, 0) = 0xffff98735000 <0.000010>
+1792243871.922842 close(4</etc/ld.so.cache>) = 0 <0.000009>
+1792243871.922880 openat(AT_FDCWD</>, "/lib/aarch64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 4</usr/lib/aarch64-linux-gnu/libc.so.6> <0.000014>
+1792243871.922929 read(4</usr/lib/aarch64-linux-gnu/libc.so.6>, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0\267\0\1\0\0\0\360\206\2\0\0\0\0\0@\0\0\0\0\0\0\0\350:\32\0\0\0\0\0\0\0\0\0@\08\0\n\0@\0=\0<\0\6\0\0\0\4\0\0\0@\0\0\0\0\0\0\0@\0\0\0\0\0\0\0@\0\0\0\0\0\0\0000\2\0\0\0\0\0\0000\2\0\0\0\0\0\0\10\0\0\0\0\0\0\0\3\0\0\0\4\0\0\0000a\26\0\0\0\0\0000a\26\0\0\0\0\0000a\26\0\0\0\0\0\33\0\0\0\0\0\0\0\33\0\0\0\0\0\0\0\10\0\0\0\0\0\0\0\1\0\0\0\5\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\201\237\31\0\0\0\0\0\201\237\31\0\0\0\0\0\0\0\1\0\0\0\0\0\1\0\0\0\6\0\0\0\0\321\31\0\0\0\0\0\0\321\32\0\0\0\0\0\0\321\32\0\0\0\0\0(E\0\0\0\0\0\0\220\16\1\0\0\0\0\0\0\0\1\0\0\0\0\0\2\0\0\0\6\0\0\0\360\372\31\0\0\0\0\0\360\372\32\0\0\0\0\0\360\372\32\0\0\0\0\0\320\1\0\0\0\0\0\0\320\1\0\0\0\0\0\0\10\0\0\0\0\0\0\0\4\0\0\0\4\0\0\0p\2\0\0\0\0\0\0p\2\0\0\0\0\0\0p\2\0\0\0\0\0\0D\0\0\0\0\0\0\0D\0\0\0\0\0\0\0\4\0\0\0\0\0\0\0\7\0\0\0\4\0\0\0\0\321\31\0\0\0\0\0\0\321\32\0\0\0\0\0\0\321\32\0\0\0\0\0\20\0\0\0\0\0\0\0\210\0\0\0\0\0\0\0\20\0\0\0\0\0\0\0P\345td\4\0\0\0La\26\0\0\0\0\0La\26\0\0\0\0\0La\26\0\0\0\0\0\4m\0\0\0\0\0\0\4m\0\0\0\0\0\0\4\0\0\0\0\0\0\0Q\345td\6\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\20\0\0\0\0\0\0\0R\345td\4\0\0\0\0\321\31\0\0\0\0\0\0\321\32\0\0\0\0\0\0\321\32\0\0\0\0\0\0/\0\0\0\0\0\0\0/\0\0\0\0\0\0\1\0\0\0\0\0\0\0\4\0\0\0\24\0\0\0\3\0\0\0GNU\0'\2{\226\345\270\304u\3742z\244E\276\241\307\0357\264\342\4\0\0\0\20\0\0\0\1\0\0\0GNU\0\0\0\0\0\3\0\0\0\7\0\0\0\0\0\0\0\0\0\0\0\361\3\0\0\30\0\0\0\0\1\0\0\16\0\0\0@2\22\334\250 \23\1\210\7\346\220\305E\214\4\304\0X\0\7\204 p\302\200\1\r\212\236\304\27\21\200\310\3042\10.@\210V<- N\262H&\204\320\216\4\f\0\3\2\16\261\254:\17f\300\200\3003\0\300\fP\t \201\t\224\v$ ($\0\204$Z0\20X\200\312DB(\0\6\200\20\32C\0\250\\\222\210IP\4Q\212P\22\4\0$\0\10  \21\20", 832) = 832 <0.000010>
+1792243871.922982 fstat(4</usr/lib/aarch64-linux-gnu/libc.so.6>, {st_mode=S_IFREG|0755, st_size=1722920, ...}) = 0 <0.000009>
+1792243871.923023 mmap(NULL, 1892240, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_DENYWRITE, -1, 0) = 0xffff98531000 <0.000009>
+1792243871.923057 mmap(0xffff98540000, 1826704, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 4</usr/lib/aarch64-linux-gnu/libc.so.6>, 0) = 0xffff98540000 <0.000014>
+1792243871.923098 munmap(0xffff98531000, 61440) = 0 <0.000009>
+1792243871.923129 munmap(0xffff986fe000, 3984) = 0 <0.000011>
+1792243871.923180 mprotect(0xffff986da000, 77824, PROT_NONE) = 0 <0.000013>
+1792243871.923216 mmap(0xffff986ed000, 20480, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 4</usr/lib/aarch64-linux-gnu/libc.so.6>, 0x19d000) = 0xffff986ed000 <0.000012>
+1792243871.923261 mmap(0xffff986f2000, 49040, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xffff986f2000 <0.000010>
+1792243871.923305 close(4</usr/lib/aarch64-linux-gnu/libc.so.6>) = 0 <0.000009>
+1792243871.923352 set_tid_address(0xffff98738fd0) = 94 <0.000009>
+1792243871.923384 set_robust_list(0xffff98738fe0, 24) = 0 <0.000008>
+1792243871.923413 rseq(0xffff98739620, 0x20, 0, 0xd428bc00) = 0 <0.000009>
+1792243871.923489 mprotect(0xffff986ed000, 12288, PROT_READ) = 0 <0.000013>
+1792243871.923547 mprotect(0xaaaab7c6f000, 4096, PROT_READ) = 0 <0.000012>
+1792243871.923584 mprotect(0xffff9873d000, 8192, PROT_READ) = 0 <0.000012>
+1792243871.923630 prlimit64(0, RLIMIT_STACK, NULL, {rlim_cur=8192*1024, rlim_max=RLIM64_INFINITY}) = 0 <0.000009>
+1792243871.923670 munmap(0xffff98735000, 11831) = 0 <0.000015>
+1792243871.923728 getrandom("\x79\x39\x74\xca\xcc\xc7\x43\x09", 8, GRND_NONBLOCK) = 8 <0.000009>
+1792243871.923764 brk(NULL)             = 0xaaaae570b000 <0.000008>
+1792243871.923794 brk(0xaaaae572c000)   = 0xaaaae572c000 <0.000009>
+1792243871.923828 openat(AT_FDCWD</>, "/usr/lib/locale/locale-archive", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory) <0.000013>
+1792243871.923887 openat(AT_FDCWD</>, "/usr/share/locale/locale.alias", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory) <0.000012>
+1792243871.923933 openat(AT_FDCWD</>, "/usr/lib/locale/C.UTF-8/LC_CTYPE", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory) <0.000011>
+1792243871.923972 openat(AT_FDCWD</>, "/usr/lib/locale/C.utf8/LC_CTYPE", O_RDONLY|O_CLOEXEC) = 4</usr/lib/locale/C.utf8/LC_CTYPE> <0.000014>
+1792243871.924026 fstat(4</usr/lib/locale/C.utf8/LC_CTYPE>, {st_mode=S_IFREG|0644, st_size=360460, ...}) = 0 <0.000009>
+1792243871.924066 mmap(NULL, 360460, PROT_READ, MAP_PRIVATE, 4</usr/lib/locale/C.utf8/LC_CTYPE>, 0) = 0xffff984e7000 <0.000010>
+1792243871.924103 close(4</usr/lib/locale/C.utf8/LC_CTYPE>) = 0 <0.000009>
+1792243871.924147 openat(AT_FDCWD</>, "/usr/lib/aarch64-linux-gnu/gconv/gconv-modules.cache", O_RDONLY|O_CLOEXEC) = 4</usr/lib/aarch64-linux-gnu/gconv/gconv-modules.cache> <0.000014>
+1792243871.924196 fstat(4</usr/lib/aarch64-linux-gnu/gconv/gconv-modules.cache>, {st_mode=S_IFREG|0644, st_size=27028, ...}) = 0 <0.000009>
+1792243871.924233 mmap(NULL, 27028, PROT_READ, MAP_SHARED, 4</usr/lib/aarch64-linux-gnu/gconv/gconv-modules.cache>, 0) = 0xffff98731000 <0.000010>
+1792243871.924270 close(4</usr/lib/aarch64-linux-gnu/gconv/gconv-modules.cache>) = 0 <0.000009>
+1792243871.924307 futex(0xffff986f166c, FUTEX_WAKE_PRIVATE, 2147483647) = 0 <0.000009>
+1792243871.924342 ioctl(0</dev/null<char 1:3>>, TCGETS, 0xfffff0f57da0) = -1 ENOTTY (Inappropriate ioctl for device) <0.000009>
+1792243871.924395 newfstatat(AT_FDCWD</>, "/tmp/agent-io/cmd.0", {st_mode=S_IFREG|0644, st_size=19, ...}, AT_SYMLINK_NOFOLLOW) = 0 <0.000014>
+1792243871.924443 unlinkat(AT_FDCWD</>, "/tmp/agent-io/cmd.0", 0) = 0 <0.000053>
+1792243871.924538 newfstatat(AT_FDCWD</>, "/tmp/agent-io/out", {st_mode=S_IFREG|0644, st_size=3, ...}, AT_SYMLINK_NOFOLLOW) = 0 <0.000019>
+1792243871.924596 unlinkat(AT_FDCWD</>, "/tmp/agent-io/out", 0) = 0 <0.000053>
+1792243871.924772 lseek(0</dev/null<char 1:3>>, 0, SEEK_CUR) = 0 <0.000010>
+1792243871.924811 close(0</dev/null<char 1:3>>) = 0 <0.000007>
+1792243871.924843 close(1<pipe:[134376773]>) = 0 <0.000007>
+1792243871.924877 close(2<pipe:[134376774]>) = 0 <0.000007>
+1792243871.924918 exit_group(0)         = ?
+1792243871.925040 +++ exited with 0 +++

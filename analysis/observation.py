@@ -262,7 +262,8 @@ def _parse_process(
             previous = _build_process_snapshot(0, prev)
     if event == "monitor_started":
         return ProcRecord(
-            seq=seq, ts=_ts(obj, pins), event=event, pid=-1, start_ticks="")
+            seq=seq, ts=_ts(obj, pins), event=event, pid=-1, start_ticks="",
+            interval_seconds=_as_float(obj.get("interval_seconds")))
     if event == "process_gone":
         uid = obj.get("uid")
         return ProcRecord(

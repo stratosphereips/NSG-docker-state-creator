@@ -1,0 +1,2 @@
+1757100003.250000 execve("/usr/bin/python3.12", ["python3", "-c", "grand-daemon"], /* 5 vars */) = 0 <0.000600>
+1757100006.050000 +++ killed by SIGTERM +++

@@ -1,0 +1,56 @@
+1792244029.042030 set_robust_list(0xffffaa16d100, 24) = 0 <0.000022>
+1792244029.042124 getpid()              = 423 <0.000014>
+1792244029.042173 close(255</tmp/agent-io/cmd.1>) = 0 <0.000015>
+1792244029.042244 rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0 <0.000008>
+1792244029.042287 rt_sigaction(SIGTSTP, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000010>
+1792244029.042324 rt_sigaction(SIGTTIN, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000008>
+1792244029.042356 rt_sigaction(SIGTTOU, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000008>
+1792244029.042397 rt_sigaction(SIGINT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0 <0.000008>
+1792244029.042434 rt_sigaction(SIGQUIT, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, {sa_handler=SIG_IGN, sa_mask=[], sa_flags=0}, 8) = 0 <0.000008>
+1792244029.042467 rt_sigaction(SIGCHLD, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=SA_RESTART}, {sa_handler=0xaaaae7747d20, sa_mask=[], sa_flags=SA_RESTART}, 8) = 0 <0.000008>
+1792244029.042506 execve("/usr/bin/sleep", ["sleep", "1"], 0xaaab1ad69bc0 /* 22 vars */) = 0 <0.000191>
+1792244029.042766 brk(NULL)             = 0xaaaaef941000 <0.000008>
+1792244029.042829 mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xffff86ba7000 <0.000009>
+1792244029.042864 faccessat(AT_FDCWD</>, "/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory) <0.000013>
+1792244029.042913 openat(AT_FDCWD</>, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 4</etc/ld.so.cache> <0.000015>
+1792244029.042965 fstat(4</etc/ld.so.cache>, {st_mode=S_IFREG|0644, st_size=11831, ...}) = 0 <0.000009>
+1792244029.043006 mmap(NULL, 11831, PROT_READ, MAP_PRIVATE, 4</etc/ld.so.cache>, 0) = 0xffff86ba4000 <0.000009>
+1792244029.043041 close(4</etc/ld.so.cache>) = 0 <0.000008>
+1792244029.043076 openat(AT_FDCWD</>, "/lib/aarch64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 4</usr/lib/aarch64-linux-gnu/libc.so.6> <0.000013>
+1792244029.043122 read(4</usr/lib/aarch64-linux-gnu/libc.so.6>, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0\267\0\1\0\0\0\360\206\2\0\0\0\0\0@\0\0\0\0\0\0\0\350:\32\0\0\0\0\0\0\0\0\0@\08\0\n\0@\0=\0<\0\6\0\0\0\4\0\0\0@\0\0\0\0\0\0\0@\0\0\0\0\0\0\0@\0\0\0\0\0\0\0000\2\0\0\0\0\0\0000\2\0\0\0\0\0\0\10\0\0\0\0\0\0\0\3\0\0\0\4\0\0\0000a\26\0\0\0\0\0000a\26\0\0\0\0\0000a\26\0\0\0\0\0\33\0\0\0\0\0\0\0\33\0\0\0\0\0\0\0\10\0\0\0\0\0\0\0\1\0\0\0\5\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\201\237\31\0\0\0\0\0\201\237\31\0\0\0\0\0\0\0\1\0\0\0\0\0\1\0\0\0\6\0\0\0\0\321\31\0\0\0\0\0\0\321\32\0\0\0\0\0\0\321\32\0\0\0\0\0(E\0\0\0\0\0\0\220\16\1\0\0\0\0\0\0\0\1\0\0\0\0\0\2\0\0\0\6\0\0\0\360\372\31\0\0\0\0\0\360\372\32\0\0\0\0\0\360\372\32\0\0\0\0\0\320\1\0\0\0\0\0\0\320\1\0\0\0\0\0\0\10\0\0\0\0\0\0\0\4\0\0\0\4\0\0\0p\2\0\0\0\0\0\0p\2\0\0\0\0\0\0p\2\0\0\0\0\0\0D\0\0\0\0\0\0\0D\0\0\0\0\0\0\0\4\0\0\0\0\0\0\0\7\0\0\0\4\0\0\0\0\321\31\0\0\0\0\0\0\321\32\0\0\0\0\0\0\321\32\0\0\0\0\0\20\0\0\0\0\0\0\0\210\0\0\0\0\0\0\0\20\0\0\0\0\0\0\0P\345td\4\0\0\0La\26\0\0\0\0\0La\26\0\0\0\0\0La\26\0\0\0\0\0\4m\0\0\0\0\0\0\4m\0\0\0\0\0\0\4\0\0\0\0\0\0\0Q\345td\6\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\20\0\0\0\0\0\0\0R\345td\4\0\0\0\0\321\31\0\0\0\0\0\0\321\32\0\0\0\0\0\0\321\32\0\0\0\0\0\0/\0\0\0\0\0\0\0/\0\0\0\0\0\0\1\0\0\0\0\0\0\0\4\0\0\0\24\0\0\0\3\0\0\0GNU\0'\2{\226\345\270\304u\3742z\244E\276\241\307\0357\264\342\4\0\0\0\20\0\0\0\1\0\0\0GNU\0\0\0\0\0\3\0\0\0\7\0\0\0\0\0\0\0\0\0\0\0\361\3\0\0\30\0\0\0\0\1\0\0\16\0\0\0@2\22\334\250 \23\1\210\7\346\220\305E\214\4\304\0X\0\7\204 p\302\200\1\r\212\236\304\27\21\200\310\3042\10.@\210V<- N\262H&\204\320\216\4\f\0\3\2\16\261\254:\17f\300\200\3003\0\300\fP\t \201\t\224\v$ ($\0\204$Z0\20X\200\312DB(\0\6\200\20\32C\0\250\\\222\210IP\4Q\212P\22\4\0$\0\10  \21\20", 832) = 832 <0.000021>
+1792244029.043209 fstat(4</usr/lib/aarch64-linux-gnu/libc.so.6>, {st_mode=S_IFREG|0755, st_size=1722920, ...}) = 0 <0.000008>
+1792244029.043261 mmap(NULL, 1892240, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_DENYWRITE, -1, 0) = 0xffff869a0000 <0.000010>
+1792244029.043292 mmap(0xffff869a0000, 1826704, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 4</usr/lib/aarch64-linux-gnu/libc.so.6>, 0) = 0xffff869a0000 <0.000015>
+1792244029.043331 munmap(0xffff86b5e000, 65424) = 0 <0.000007>
+1792244029.043358 mprotect(0xffff86b3a000, 77824, PROT_NONE) = 0 <0.000012>
+1792244029.043388 mmap(0xffff86b4d000, 20480, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 4</usr/lib/aarch64-linux-gnu/libc.so.6>, 0x19d000) = 0xffff86b4d000 <0.000010>
+1792244029.043428 mmap(0xffff86b52000, 49040, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xffff86b52000 <0.000008>
+1792244029.043466 close(4</usr/lib/aarch64-linux-gnu/libc.so.6>) = 0 <0.000007>
+1792244029.043508 set_tid_address(0xffff86ba7fb0) = 423 <0.000008>
+1792244029.043536 set_robust_list(0xffff86ba7fc0, 24) = 0 <0.000006>
+1792244029.043562 rseq(0xffff86ba8600, 0x20, 0, 0xd428bc00) = 0 <0.000006>
+1792244029.043640 mprotect(0xffff86b4d000, 12288, PROT_READ) = 0 <0.000012>
+1792244029.043689 mprotect(0xaaaad1c3f000, 4096, PROT_READ) = 0 <0.000011>
+1792244029.043722 mprotect(0xffff86bac000, 8192, PROT_READ) = 0 <0.000011>
+1792244029.043764 prlimit64(0, RLIMIT_STACK, NULL, {rlim_cur=8192*1024, rlim_max=RLIM64_INFINITY}) = 0 <0.000007>
+1792244029.043799 munmap(0xffff86ba4000, 11831) = 0 <0.000015>
+1792244029.043876 getrandom("\xa2\x83\x6c\x9d\x8d\xa0\x0f\x7f", 8, GRND_NONBLOCK) = 8 <0.000007>
+1792244029.043909 brk(NULL)             = 0xaaaaef941000 <0.000007>
+1792244029.043936 brk(0xaaaaef962000)   = 0xaaaaef962000 <0.000008>
+1792244029.043967 openat(AT_FDCWD</>, "/usr/lib/locale/locale-archive", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory) <0.000023>
+1792244029.044063 openat(AT_FDCWD</>, "/usr/share/locale/locale.alias", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory) <0.000011>
+1792244029.044105 openat(AT_FDCWD</>, "/usr/lib/locale/C.UTF-8/LC_CTYPE", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory) <0.000009>
+1792244029.044138 openat(AT_FDCWD</>, "/usr/lib/locale/C.utf8/LC_CTYPE", O_RDONLY|O_CLOEXEC) = 4</usr/lib/locale/C.utf8/LC_CTYPE> <0.000013>
+1792244029.044181 fstat(4</usr/lib/locale/C.utf8/LC_CTYPE>, {st_mode=S_IFREG|0644, st_size=360460, ...}) = 0 <0.000007>
+1792244029.044216 mmap(NULL, 360460, PROT_READ, MAP_PRIVATE, 4</usr/lib/locale/C.utf8/LC_CTYPE>, 0) = 0xffff86947000 <0.000009>
+1792244029.044249 close(4</usr/lib/locale/C.utf8/LC_CTYPE>) = 0 <0.000007>
+1792244029.044287 openat(AT_FDCWD</>, "/usr/lib/aarch64-linux-gnu/gconv/gconv-modules.cache", O_RDONLY|O_CLOEXEC) = 4</usr/lib/aarch64-linux-gnu/gconv/gconv-modules.cache> <0.000011>
+1792244029.044328 fstat(4</usr/lib/aarch64-linux-gnu/gconv/gconv-modules.cache>, {st_mode=S_IFREG|0644, st_size=27028, ...}) = 0 <0.000007>
+1792244029.044361 mmap(NULL, 27028, PROT_READ, MAP_SHARED, 4</usr/lib/aarch64-linux-gnu/gconv/gconv-modules.cache>, 0) = 0xffff86ba0000 <0.000008>
+1792244029.044393 close(4</usr/lib/aarch64-linux-gnu/gconv/gconv-modules.cache>) = 0 <0.000007>
+1792244029.044424 futex(0xffff86b5166c, FUTEX_WAKE_PRIVATE, 2147483647) = 0 <0.000008>
+1792244029.044468 clock_nanosleep(CLOCK_REALTIME, 0, {tv_sec=1, tv_nsec=0}, 0xffffddd8edb8) = 0 <1.000095>
+1792244030.044645 close(1</tmp/agent-io/out>) = 0 <0.000016>
+1792244030.044739 close(2</tmp/agent-io/out>) = 0 <0.000007>
+1792244030.044777 exit_group(0)         = ?
+1792244030.044930 +++ exited with 0 +++

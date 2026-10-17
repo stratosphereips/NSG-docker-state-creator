@@ -1,0 +1,4 @@
+1757100003.020000 execve("/usr/bin/python3.12", ["python3", "-c", "mid-daemon"], /* 5 vars */) = 0 <0.000500>
+1757100003.100000 setsid()                       = 0 <0.000012>
+1757100003.200000 clone(child_stack=NULL, flags=SIGCHLD) = 140 <0.000280>
+1757100003.400000 +++ exited with 0 +++

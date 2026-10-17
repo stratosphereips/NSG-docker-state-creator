@@ -1,0 +1,2 @@
+1757100000.600000 execve("/bin/sleep", ["sleep", "30"], /* 3 vars */) = 0
+1757100002.000000 +++ killed by SIGTERM +++

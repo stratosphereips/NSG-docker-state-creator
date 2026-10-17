@@ -1,0 +1,4 @@
+1757100003.950000 execve("/usr/bin/scout", ["/usr/bin/scout", "--phase", "1"], /* 5 vars */) = 0 <0.000400>
+1757100006.050000 +++ killed by SIGTERM +++
+1757100011.900000 exit_group(0)                   = 0
+1757100011.950000 +++ exited with 0 +++

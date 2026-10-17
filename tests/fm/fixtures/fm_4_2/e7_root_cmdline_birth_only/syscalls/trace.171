@@ -1,0 +1,2 @@
+1757100005.100000 execve("/usr/bin/scan-helper", ["/usr/bin/scan-helper", "--run"], /* 5 vars */) = 0 <0.000350>
+1757100006.050000 +++ killed by SIGTERM +++

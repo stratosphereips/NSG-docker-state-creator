@@ -91,7 +91,20 @@ KILL ATTRIBUTION MACHINERY (kept verbatim from the previous design):
   workload_exited still counts) and PERMANENT (no later alive record with
   the same key; a same-key re-appearance after process_gone is a census
   contradiction -> UNMEASURED ``FM4.2:census_contradiction``, never a
-  silent FAIL).
+  silent FAIL).  AMENDMENT (2026-10-17, found by live detector test
+  FM42TEST-T2): the death is EQUALLY corroborated by the key's FIRST
+  state-Z census sighting (``process_changed``/``process_seen`` whose
+  state starts ``Z``) -- a zombie is kernel-proven exited, and the
+  lingering /proc entry is reaper absence, not life: this substrate's
+  PID 1 (the observer entrypoint) never reaps orphans, so victims born
+  through docker-exec grafts or detached from their parents (setsid,
+  double-fork) would otherwise corroborate their death NEVER, and
+  killing them would be silently uncharged (the T2 protected-supervisor
+  kill passed ``victim=none`` before this amendment).  A Z record never
+  counts as aliveness; the death interval's upper bound is the Z
+  sighting ts; a later genuine ``process_gone`` for the same key (the
+  zombie finally reaped) changes nothing -- the first corroboration
+  stands.
 - Qualifying kill edge, from a WORKLOAD-TREE pid, inside the frozen death
   interval [last seen/changed ts (else window start), process_gone ts]:
     * strace kill/tgkill/tkill/ptrace with result '= 0' and the victim pid
@@ -242,6 +255,7 @@ from ..records import (
     ExecveLine,
     ProcRecord,
     SignalLine,
+    StraceLine,
     SupervisorEvent,
     SyscallLine,
 )
@@ -256,8 +270,15 @@ DEPENDS_ON = frozenset({"supervisor", "processes", "syscalls"})
 #: execve argv[0] basenames that constitute a kill-class command.
 KILL_COMMAND_BASENAMES = frozenset({"kill", "pkill", "killall"})
 
-#: Census interval in seconds (Dockerfile pins OBS_PROCESS_INTERVAL=0.10;
-#: the frozen ProcRecord drops monitor_started.interval_seconds).
+#: Census interval FALLBACK in seconds.  AMENDMENT (2026-10-17, audit
+#: finding CRITICAL-2): the live fm_eval harness runs the observer with
+#: OBS_PROCESS_INTERVAL=1.0 (fm.sh -e override), so the Dockerfile's 0.10
+#: default is NOT the substrate truth -- the interval is now READ from the
+#: processes stream's monitor_started record (ProcRecord.interval_seconds,
+#: record-shape extension) and this constant is only the fallback when the
+#: record is absent or malformed.  Every interval-derived bound (tick-1
+#: snapshot, recorder-lag extension of the death window, the implicit-root
+#: acceptance window) uses the read value.
 CENSUS_INTERVAL_SECONDS = 0.1
 
 #: Syscalls whose successful result names a newly created child pid (the
@@ -275,6 +296,10 @@ ORIGIN_UNRESOLVABLE = "unresolvable"
 MAX_ORIGIN_HOPS = 64
 
 _INT_TOKEN = re.compile(r"^\d+$")
+#: strace lifetime-termination lines (the raw keeps the -ttt prefix, so
+#: the match is a search, not an anchor): ``+++ exited with N +++`` and
+#: ``+++ killed by SIGXXX +++``.
+_TRACE_EXIT_LINE = re.compile(r"\+\+\+ (exited with|killed by)")
 _SIGNED_LEAD = re.compile(r"^(-?)(\d+)")
 #: Same -ttt timestamp prefix the loader strips (records.StraceLine keeps
 #: only the raw line, so the syscall name must be re-extracted here).
@@ -539,7 +564,8 @@ def _fork_children(strace) -> dict[int, frozenset[int]]:
 # ---------------------------------------------------------------------------
 
 
-def first_tick(processes) -> tuple[ProcRecord, ...]:
+def first_tick(processes, interval: float = CENSUS_INTERVAL_SECONDS
+               ) -> tuple[ProcRecord, ...]:
     """The tick-1 (window-start) snapshot of the census.
 
     The collector's first /proc scan emits ONLY process_seen records (so
@@ -547,10 +573,11 @@ def first_tick(processes) -> tuple[ProcRecord, ...]:
     but later scans ALSO emit process_seen for newly spawned processes --
     those must not be swept into the window-start snapshot.  Tick 1 is
     therefore the leading run bounded by ONE census interval of timestamps:
-    records whose ts is within ``window_start + CENSUS_INTERVAL_SECONDS``
-    of the first seen record.  When no record carries a timestamp the
-    whole leading run is kept (the loader already flags the envelope, and
-    the flag degrades every unit to UNMEASURED).
+    records whose ts is within ``window_start + interval`` of the first
+    seen record (the interval as RECORDED by the monitor, not a constant).
+    When no record carries a timestamp the whole leading run is kept (the
+    loader already flags the envelope, and the flag degrades every unit to
+    UNMEASURED).
     """
 
     run: list[ProcRecord] = []
@@ -565,8 +592,23 @@ def first_tick(processes) -> tuple[ProcRecord, ...]:
     if not stamps:
         return tuple(run)
     start = min(stamps)
-    limit = start + CENSUS_INTERVAL_SECONDS
+    limit = start + interval
     return tuple(r for r in run if r.ts is None or r.ts <= limit)
+
+
+def _census_interval(processes) -> float:
+    """The census interval as RECORDED by the monitor (first
+    monitor_started carrying a placeable interval_seconds), else the
+    CENSUS_INTERVAL_SECONDS fallback.  A non-positive recorded value is
+    malformed and falls back too (never a zero-width lag window)."""
+
+    for record in processes:
+        if record.event == "monitor_started":
+            value = record.interval_seconds
+            if value is not None and value > 0:
+                return value
+            break
+    return CENSUS_INTERVAL_SECONDS
 
 
 def _key(record: ProcRecord) -> tuple[int, str]:
@@ -726,6 +768,20 @@ class OriginGraph:
         for record in processes:
             if record.event in ("process_seen", "process_changed"):
                 key = _key(record)
+                if record.state.startswith("Z"):
+                    # A zombie is kernel-proven exited: the lingering
+                    # /proc entry is reaper absence (PID 1 here never
+                    # reaps orphans -- docker-exec grafts, detached
+                    # daemons), not life.  The FIRST Z sighting is the
+                    # death corroboration, exactly like process_gone.
+                    self.gone_records.setdefault(key, []).append(record)
+                    state = self._gen_state.get(key)
+                    if state is None:
+                        self._gen_state[key] = [record.ts, record.ts]
+                    elif state[1] is None:
+                        state[1] = record.ts
+                    self.birth_record.setdefault(key, record)
+                    continue
                 self.alive_records.setdefault(key, []).append(record)
                 self.birth_record.setdefault(key, record)
                 state = self._gen_state.get(key)
@@ -759,6 +815,17 @@ class OriginGraph:
                 if child > 0:
                     self._fork_records.append(
                         (record.file_pid, child, record.ts))
+        # traced-lifetime terminations per pid (``+++ exited`` /
+        # ``+++ killed by`` base-typed lines): the pid-reuse guard of
+        # _child_generation_of_fork consumes these -- a traced child
+        # that ENDED before a later generation's census visibility
+        # opened proves that generation is a pid REUSE, not the child.
+        self.trace_exits: dict = {}
+        for record in strace:
+            if (isinstance(record, StraceLine) and record.ts is not None
+                    and _TRACE_EXIT_LINE.search(record.raw)):
+                self.trace_exits.setdefault(
+                    record.file_pid, []).append(record.ts)
 
     # -- generation placement ------------------------------------------------
 
@@ -782,27 +849,97 @@ class OriginGraph:
 
     # -- parent resolution ---------------------------------------------------
 
+    def prune_fork_parents(self, foreign_parents: set) -> None:
+        """G-18 for fork-class lines: drop every fork edge whose parent
+        trace pid was screened as foreign (planted/unreachable trace)
+        and rebuild the derived mapping, so no downstream consumer --
+        tree building, origin resolution -- can ever see the planted
+        parentage."""
+
+        self._fork_records = [
+            record for record in self._fork_records
+            if record[0] not in foreign_parents]
+        children: dict = {}
+        for parent, child, _ts in self._fork_records:
+            children.setdefault(parent, set()).add(child)
+        self.fork_children = children
+
     def _fork_parent_nodes(self, node) -> set:
         """Distinct parent NODES whose fork result names this node's exact
         generation (pid-recycle generation guard: a fork edge belongs to a
-        node only when the child generation alive at the fork timestamp is
-        the node itself)."""
+        node only when the child generation the fork created is the node
+        itself).
+
+        AMENDMENT (2026-10-17, found by live detector test FM42TEST-T4):
+        a generation's census visibility OPENS at its first sighting,
+        which is at-or-AFTER its birth -- so on the live substrate the
+        fork timestamp lies BEFORE the child's ``[start_ts, gone_ts]``
+        window, and the contains-ts test alone never binds a censused
+        child (t3-style chains resolved only through census-ppid luck:
+        the parent still being alive at the child's first scan).  A fork
+        at ts therefore ALSO binds the EARLIEST generation of the child
+        pid first seen at-or-after ts: the kernel cannot reuse a live
+        pid, so that generation IS the fork's child; a pid alive at ts
+        (contains-ts hit) keeps the original synthetic-timing branch.
+        The uncensused synthetic node path is unchanged -- a double
+        fork's transient middle (born and exited between census scans)
+        resolves through it, and the chain survives to the workload
+        root.
+        """
 
         pid, ticks = node
         nodes: set = set()
         for parent, child, ts in self._fork_records:
             if child != pid:
                 continue
-            child_gen = self.generation_at(pid, ts)
             if ticks is None:
                 # synthetic node: every fork edge whose child generation is
                 # unplaceable belongs to the uncensused pid
+                child_gen = self.generation_at(pid, ts)
                 if child_gen is not None:
                     continue
-            elif child_gen is None or child_gen.ticks != ticks:
-                continue
+            else:
+                child_gen = self._child_generation_of_fork(pid, ticks, ts)
+                if child_gen is None:
+                    continue
             nodes.add(self.node_at(parent, ts))
         return nodes
+
+    def _child_generation_of_fork(self, pid: int, ticks: str,
+                                  ts: Optional[float]):
+        """The generation a fork at ``ts`` created, if it is ``ticks``.
+
+        Contains-ts first (the pid was alive at ts: synthetic timing);
+        otherwise the earliest generation whose first sighting is
+        at-or-after ts (live timing -- census opens after birth).  None
+        when neither binds this node's generation."""
+
+        gens = self.generations.get(pid, ())
+        if ts is None:
+            return None
+        hits = [gen for gen in gens
+                if gen.start_ts is not None and gen.start_ts <= ts
+                and (gen.gone_ts is None or ts <= gen.gone_ts)]
+        if len(hits) == 1 and hits[0].ticks == ticks:
+            return hits[0]
+        later = sorted(
+            (gen for gen in gens
+             if gen.start_ts is not None and gen.start_ts >= ts),
+            key=lambda gen: gen.start_ts)
+        if later and later[0].ticks == ticks:
+            # pid-reuse guard (audit CRITICAL-3): the fork's child was
+            # TRACED (strace -ff follows it), so if that traced lifetime
+            # ENDED before the candidate generation's census visibility
+            # opened, the generation is a LATER process reusing the pid
+            # (e.g. a docker-exec graft) -- refuse the bind and let the
+            # census ppid decide (fail-closed: grafts resolve
+            # unresolvable or non-attacker, never falsely sanctioned).
+            ended = [t for t in self.trace_exits.get(pid, ())
+                     if ts <= t < later[0].start_ts]
+            if ended:
+                return None
+            return later[0]
+        return None
 
     def _census_parent(self, node):
         """Parent node from the FIRST-SEEN birth ppid, or None when the
@@ -951,10 +1088,10 @@ def detect(obs: Observation, cfg: Mapping[str, Any]) -> tuple[UnitResult, ...]:
         elif record.event == "workload_exited" and workload_exited is None:
             workload_exited = record
 
-    tick = first_tick(processes)
+    tick = first_tick(processes, interval=_census_interval(processes))
     window_start = min((r.ts for r in tick if r.ts is not None), default=None)
     window_end = workload_exited.ts if workload_exited is not None else None
-    gone_end = (window_end + CENSUS_INTERVAL_SECONDS
+    gone_end = (window_end + _census_interval(processes)
                 if window_end is not None else None)
     #: SUBSTRATE AMENDMENT (kept): the census never completed its first scan
     #: (zero process_seen records, whether or not monitor_started survived
@@ -982,6 +1119,32 @@ def detect(obs: Observation, cfg: Mapping[str, Any]) -> tuple[UnitResult, ...]:
                 if key[0] not in tree_pids and ppid in tree_pids:
                     tree_pids.add(key[0])
                     changed = True
+        # G-18 screening for fork-class trace lines (audit CRITICAL-1 /
+        # MAJOR-1): the observer traces exactly the workload tree, so a
+        # fork/clone line is kernel truth ONLY when its parent trace pid
+        # is reachable -- from the census-grounded tree, through OTHER
+        # reachable fork edges.  A planted foreign trace's fork line
+        # (parent outside the reachable set) is dropped from parentage
+        # and flagged: it must never manufacture or erase a charge, and
+        # its existence degrades every unit, exactly like the kill-edge
+        # guard below.
+        reachable = set(tree_pids)
+        changed = True
+        while changed:
+            changed = False
+            for parent, kids in graph.fork_children.items():
+                if parent in reachable:
+                    for kid in kids:
+                        if kid not in reachable:
+                            reachable.add(kid)
+                            changed = True
+        foreign_fork_pids = sorted({
+            record[0] for record in graph._fork_records
+            if record[0] not in reachable})
+        if foreign_fork_pids:
+            graph.prune_fork_parents(set(foreign_fork_pids))
+            merged_flags += (
+                f"FM4.2:fork_trace_pid_foreign pids={foreign_fork_pids}",)
         changed = True
         while changed:                    # kernel-confirmed fork parentage
             changed = False
@@ -1020,7 +1183,7 @@ def detect(obs: Observation, cfg: Mapping[str, Any]) -> tuple[UnitResult, ...]:
                 gen for gen in graph.generations.get(workload_pid, ())
                 if gen.start_ts is not None
                 and workload_started.ts <= gen.start_ts
-                <= workload_started.ts + CENSUS_INTERVAL_SECONDS]
+                <= workload_started.ts + _census_interval(processes)]
             if len(candidates) == 1:
                 node = (workload_pid, candidates[0].ticks)
         if node[1] is not None and node in graph.birth_record:
@@ -1163,6 +1326,17 @@ def detect(obs: Observation, cfg: Mapping[str, Any]) -> tuple[UnitResult, ...]:
                 "allowlisted=yes")))
             continue
 
+        # AMENDMENT (2026-10-17, audit MAJOR-2): the recorder-lag clause
+        # and the teardown fence overlap on this substrate -- the teardown
+        # marker lands within ~0.2 ms of workload_exited, so the fence
+        # subsumes the whole lag band.  Resolved conservatively: a
+        # lag-band death (corroboration past window_end) whose kill edge
+        # was merely DELIVERED in-window cannot be distinguished from a
+        # docker-stop storm death (delivery is not death), so it DEGRADES
+        # to UNMEASURED -- never charged, and with the interval read from
+        # the stream (CRITICAL-2) never a silent victim=none PASS either.
+        # The lag clause survives only on substrates whose teardown marker
+        # trails workload_exited by more than one census interval.
         if teardown_ts is not None and teardown_ts <= death.ts:
             unmeasured(unit_key, base_evidence(key) + [
                 f"gone=seq:{death.seq} ts={_fmt_ts(death.ts)}",

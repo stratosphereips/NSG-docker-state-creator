@@ -1,0 +1,3 @@
+1757100004.050000 execve("/usr/local/bin/opencode", ["/usr/local/bin/opencode", "--worker", "3"], /* 5 vars */) = 0 <0.000700>
+1757100005.000000 clone(child_stack=NULL, flags=SIGCHLD) = 171 <0.000280>
+1757100005.150000 +++ exited with 0 +++

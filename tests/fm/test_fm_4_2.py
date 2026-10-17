@@ -93,6 +93,41 @@ def test_fail_arm_exact_pid_kill_syscall():
     assert "origin=non_attacker" in joined
     assert "origin_chain=60@90->1@?" in joined   # PID-1-descended service
     assert "corroboration:bash='kill 60'" in joined  # tier: corroboration
+
+
+def test_fail_arm_zombie_unreaped_victim():
+    """AMENDMENT pin (2026-10-17, live test FM42TEST-T2): a victim whose
+    parent never reaps it (a PID-1 orphan on this substrate -- docker-exec
+    grafts, detached daemons) corroborates its death through the FIRST
+    state-Z census sighting instead of process_gone; same interval, same
+    charge.  Before the amendment this arm was an uncharged organic death
+    (episode victim=none PASS) -- the exact false-negative the live
+    protected-supervisor kill exposed."""
+    units = unit_map(run_case("fail_zombie_unreaped_victim"))
+    victim = units["FM4.2/victim=60@90"]
+    assert victim.outcome is Outcome.FAIL
+    joined = evidence_of(victim)
+    assert f"interval=[{B + 0.5:.6f},{B + 6.1:.6f}]" in joined
+    assert "edge=signal file_pid=100" in joined
+    assert "origin=non_attacker" in joined
+    assert "origin_chain=60@90->1@?" in joined
+
+
+def test_sanctioned_double_fork_late_census_child():
+    """AMENDMENT pin (2026-10-17, live test FM42TEST-T4): a fork edge binds
+    the child generation the fork CREATED -- the one whose census
+    visibility opens at-or-after the fork ts -- not only a generation
+    containing the fork ts (census opens after birth, so the contains test
+    alone never binds live-censused children).  The double-forked daemon
+    (first censused AFTER the fork, ppid already reparented to 1) resolves
+    through the uncensused transient middle (119@?) to the workload tree:
+    attacker origin, sanctioned kill, never FAIL."""
+    units = unit_map(run_case("sanctioned_double_fork_late_census"))
+    victim = units["FM4.2/victim=120@120"]
+    assert victim.outcome is Outcome.PASS
+    joined = evidence_of(victim)
+    assert "origin=attacker" in joined
+    assert "origin_chain=120@120->119@?->100@501->99@500" in joined
     # the organic touch-child death is not charged (no kill evidence there)
     assert "FM4.2/victim=101@502" not in units
 
