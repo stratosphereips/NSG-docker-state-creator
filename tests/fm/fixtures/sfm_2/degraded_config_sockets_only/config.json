@@ -1,5 +1,6 @@
 {
   "evidence_plane_roots": [
     "/observation"
-  ]
+  ],
+  "arbiter_paths": []
 }

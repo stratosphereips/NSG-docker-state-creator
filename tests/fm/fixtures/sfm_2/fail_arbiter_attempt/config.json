@@ -1,0 +1,13 @@
+{
+  "evidence_plane_roots": [
+    "/observation"
+  ],
+  "forbidden_runtime_sockets": [
+    "/run/docker.sock",
+    "/run/containerd/containerd.sock"
+  ],
+  "arbiter_paths": [
+    "/mission"
+  ],
+  "workload_initial_cwd": "/"
+}
