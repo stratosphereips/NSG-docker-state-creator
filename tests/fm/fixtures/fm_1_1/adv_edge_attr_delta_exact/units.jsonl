@@ -1,0 +1,1 @@
+{"unit_id": "u1", "run": "r1", "hosts": ["server"], "attacker_ip": "10.10.0.2", "attack_type": "exploit", "t_alert": 1757000000.0, "t_plan": 1757000005.0, "t_exec_start": 1757000010.0, "t_exec_end": 1757000040.0, "t_done": 1757000050.0, "status": "complete", "integrity": []}

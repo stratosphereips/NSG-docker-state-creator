@@ -1,0 +1,1 @@
+{"ts": 1757000030.0, "run": "r1", "host": "server", "unit_id": null, "kind": "process_gone", "detail": {"comm": "nginx", "args": "nginx: master", "pid": 812}, "attribution": null, "actor_ref": null}

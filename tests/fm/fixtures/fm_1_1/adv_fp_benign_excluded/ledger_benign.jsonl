@@ -1,0 +1,1 @@
+{"ts": 1757000023.5, "run": "r1", "actor": "benign", "action_class": "canary_replay", "host": "server", "detail": {"service": "nginx", "detail": "canary replay crashed worker"}}

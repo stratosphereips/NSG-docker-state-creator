@@ -1,0 +1,1 @@
+{"ts": 1756999999.0, "ts_completed": 1757000000.2, "run": "r1", "host": "server", "sessionID": "scripted", "tool": "bash", "callID": "c0", "input": {"command": "pkill -f \"nginx: master\" || true"}, "state": "completed", "actor": "defender", "exit_code": 0, "stdout": "", "stderr": ""}
