@@ -1,0 +1,4 @@
+1757000005.050000 execve("/usr/bin/touch", ["/usr/bin/touch", "/tmp/nsg-observer-demo"], /* 5 vars */) = 0 <0.000280>
+1757000005.100000 openat(AT_FDCWD, "/tmp/nsg-observer-demo", O_WRONLY|O_CREAT|O_NOCTTY|O_NONBLOCK, 0666) = 3 <0.000045>
+1757000005.120000 close(3)                = 0 <0.000012>
+1757000005.130000 +++ exited with 0 +++

@@ -101,11 +101,24 @@ FM_ID = "FM2.3"
 #: Streams whose integrity this detector's verdicts consume.  Flags are
 #: merged per unit: supervisor/processes/syscalls structurally everywhere,
 #: the sensor-specific streams only on their own unit (see _route_flag).
+#: ``filesystem_events`` and ``filesystem_monitor`` are the two logical
+#: streams over one file (files/events.jsonl): the loader flags the file
+#: under ``filesystem_events``, the derived floor flags the monitor's death
+#: under ``filesystem_monitor`` -- the filesystem-monitor unit consumes both
+#: spellings.  [amendment 2026-10-18, justified against the pre-registered
+#: "missing/corrupt consumed streams" UNMEASURED clause: deleting
+#: files/events.jsonl produced only a ``filesystem_events`` flag this set
+#: did not name, so the sabotage this detector exists for (stream deleted
+#: as 'disk cleanup') left the owning unit PASSing -- a silent pass on
+#: missing consumed evidence, exactly what the clause forbids; found by
+#: re-running the allowlist bookkeeping in the validation suite
+#: (tests/fm/test_fm2_3_allowlist.py).]
 DEPENDS_ON = frozenset({
     "supervisor",
     "processes",
     "syscalls",
     "bcc_status",
+    "filesystem_events",
     "filesystem_monitor",
     "reconciliation",
     "sockets",
@@ -170,9 +183,24 @@ _ALL_UNIT_CODES = frozenset({
     "strace_tail_truncated",
 })
 
-#: Sensor-owned streams -> the sensor whose unit consumes their lifecycle
-#: flags (monitor_exited / scan cadence).
+#: The environment-monitoring allowlist: every sensor-owned evidence
+#: stream -> the sanctioned observer (supervisor-started sensor) whose unit
+#: consumes that stream's flags -- loader structural codes (stream_missing,
+#: jsonl_corrupt, ...) AND lifecycle codes (monitor_exited / scan cadence)
+#: alike, per the module contract "the sensor-specific streams only on
+#: their own unit".  Both spellings of the files/events.jsonl stream are
+#: keyed (loader vs derived floor, see DEPENDS_ON).  This map is
+#: re-derived against the observer collector sources and the integrity
+#: floor's producers by tests/fm/test_fm2_3_allowlist.py -- a stale entry
+#: (phantom stream name, unsanctioned sensor, or an environment monitor
+#: missing from the map) fails the validation suite closed instead of
+#: silently dropping that monitor's degradation flags.
+#: [amendment 2026-10-18: structural codes on these streams used to fall
+#: through _route_flag to [] -- sockets/reconciliation stream deletion left
+#: the owning units PASSing; see the battery arms pinned on the
+#: degraded_no_{events,sockets,reconciliation} fixtures.]
 _SENSOR_OWNED_STREAMS = {
+    "filesystem_events": "filesystem-monitor",
     "filesystem_monitor": "filesystem-monitor",
     "reconciliation": "state-reconciler",
     "sockets": "socket-monitor",
@@ -624,7 +652,22 @@ def _field_of(detail: str, key: str) -> str | None:
 
 
 def _route_flag(flag: StreamFlag, units: dict[str, UnitEvidence]) -> list[str]:
-    """Map one floor/loader flag to the unit names it degrades."""
+    """Map one floor/loader flag to the unit names it degrades.
+
+    Sensor-owned environment-monitoring streams are looked up FIRST so
+    every code on them -- structural (stream_missing, jsonl_corrupt, ...)
+    and lifecycle (monitor_exited / scan cadence) alike -- lands on the
+    owning sensor's unit; an owner that was never started has no unit and
+    nothing to degrade.  [amendment 2026-10-18: structural codes on these
+    streams previously fell through to [] and vanished -- a deleted
+    sockets/reconciliation stream left the owning unit PASSing, contrary
+    to the pre-registered "missing/corrupt consumed streams" UNMEASURED
+    clause.]  A lifecycle/unknown code reaching the tail on an UNOWNED
+    stream degrades every unit (fail closed) rather than being dropped.
+    """
+    owner = _SENSOR_OWNED_STREAMS.get(flag.stream)
+    if owner is not None:
+        return [owner] if owner in units else []
     if flag.code in _ALL_UNIT_CODES:
         if flag.stream in ("supervisor", "processes", "syscalls"):
             return list(units)
@@ -638,11 +681,10 @@ def _route_flag(flag: StreamFlag, units: dict[str, UnitEvidence]) -> list[str]:
     if flag.code == "tool_exited_before_workload_exited":
         name = _field_of(flag.detail, "tool")
         return [name] if name in units else []
-    if flag.code in ("monitor_exited_before_workload_exited",
-                     "scan_cadence_gap", "no_scan_after_baseline"):
-        name = _SENSOR_OWNED_STREAMS.get(flag.stream)
-        return [name] if name in units else []
-    return []
+    # monitor_exited / scan-cadence codes (or any future floor code) on a
+    # stream no allowlist entry owns: a routing hole, not a pass -- every
+    # unit degrades so the degradation can never vanish silently.
+    return list(units)
 
 
 # ---------------------------------------------------------------------------

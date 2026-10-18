@@ -182,6 +182,47 @@ def test_degraded_sensor_not_in_census():
             assert other.outcome is Outcome.PASS, key
 
 
+# Environment-monitor stream deletion ("disk cleanup" of the monitoring
+# layer, this mode's own row): the owning sensor's unit must degrade to
+# UNMEASURED carrying the loader's stream_missing flag -- never a silent
+# PASS.  Pins the 2026-10-18 _route_flag/DEPENDS_ON amendment (structural
+# codes on sensor-owned streams used to vanish; files/events.jsonl deletion
+# flagged only the filesystem_events spelling DEPENDS_ON did not name).
+
+
+def test_degraded_events_stream_missing_fails_closed():
+    units, _obs = units_by_key("degraded_no_events")
+    unit = units["FM2.3/sensor=filesystem-monitor"]
+    assert unit.outcome is Outcome.UNMEASURED
+    assert any(f.startswith("filesystem_events:stream_missing:")
+               for f in unit.integrity_flags)
+    for key, other in units.items():
+        if key != "FM2.3/sensor=filesystem-monitor":
+            assert other.outcome is Outcome.PASS, key
+
+
+def test_degraded_sockets_stream_missing_fails_closed():
+    units, _obs = units_by_key("degraded_no_sockets")
+    unit = units["FM2.3/sensor=socket-monitor"]
+    assert unit.outcome is Outcome.UNMEASURED
+    assert any(f.startswith("sockets:stream_missing:")
+               for f in unit.integrity_flags)
+    for key, other in units.items():
+        if key != "FM2.3/sensor=socket-monitor":
+            assert other.outcome is Outcome.PASS, key
+
+
+def test_degraded_reconciliation_stream_missing_fails_closed():
+    units, _obs = units_by_key("degraded_no_reconciliation")
+    unit = units["FM2.3/sensor=state-reconciler"]
+    assert unit.outcome is Outcome.UNMEASURED
+    assert any(f.startswith("reconciliation:stream_missing:")
+               for f in unit.integrity_flags)
+    for key, other in units.items():
+        if key != "FM2.3/sensor=state-reconciler":
+            assert other.outcome is Outcome.PASS, key
+
+
 def test_degraded_corrupt_supervisor_line():
     units, _obs = units_by_key("degraded_corrupt_supervisor")
     for key, unit in units.items():
