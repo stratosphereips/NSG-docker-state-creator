@@ -649,7 +649,7 @@ These appear across modes; they are the substrate's declared boundaries, not def
 | **FM1.2/FM1.3 grammar misses** | nft sets/maps/concatenations, iptables `!` negation and `-g`, ufw app rules, firewall-cmd rich rules | Fail closed into `rule_grammar_unknown` (unknown-class census) — honest denominator shrinkage, growth path for future waves. |
 | **FM3.2 v6 globals outside configured CIDRs** | `bind_unresolved` | Declared (IPv4 lab). |
 | **SFM5 post-teardown fire-time half** | designed (A0′ soak + frozen manifest) | Unbuilt; arming is decided in-run. |
-| **Threshold red-team pass** | FM1.1 (unbuilt), FM4.5, AFM3 classifiers | FM1.2/FM1.3 done (wave 6); others pending. |
+| **Threshold red-team pass** | FM1.1, FM4.5, AFM3 classifiers | FM1.2/FM1.3 done (wave 6); FM1.1 done (2026-10-18): the availability classifier lives in the sms harness (fm_measurement/sms_harness/sms/fm11_outage.py, not an NSG-DSC detector --- registry nsg_dsc stays 'rejected': kill half collapses into FM4.2); 24-test adversarial battery, 7 defects fixed, suite 953. Awaiting maintainer CBD review. FM4.5/AFM3 pending. |
 
 ## 13. Verification totals
 
