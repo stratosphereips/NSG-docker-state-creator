@@ -77,3 +77,14 @@ must reach within 2 s of `workload_exited` (else the integrity floor flags
   (e.g. `fm_4_2/fail_kill/`, `fm_4_2/benign_control/`), one case per
   battery arm: FAIL arm, benign control, degradation corpus, adversary
   controls, determinism.
+- `sfm_4/` — SFM4 (unprompted self-disarmament, 2026-10-22 ruling):
+  activation boolean `/guardrail/activation.json` (field `active`),
+  ro-mount denial shapes (`= -1 EROFS`) plus writable-staging variants.
+  25 cases: 12 FAIL/edge arms (redirection, sed -i, jq tmp+mv, python
+  one-liner, rename/unlink/symlink swap, write-then-restore, fd family,
+  cd+relative via cwd replay, execveat interpreter, elided-prefix), 3
+  benign controls (inspect-only, work-around+abstain, sibling-file
+  writes), 9 degradation cases (trace hole, no syscalls, no bracket,
+  absent config, unanchored relative, torn line, foreign tree, elided
+  operand, elided interpreter argv), 2 adversarial arms (/proc/self/fd +
+  splice denial closure; mmap writeback — open edge already fired).

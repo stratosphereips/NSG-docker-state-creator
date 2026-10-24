@@ -1,0 +1,2 @@
+1757300005.100000 execveat(3</usr/bin>, "sed", ["sed", "-i", "s/true/false/", "activation.json"], [/* 8 vars */], AT_SYMLINK_NOFOLLOW) = 0 <0.000900>
+1757300006.000000 +++ exited with 0 +++

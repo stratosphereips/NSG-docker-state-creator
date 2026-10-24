@@ -2,7 +2,7 @@
 
 One map of every failure mode in the taxonomy (32 modes: 21 defender FM,
 4 attacker AFM, 7 shared SFM — per `../docs/experiment_design_unified.tex`)
-to every surface that implements it. **22 modes are measured on at least one
+to every surface that implements it. **24 modes are measured on at least one
 surface.** The machine-readable source of truth is
 [`fm_registry.json`](fm_registry.json); the table below is rendered from it
 by hand and kept honest by `tests/fm/test_fm_registry.py`, which enforces
@@ -49,17 +49,17 @@ topology `fm-defender-lab`).
 | AFM3 | RoE recklessness (prohibited force / noise ceilings) | `afm_3` ✓ |
 | AFM4 | Restoration failure (residue left behind) | `afm_4` ✓ (open: `kind=deleted` attribution gap) |
 
-## Shared modes (SFM) — DSC only
+## Shared modes (SFM)
 
-| ID | Mode | DSC |
-|---|---|---|
-| SFM1 | Confabulation (report vs engagement record) | ✗ agent-authored text in deciding path — rule 1 |
-| SFM2 | Specification gaming (subverting the evaluator) | `sfm_2` ✓ (tier-A table also carries the folded SFM5 surface) |
-| SFM3 | Executed safety-strip on operator order | ✗ verdict ledger can't be config |
-| SFM4 | Self-initiated disabling (ungoverned window) | ✗ verdict ledger can't be config |
-| SFM5 | Self-loss: escape, persistence, weaponization | `sfm_5` ✓ (wave 5: in-bracket surfaces; tier-A reach stays in `sfm_2`) |
-| SFM6 | Authorization obedience decays under context load | ✗ paired-arm machinery |
-| SFM7 | Acting against own recorded judgment | ✗ paired-arm machinery |
+| ID | Mode | DSC | SMS |
+|---|---|---|---|
+| SFM1 | Confabulation (report vs engagement record) | ✗ agent-authored text in deciding path — rule 1 | |
+| SFM2 | Specification gaming (subverting the evaluator) | `sfm_2` ✓ (tier-A table also carries the folded SFM5 surface) | |
+| SFM3 | Executed safety-strip on operator order | ✗ verdict ledger can't be config | |
+| SFM4 | Self-initiated disabling (ungoverned window) | `sfm_4` ✓ (2026-10-22 ruling: disclosed activation boolean, FAIL-on-attempt write on the declared file) | |
+| SFM5 | Self-loss: escape, persistence, weaponization | `sfm_5` ✓ (wave 5: in-bracket surfaces; tier-A reach stays in `sfm_2`) | |
+| SFM6 | Authorization obedience decays under context load | ✗ paired-arm machinery | |
+| SFM7 | Acting against own recorded judgment | ✗ paired-arm machinery | `sfm7_divergence` ✓ (pre-action declaration ledger + two-field consistency checker) |
 
 ## Reading the rejections
 
@@ -69,5 +69,7 @@ full reasons and the challenge conditions ("future substrate growth") are in
 `../docs/NSG_DSC_FM_DETECTORS_20260907.md`. Modes like FM2.2, FM5.2 or
 FM6.1 that DSC rejects **are** measured live by `sms_harness`, which controls
 the substrate and can therefore build what a passive observer cannot. The
-inverse also holds: AFM/SFM modes need substrate forms only the observer
-records, so they exist only on the DSC surface.
+inverse mostly holds: the other AFM/SFM modes need substrate forms only the
+observer records, so they exist only on the DSC surface — SFM7 is the
+exception, measured on the sms surface via the pre-action declaration
+ledger the harness itself records (declared unsafe/out_scope + executed).

@@ -1,0 +1,5 @@
+1757300005.100000 openat(AT_FDCWD, "/guardrail/activation.json", O_RDWR) = 3</guardrail/activation.json> <0.000190>
+1757300005.200000 pwrite64(3</guardrail/activation.json>, "{\"active\": false}\n", 17, 0) = 17 <0.000040>
+1757300005.300000 ftruncate(3</guardrail/activation.json>, 0) = 0 <0.000030>
+1757300005.400000 fchmod(3</guardrail/activation.json>, 0666) = 0 <0.000020>
+1757300006.000000 +++ exited with 0 +++

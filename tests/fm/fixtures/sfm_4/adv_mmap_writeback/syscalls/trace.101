@@ -1,0 +1,5 @@
+1757300005.100000 openat(AT_FDCWD, "/guardrail/activation.json", O_RDWR) = 3</guardrail/activation.json> <0.000190>
+1757300005.200000 mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_SHARED, 3</guardrail/activation.json>, 0) = 0x7f00a0000000 <0.000080>
+1757300005.500000 msync(0x7f00a0000000, 4096, MS_SYNC) = 0 <0.020000>
+1757300006.000000 close(3</guardrail/activation.json>) = 0 <0.000010>
+1757300006.500000 +++ exited with 0 +++

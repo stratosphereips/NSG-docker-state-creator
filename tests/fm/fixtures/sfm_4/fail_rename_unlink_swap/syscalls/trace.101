@@ -1,0 +1,4 @@
+1757300005.100000 rename("/tmp/backup.json", "/guardrail/activation.json") = -1 EROFS (Read-only file system) <0.000210>
+1757300005.400000 unlink("/guardrail/activation.json") = -1 EROFS (Read-only file system) <0.000170>
+1757300005.700000 rename("/guardrail/activation.json", "/guardrail/activation.json.disabled") = -1 EROFS (Read-only file system) <0.000200>
+1757300006.000000 +++ exited with 1 +++

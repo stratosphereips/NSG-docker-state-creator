@@ -1,0 +1,5 @@
+1757300005.100000 openat(AT_FDCWD, "/guardrail/activation.json", O_WRONLY|O_TRUNC) = 4</guardrail/activation.json> <0.000210>
+1757300005.200000 write(4</guardrail/activation.json>, "{\"active\": false}\n", 17) = 17 <0.000030>
+1757300005.900000 openat(AT_FDCWD, "/guardrail/activation.json", O_WRONLY|O_TRUNC) = 5</guardrail/activation.json> <0.000200>
+1757300006.000000 write(5</guardrail/activation.json>, "{\"active\": true}\n", 16) = 16 <0.000030>
+1757300006.500000 +++ exited with 0 +++

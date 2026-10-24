@@ -1,15 +1,18 @@
-# sms_harness — Defender Failure-Mode Measurement Lab (14 playbook FMs)
+# sms_harness — Defender Failure-Mode Measurement Lab (14 playbook FMs + SFM7)
 
-Deterministic, no-LLM measurement harness for the **14 currently-measured**
-defender failure modes of the Trident playbook
-(`/home/diego/SCLT/DEFENDER_FAILURE_MODES_MEASUREMENT_PLAYBOOK.md`):
+Deterministic, no-LLM measurement harness for the **15 currently-measured**
+failure modes: the 14 defender playbook FMs
+(`/home/diego/SCLT/DEFENDER_FAILURE_MODES_MEASUREMENT_PLAYBOOK.md`) plus the
+unified-taxonomy shared mode SFM7 (intent–action divergence, 2026-10-21):
 FM1.1 (protected-service outage), FM1.2 (self-DoS blanket blocking), FM1.3
 (wrong-direction block), FM2.1 (log deletion), FM2.2 (database data loss),
 FM2.3 (capture destruction), FM3.3 (decoy data substitution), FM4.1
 (ineffective containment), FM4.2 (wrong-process kill, PID-blacklist form),
 FM4.5 (retry pathology), FM5.1 (injected-instruction execution), FM5.2
 (injection-induced suppression, forced-utterance form), FM5.5
-(injection-induced self-disarmament), FM6.1 (response refusal). Runs on the
+(injection-induced self-disarmament), FM6.1 (response refusal), SFM7
+(acting against own recorded judgment — pre-action declaration ledger +
+two-field consistency checker, `sfm7_divergence`). Runs on the
 live Docker topology `fm-defender-lab` (guarded soc_god defender on both
 victim hosts, guarded coder56 attacker, slips + router capture) with
 defender/attacker actions simulated by host-side scripts writing the same
@@ -23,7 +26,8 @@ and 8). FM4.2 and FM5.2 were reworked the same day — see their RESULTS
 sections.
 
 Modules (`sms/`): substrate `prober`, `differ`, `units`, `ledger`,
-`scripted_defender` (with `gate=`/`ungated=` verdict-ledger mode), `ocx_tail`,
+`scripted_defender` (with `gate=`/`ungated=` verdict-ledger mode and
+`declaration=`/`sfm7=` pre-action declaration capture), `ocx_tail`,
 `host_capture`, `integrity`, `mutate_filter`, `run_controller`, `common`,
 `verdict_ledger` (simulated guardrail gate + HMAC-chained verdict ledger),
 `dbprobe` (frozen-checksum DB census), `inject_delivery` (host-executed
@@ -31,17 +35,20 @@ injection payload delivery, shared by FM5.2/FM5.5); FM analyzers
 `fm11_outage`, `fm4_residual`, `canary_check` (FM5.1), `fm61_refusal`;
 `fm12_selfdos`, `fm55_selfdisarm`; `fm13_wrongdir`, `fm21_logdel`,
 `fm42_wrongkill` (PID-blacklist form), `fm52_suppress` (forced-utterance
-form); `fm22_dbloss`, `fm23_capture`, `fm33_substitute`, `fm45_retry`.
+form); `fm22_dbloss`, `fm23_capture`, `fm33_substitute`, `fm45_retry`; and
+the shared-mode analyzer `sfm7_divergence` (SFM7).
 
 Docs: [DESIGN.md](DESIGN.md) (v1 architecture + contracts) ·
 [DESIGN2.md](DESIGN2.md) (v2 contracts) · [DESIGN3.md](DESIGN3.md) (v3
 contracts + honesty rules) · [DESIGN4.md](DESIGN4.md) (v4 contracts, lane
-isolation, honesty minimum set) — v2–v4 are historical contracts; the FMs
+isolation, honesty minimum set) · [DESIGN5.md](DESIGN5.md) (SFM7 contract:
+pre-action declaration ledger + two-field consistency checker) — v2–v4 are
+historical contracts; the FMs
 they specify that are listed as removed above no longer have
 implementations · [RESULTS.md](RESULTS.md) (lab verification, per-FM
 verdicts incl. a measured repeatability section, how to run) ·
 [COVERAGE.md](COVERAGE.md) (honest clause-level coverage vs the playbook for
-the 14 measured FMs).
+the measured FMs).
 
 v4 execution note: the v4 e2e suites were originally run to green by
 **three lanes executing in parallel against the single live lab** (per-lane
@@ -53,6 +60,6 @@ Quickstart (python3.12 required — default python3 on this host is 3.8):
 
 ```bash
 python3.12 lab/deploy_lab.py ensure-up && python3.12 lab/deploy_lab.py verify  # lab up
-python3.12 -m pytest tests/unit -q                                        # 181 unit tests
-python3.12 -m pytest tests/e2e -q                                         # live tests across 14 files, no LLM
+python3.12 -m pytest tests/unit -q                                        # 211 unit tests
+python3.12 -m pytest tests/e2e -q                                         # live tests across 15 files, no LLM
 ```

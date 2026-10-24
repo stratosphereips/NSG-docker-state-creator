@@ -8,7 +8,7 @@ import json
 import os
 import uuid
 
-from . import common, ledger, verdict_ledger
+from . import common, ledger, sfm7_divergence, verdict_ledger
 
 OCX_PATH = "ocx_defender.jsonl"
 
@@ -21,7 +21,8 @@ def _topology(archive):
 
 
 def execute(archive, host, command, actor="defender", action_class=None,
-            ts=None, session_id=None, call_id=None, gate=None, ungated=False):
+            ts=None, session_id=None, call_id=None, gate=None, ungated=False,
+            declaration=None, sfm7=None):
     """Execute `command` in container `host` (docker exec, root), then append
     an ocx record + ledger row with the exit code.
 
@@ -37,11 +38,60 @@ def execute(archive, host, command, actor="defender", action_class=None,
     ungated=True: execute with NO adjudication and NO verdict row (the
     simulated bypass path for FM5.4 sub-case (d)). gate=None + ungated=False
     (defaults): v1 behavior unchanged (no verdict file is ever written).
+
+    declaration + sfm7 (SFM7, sms/sfm7_divergence.py): the per-command
+    two-field self-assessment riding THIS SAME tool use —
+    declaration={"safety": "safe"|"unsafe", "scope": "in_scope"|"out_scope"}.
+    Values are validated (ValueError on anything outside the enums — the
+    tool-schema analog) and captured by the HARNESS at submission time into
+    the HMAC-chained ledger evidence/declarations.jsonl BEFORE anything
+    executes; the ocx record embeds input.declaration (where the real-agent
+    tool schema carries it). sfm7=DeclarationPolicy(...) additionally makes
+    coverage executor-enforced: a required-class command (mutating classes,
+    fail-closed incl. "unknown") arriving WITHOUT a declaration is REFUSED
+    pre-execution (ocx state "refused", refusal_reason
+    "sfm7_missing_declaration", no declaration row, command NEVER runs).
+    Defaults (declaration=None, sfm7=None): prior behavior unchanged — no
+    declarations file is ever written.
     """
     topo = _topology(archive)
     t0 = ts if ts is not None else common.now()
     cid = call_id or str(uuid.uuid4())[:8]
     vledger = None
+    decl_rec = None
+    if declaration is not None:
+        decl = sfm7_divergence.validate_declaration(declaration)
+    else:
+        decl = None
+        if sfm7 is not None and sfm7.enforce and sfm7.requires(command):
+            # executor-enforced structural coverage: no declaration, no
+            # execution (the call is rejected at submission time)
+            ocx = {
+                "ts": t0,
+                "ts_completed": common.now(),
+                "run": os.path.basename(os.path.normpath(archive)),
+                "host": host,
+                "sessionID": session_id or "scripted",
+                "tool": "bash",
+                "callID": cid,
+                "input": {"command": command},
+                "state": "refused",
+                "actor": actor,
+                "exit_code": None,
+                "stdout": "",
+                "stderr": "",
+                "refusal_reason": "sfm7_missing_declaration",
+            }
+            common.append_jsonl(os.path.join(archive, OCX_PATH), ocx)
+            if action_class:
+                ledger.record(archive, actor, action_class, host,
+                              {"command": command, "refused": True,
+                               "refusal_reason": "sfm7_missing_declaration"})
+            return ocx, None, "", ""
+    if decl is not None:
+        dledger = sfm7_divergence.DeclarationLedger(archive)
+        decl_rec = dledger.append(cid, decl["safety"], decl["scope"],
+                                  command, ts=t0)
     if gate is not None and not ungated:
         adjudication = gate.adjudicate(command)
         vledger = getattr(gate, "ledger", None) or verdict_ledger.Ledger(
@@ -56,7 +106,9 @@ def execute(archive, host, command, actor="defender", action_class=None,
                 "sessionID": session_id or "scripted",
                 "tool": "bash",
                 "callID": cid,
-                "input": {"command": command},
+                "input": dict({"command": command},
+                              **({"declaration": dict(decl)}
+                                 if decl is not None else {})),
                 "state": "refused",
                 "actor": actor,
                 "exit_code": None,
@@ -82,13 +134,17 @@ def execute(archive, host, command, actor="defender", action_class=None,
         "sessionID": session_id or "scripted",
         "tool": "bash",
         "callID": cid,
-        "input": {"command": command},
+        "input": dict({"command": command},
+                      **({"declaration": dict(decl)}
+                         if decl is not None else {})),
         "state": "completed",
         "actor": actor,
         "exit_code": rc,
         "stdout": out[-2000:],
         "stderr": err[-2000:],
     }
+    if decl_rec is not None:
+        ocx["declaration_seq"] = decl_rec["seq"]
     if ungated:
         ocx["ungated"] = True
     if vledger is not None:
