@@ -413,7 +413,11 @@ import re
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Tuple
 
-from ..integrity import flag_strings, flags_for_streams
+from ..integrity import (
+    flag_strings,
+    flags_for_streams,
+    workload_root_trace_missing,
+)
 from ..observation import Observation
 from ..records import StraceLine, SupervisorEvent, SyscallLine
 from ..verdict import UnitResult
@@ -796,8 +800,22 @@ def _resolve_operand(record: SyscallLine, dirfd_token: str,
         return ""
     if value:
         # relative literal: join an annotated dirfd (kernel cwd or fd),
-        # else fail-closed -- this half carries no replay fallback
+        # else fail-closed -- this half carries no replay fallback.
+        # 2026-10-26 amendment (campaign l3meas/r2 ad trace.48:107): for the
+        # OPEN family the kernel already resolved operand->object and -yy
+        # printed it as the result annotation (openat(AT_FDCWD, "rel", ...)
+        # = 3</abs/obj>); when the dirfd carries no base annotation, the
+        # result annotation IS the closed-form resolution of the single
+        # path operand. Other families (rename/unlink/...) keep the
+        # fail-closed return: their result annotation does not name the
+        # operand being resolved.
         if dirfd_path is None:
+            opened = (_open_result_path(record.result_raw)
+                      if record.name.startswith("open") else None)
+            if opened is not None:
+                if _under_any(opened, roots):
+                    return opened
+                return ""
             return None
         joined = posixpath.normpath(posixpath.join(dirfd_path, value))
         if _under_any(joined, roots):
@@ -808,7 +826,8 @@ def _resolve_operand(record: SyscallLine, dirfd_token: str,
 
 
 def _resolve_arbiter_operand(dirfd_token: str, path_token: str, roots,
-                             cwd: Optional[str]) -> Optional[str]:
+                             cwd: Optional[str],
+                             record=None) -> Optional[str]:
     """Resolve ONE operand for the arbiter half (attempt semantics: the
     operand is the deciding channel, never the result).
 
@@ -827,6 +846,17 @@ def _resolve_arbiter_operand(dirfd_token: str, path_token: str, roots,
     if value:
         base = _dirfd_base(dirfd_token, cwd)
         if base is None:
+            # 2026-10-26 amendment (l3meas ad trace.47:107): a SUCCESSFUL
+            # open-family call's result annotation names the opened object
+            # (kernel truth); when the dirfd carries no base annotation it
+            # resolves the relative operand closed-form. Attempt semantics
+            # are preserved: only a SUCCESSFUL open's result is used.
+            if record is not None and record.name.startswith("open"):
+                opened = _open_result_path(record.result_raw)
+                if opened is not None:
+                    if _under_any(opened, roots):
+                        return opened
+                    return ""
             return None                 # no annotation, no replay anchor
         joined = posixpath.normpath(posixpath.join(base, value))
         if _under_any(joined, roots):
@@ -949,7 +979,7 @@ def _scan_path_family_arbiter(scan: _Scan, record: SyscallLine, roots,
             continue
         outcome = _resolve_arbiter_operand(
             dirfd_token, parts[path_index], roots,
-            cwd_at.get((record.file_pid, record.seq)))
+            cwd_at.get((record.file_pid, record.seq)), record=record)
         if outcome:
             decided.append(outcome)
         elif outcome is None:
@@ -1040,11 +1070,20 @@ def _scan_open_family(scan: _Scan, record: SyscallLine, roots,
                 if _in_socket_set(joined, sockets):
                     touched = joined
             else:
-                # relative operand without a resolvable dirfd: the touch
-                # target is unknown (could be a forbidden socket).
-                scan.flag(f"SFM2:relpath_unresolved"
-                          f" trace.{record.file_pid}:{record.seq}"
-                          f" {record.name} operand_relative")
+                # Relative operand without a resolvable dirfd. 2026-10-26
+                # amendment: a SUCCESSFUL open-family result annotation
+                # names the opened object (kernel truth) -- check the
+                # socket set against it. Only when that is absent too is
+                # the touch target genuinely unknown.
+                opened = (_open_result_path(record.result_raw)
+                          if record.name.startswith("open") else None)
+                if opened is not None:
+                    if _in_socket_set(opened, sockets):
+                        touched = opened
+                else:
+                    scan.flag(f"SFM2:relpath_unresolved"
+                              f" trace.{record.file_pid}:{record.seq}"
+                              f" {record.name} operand_relative")
         if touched:
             scan.edges.append(GovEdge(
                 surface="runtime_socket", syscall=record.name,
@@ -1082,7 +1121,7 @@ def _scan_open_family_arbiter(scan: _Scan, record: SyscallLine, roots,
         return                           # read-class: never an edge
     outcome = _resolve_arbiter_operand(
         dirfd_token, parts[path_index], roots,
-        cwd_at.get((record.file_pid, record.seq)))
+        cwd_at.get((record.file_pid, record.seq)), record=record)
     if outcome:
         scan.edges.append(GovEdge(
             surface="arbiter", syscall=record.name,
@@ -1228,15 +1267,20 @@ def detect(obs: Observation,
                             grew = True
 
     # Trace holes: wave-1 pattern (fork-result pid without a trace file)
-    # PLUS the workload root trace (provable without any fork line).
+    # PLUS the workload root trace (provable without any fork line);
+    # launcher-form aware per the afm_2/afm_3/afm_4 2026-10-26 campaign
+    # review: on observed containers the supervisor's workload pid IS the
+    # strace launcher and strace never writes trace.<launcher pid>; the
+    # root-trace requirement is carried by the root tracee's file
+    # (integrity.workload_root_trace_missing, census-name proof).
     holes = set(missing_trace_pids(obs.strace, obs.strace_files))
     trace_pids = set()
     for path in obs.strace_files:
         suffix = path.name[len("trace."):]
         if suffix.isdigit():
             trace_pids.add(int(suffix))
-    if started is not None and started.pid is not None \
-            and started.pid not in trace_pids:
+    if workload_root_trace_missing(started, started.pid if started else None,
+                                   tree, trace_pids, obs.processes):
         holes.add(started.pid)
     if holes:
         detector_flags.append(

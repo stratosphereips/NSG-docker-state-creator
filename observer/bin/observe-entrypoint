@@ -149,23 +149,247 @@ def workload_command(argv: list[str]) -> list[str]:
     return command
 
 
-def stop_all(signum: int = signal.SIGTERM) -> None:
+def _term_tracees_only(leader_pid: int, signum: int) -> None:
+    """Signal every member of the workload's process group EXCEPT the group
+    leader (strace itself) so strace keeps tracing the tracees' exits.
+
+    killpg on the workload would TERM strace together with its tracees:
+    strace then detaches (untraced) tracees and lingers, so the trace tail
+    ends seconds before the workload_exited bracket and the integrity layer
+    flags strace_tail_truncated. Terminating only the tracees lets strace
+    record their death events, flush, and exit by itself right at the
+    bracket."""
+    import glob
+    try:
+        leader_pgid = os.getpgid(leader_pid)
+    except ProcessLookupError:
+        return
+    for stat in glob.glob("/proc/[0-9]*/stat"):
+        try:
+            with open(stat) as fh:
+                fields = fh.read().rsplit(") ", 1)[1].split()
+            pid = int(stat.split("/")[2])
+            pgid = int(fields[2])
+        except (OSError, IndexError, ValueError):
+            continue
+        if pgid == leader_pgid and pid != leader_pid:
+            try:
+                os.kill(pid, signum)
+            except (ProcessLookupError, PermissionError):
+                pass
+
+
+def stop_workload_only(signum: int) -> None:
+    """Shutdown-signal path: signal ONLY the workload (its tracees, not the
+    strace wrapper).  Sensors must survive until workload_exited is logged
+    and final_census_flush() has the process monitor write its post-exit
+    sweep: TERMing them here (the pre-2026-10-26 behaviour ran stop_all on
+    the signal) made the monitor flush its last census the instant SIGTERM
+    arrived -- 10-30s BEFORE the workload actually exited -- so no census
+    record ever landed at/after the workload_exited anchor and every run
+    degraded (AFM4:post_exit_census_missing).  Sensor teardown happens in
+    main() via stop_all() after the flush."""
     global stopping
     if stopping:
         return
     stopping = True
+    for name, proc in children:
+        if name != "workload" or proc.poll() is not None:
+            continue
+        try:
+            if env_bool("OBS_ENABLE_STRACE", True):
+                _term_tracees_only(proc.pid, signum)
+            else:
+                os.killpg(proc.pid, signum)
+            log.write("sensor_signal", name=name, pid=proc.pid, signal=signum)
+        except ProcessLookupError:
+            pass
+
+
+def stop_all(signum: int = signal.SIGTERM) -> None:
+    global stopping
+    stopping = True
     for name, proc in reversed(children):
         if proc.poll() is None:
             try:
-                os.killpg(proc.pid, signum)
+                if name == "workload" and env_bool("OBS_ENABLE_STRACE", True):
+                    _term_tracees_only(proc.pid, signum)
+                else:
+                    os.killpg(proc.pid, signum)
                 log.write("sensor_signal", name=name, pid=proc.pid, signal=signum)
             except ProcessLookupError:
                 pass
 
 
+def _straggler_identity(pid: int) -> dict | None:
+    """process-monitor's exact census identity (naive stat split, same
+    field indexes) so the gone rows join the same (pid, start_ticks)
+    identity the monitor's census used."""
+    base = Path("/proc") / str(pid)
+    try:
+        status: dict = {}
+        for line in (base / "status").read_text().splitlines():
+            if ":" in line:
+                key, value = line.split(":", 1)
+                status[key] = value.strip()
+        stat_fields = (base / "stat").read_text().split()
+        if len(stat_fields) <= 21 or not stat_fields[21]:
+            return None
+        uid_values = status.get("Uid", "-1").split()
+        uid = int(uid_values[0]) if uid_values and uid_values[0].isdigit() else -1
+        try:
+            username = pwd.getpwuid(uid).pw_name
+        except KeyError:
+            username = str(uid)
+        return {
+            "pid": pid,
+            "start_ticks": stat_fields[21],
+            "name": status.get("Name", ""),
+            "cmdline": (base / "cmdline").read_bytes()
+                        .replace(b"\0", b" ").decode("utf-8", "replace").strip(),
+            "uid": [username, str(uid)],
+        }
+    except (OSError, ValueError):
+        return None
+
+
+def straggler_sweep(term_grace: float = 2.5, kill_grace: float = 3.0) -> None:
+    """2026-10-27 amendment: reap the workload-tree stragglers the final
+    census saw alive. Their deaths would otherwise land only at docker's
+    grace SIGKILL -- after PID 1 exits, unrecorded -- degrading AFM4
+    (death_evidence_missing) and FM4.5. The entrypoint (still PID 1, and
+    the reaper of everything reparented to it) TERMs then KILLs the
+    remaining processes, waits for their /proc entries to vanish, and
+    appends process_gone rows in the process monitor's exact schema."""
+    own = os.getpid()
+    victims: dict[int, dict] = {}
+    for item in Path("/proc").glob("[0-9]*"):
+        pid = int(item.name)
+        if pid in (1, own):
+            continue
+        identity = _straggler_identity(pid)
+        if identity:
+            victims[pid] = identity
+    if not victims:
+        return
+    for pid in victims:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except (ProcessLookupError, PermissionError):
+            pass
+    deadline = time.monotonic() + term_grace
+    while time.monotonic() < deadline and victims:
+        _reap_zombies()
+        victims = {p: i for p, i in victims.items()
+                   if Path("/proc", str(p)).exists()}
+        if victims:
+            time.sleep(0.1)
+    for pid in list(victims):
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass
+    deadline = time.monotonic() + kill_grace
+    while time.monotonic() < deadline and victims:
+        _reap_zombies()
+        victims = {p: i for p, i in victims.items()
+                   if Path("/proc", str(p)).exists()}
+        if victims:
+            time.sleep(0.1)
+    gone_log = JsonLog("processes.jsonl", "process-monitor")
+    for pid in sorted(victims):
+        identity = victims[pid]
+        gone_log.write("process_gone",
+                       pid=identity["pid"],
+                       start_ticks=identity["start_ticks"],
+                       name=identity["name"],
+                       cmdline=identity["cmdline"],
+                       uid=identity["uid"])
+    # Absence reconciliation: identities the final census saw ALIVE
+    # (process_seen/process_changed rows) whose deaths landed between that
+    # census and now -- e.g. tracees SIGKILLed by PTRACE_O_EXITKILL when
+    # the strace wrapper died -- have no process_gone row. At this point
+    # every tree member is provably dead or reaped above: any census
+    # identity absent from /proc AND absent from the gone log died in that
+    # window, and this sweep positively witnesses the absence.
+    seen: dict = {}
+    gone_keys: set = set()
+    try:
+        with open(OUTPUT / "processes.jsonl", encoding="utf-8") as fh:
+            for line in fh:
+                try:
+                    row = json.loads(line)
+                except ValueError:
+                    continue
+                event = row.get("event")
+                if event in ("process_seen", "process_changed"):
+                    ticks = str(row.get("start_ticks") or "")
+                    if row.get("pid") is not None and ticks:
+                        seen[(int(row["pid"]), ticks)] = row
+                elif event == "process_gone":
+                    ticks = str(row.get("start_ticks") or "")
+                    if row.get("pid") is not None and ticks:
+                        gone_keys.add((int(row["pid"]), ticks))
+    except OSError:
+        seen = {}
+    still_live = set()
+    for item in Path("/proc").glob("[0-9]*"):
+        identity = _straggler_identity(int(item.name))
+        if identity:
+            still_live.add((identity["pid"], identity["start_ticks"]))
+    reconciled = 0
+    for key, row in seen.items():
+        if key in gone_keys or key in still_live:
+            continue
+        if key[0] in (1, os.getpid()):
+            continue
+        gone_log.write("process_gone",
+                       pid=key[0],
+                       start_ticks=key[1],
+                       name=row.get("name", ""),
+                       cmdline=row.get("cmdline", ""),
+                       uid=row.get("uid", []))
+        reconciled += 1
+    log.write("straggler_sweep", reaped=len(victims),
+              reconciled_absent=reconciled)
+
+
+def _reap_zombies() -> None:
+    while True:
+        try:
+            pid, _ = os.waitpid(-1, os.WNOHANG)
+        except ChildProcessError:
+            return
+        if pid == 0:
+            return
+
+
+def final_census_flush(grace: float = 3.0) -> None:
+    """2026-10-26 campaign amendment: request the process monitor's FINAL
+    SWEEP immediately after workload_exited is logged (SIGUSR1; the
+    monitor writes one full census pass -- process_seen/process_changed
+    for live identities, process_gone reconciliation -- into
+    processes.jsonl and exits).  AFM4's residue sweep needs a census tick
+    strictly at/after the workload_exited anchor to witness survival;
+    without this the monitor's last tick almost always lands a poll
+    interval BEFORE the anchor and every run degrades
+    (AFM4:post_exit_census_missing)."""
+    for name, proc in children:
+        if name != "process-monitor" or proc.poll() is not None:
+            continue
+        try:
+            proc.send_signal(signal.SIGUSR1)
+            try:
+                proc.wait(timeout=grace)
+            except subprocess.TimeoutExpired:
+                pass  # stop_all's TERM below triggers the deferred flush
+        except (ProcessLookupError, OSError):
+            pass
+
+
 def on_signal(signum, _frame) -> None:
     log.write("supervisor_signal", signal=signum)
-    stop_all(signum)
+    stop_workload_only(signum)
 
 
 def main() -> int:
@@ -198,16 +422,46 @@ def main() -> int:
 
     if stopping and workload.poll() is None:
         try:
-            os.killpg(workload.pid, signal.SIGTERM)
+            if env_bool("OBS_ENABLE_STRACE", True):
+                _term_tracees_only(workload.pid, signal.SIGTERM)
+            else:
+                os.killpg(workload.pid, signal.SIGTERM)
         except ProcessLookupError:
             pass
     try:
-        result = workload.wait(timeout=10)
+        result = workload.wait(timeout=float(
+            os.environ.get("OBS_TRACEE_TERM_GRACE", "10")))
     except subprocess.TimeoutExpired:
-        os.killpg(workload.pid, signal.SIGKILL)
-        result = workload.wait()
+        # Tracees ignoring TERM (e.g. samba's slow shutdown, an sshd -D
+        # stuck in ppoll): escalate on the TRACEES first so strace still
+        # records their deaths; only kill the strace wrapper itself as the
+        # last resort.  2026-10-26 campaign amendment: the first grace is
+        # OBS_TRACEE_TERM_GRACE (default 10s, was 30) -- the campaign's
+        # 30s window let TERM-ignoring tracees hold the bracket open
+        # until docker's stop-grace SIGKILL tore down strace mid-flush,
+        # losing exactly their death trailers
+        # (syscalls:strace_tail_truncated).  Escalating sooner gives
+        # strace a clean final flush window inside the container's
+        # stop-grace budget.
+        try:
+            if env_bool("OBS_ENABLE_STRACE", True):
+                _term_tracees_only(workload.pid, signal.SIGKILL)
+                try:
+                    result = workload.wait(timeout=20)
+                except subprocess.TimeoutExpired:
+                    os.kill(workload.pid, signal.SIGKILL)
+                    result = workload.wait()
+            else:
+                os.killpg(workload.pid, signal.SIGKILL)
+                result = workload.wait()
+        except ProcessLookupError:
+            result = workload.wait()
 
     log.write("workload_exited", pid=workload.pid, returncode=result)
+    # Post-exit census flush BEFORE any sensor teardown: the final sweep's
+    # census records timestamp at/after this workload_exited line, giving
+    # the AFM4 residue sweep its post-anchor witness (see final_census_flush).
+    final_census_flush()
     stop_all()
     deadline = time.monotonic() + 5
     for _name, proc in children:
@@ -221,6 +475,9 @@ def main() -> int:
                 os.killpg(proc.pid, signal.SIGKILL)
             except ProcessLookupError:
                 pass
+    # 2026-10-27: reap remaining workload-tree stragglers and record
+    # their deaths (see straggler_sweep) BEFORE PID 1 exits.
+    straggler_sweep()
     status("stopped", workload.pid)
     return result
 

@@ -83,6 +83,10 @@ DIR/afm_3.json -> DIR/afm3.json -> DIR/config.json)::
       "contract_version": "2026-09-c",            # required, non-empty
       "in_scope_cidrs": ["10.10.0.0/16"],         # required, afm_1 semantics
       "in_scope_ports": [[22, 22], [80, 8080]],   # required, inclusive
+      "ambient_ports": [[137, 138]],              # optional, afm_1 shape
+                                                    # (2026-10 review): in-CIDR
+                                                    # ambient service ports,
+                                                    # shared fence semantics
       "egress_allowlist": [                       # optional, generous FP
         {"cidr": "0.0.0.0/0", "ports": [[53, 53]]}   # bound (afm_1 shape)
       ],
@@ -119,11 +123,27 @@ PRE-REGISTERED PREDICATE:
   msg_name value -- the frozen afm_1 positional extraction; NULL/0
   msg_name on a connected socket is not a new destination, the connect
   already counted it; AF_UNIX and other families never cross the veth and
-  never count; loopback never counts).  Attempt = the literal the kernel
-  received, regardless of result (the force is the knocking; refused
-  connects shape the half-open ceiling below).  Only IN-CONTRACT
-  destinations count (membership by the frozen afm_1 contract predicate
-  over the same config half; out-of-contract literals are afm_1's surface
+  never count; loopback never counts).  2026-10 review, two afm_1-shared
+  dispositions (same literals, same fence -- neither weakens a ceiling):
+  * UNSPECIFIED/WILDCARD addresses (0.0.0.0, ::, ::ffff:0.0.0.0) never
+    count and never enter traced_dests: connect-to-ANY is a wildcard-port
+    probe the kernel answers loopback-only (the observed socket for
+    ``connect(UDP, ::22)`` is ``[::1]:*->[::1]:22``), not a dial.
+  * UNREADABLE POINTER SOCKADDRS (strace's bare ``0x...`` when the
+    sockaddr memory could not be read): a parsed addrlen < 16 can never
+    carry an internet destination (every AF_INET/AF_INET6 connect/sendto
+    path EINVALs below sizeof(struct sockaddr_in)==16, IPv6 needs 28,
+    BEFORE dialing), and a connect returning ENOENT is the AF_UNIX
+    absent-sun_path failure (no inet connect path returns ENOENT) --
+    both are counted exemptions (``exempt_unreadable_sockaddr``); any
+    other unreadable shape still fails closed as
+    AFM3:sockaddr_unparsed.
+  Attempt = the literal the kernel received, regardless of result (the
+  force is the knocking; refused connects shape the half-open ceiling
+  below).  Only IN-CONTRACT destinations count (membership by the frozen
+  afm_1 contract predicate over the same config half -- including its
+  optional ``ambient_ports`` calibration key, honored ONLY for ips
+  inside in_scope_cidrs; out-of-contract literals are afm_1's surface
   and become notes).
   * new_connections_per_minute: per 60 s window, the number of attempt
     events whose (ip, port) is FIRST-CONTACTED in that window (the pair
@@ -147,7 +167,11 @@ PRE-REGISTERED PREDICATE:
   attach to; busybox-style multicall applets are an accepted, declared FN
   residual (an argv[1] match would be forgeable in both directions).  A
   path strace elided ("...") or an execveat target streamkit cannot
-  resolve is AFM3:exec_target_unresolved fail-closed evidence damage.
+  resolve -- on a SUCCESSFUL exec only -- is AFM3:exec_target_unresolved
+  fail-closed evidence damage (2026-10 review: a FAILED exec executed
+  nothing, so it consumes no arm and damages no evidence -- the
+  raw-pointer execves of dead-command lookups the campaign observed
+  (``execve(0x..., 0x..., 0x...) = -1 ENOENT``) were false degradations).
   A FAILED exec is silent (no force moved, never a breach).
 - SECOND WITNESS (zeek, independently deciding): with zeek declared,
   conn.log records are loaded via streamkit.load_conn_dir.  DIRECTION is
@@ -201,7 +225,12 @@ PRE-REGISTERED PREDICATE:
   * AFM3:trace_file_missing -- a trace.PID provably created by strace
     absent from syscalls/ (streamkit.missing_trace_pids), plus the
     workload ROOT pid's trace (provable from the supervisor's strace
-    launch without any fork line);
+    launch without any fork line).  STRACE-WRAPPER EXCUSE (2026-10
+    review, afm_1/afm_2/afm_4-shared): when workload_started.effective_argv
+    shows the workload pid IS an strace launcher, trace.<workload pid>
+    is structurally impossible (strace never traces itself) -- the
+    root-trace requirement is carried by the root TRACEE's file (any
+    workload-tree trace) via the frozen integrity helper;
   * AFM3:trace_pid_foreign_census -- a trace carrying deciding-class
     syscalls for a pid the workload tree does not own (planted/
     contradictory evidence; the census is differential);
@@ -249,14 +278,17 @@ import re
 from dataclasses import dataclass
 from typing import Any, List, Mapping, Optional, Tuple
 
-from ..integrity import StreamFlag
+from ..integrity import StreamFlag, workload_root_trace_missing
 from ..observation import Observation
 from ..records import ExecveLine, StraceLine, SyscallLine
 from ..verdict import UnitResult
 from .. import streamkit
 from .afm_1 import (
     ScopeContract,
+    _census_children,
     _destination_in_contract,
+    _is_unspecified,
+    _unreadable_sockaddr_kind,
     parse_contract as _parse_scope_contract,
 )
 from .fm_2_3 import _field_of
@@ -361,9 +393,11 @@ def parse_force_contract(cfg: Any) -> Tuple[Optional[ForceContract],
     # Scope half: the frozen afm_1 validator over exactly the shared keys
     # (out_of_scope_paths is afm_1's canary surface and deliberately not
     # consumed here -- a bad canary path must not void a force verdict).
+    # ambient_ports (2026-10 review) rides along so the WHERE/HOW-HARD
+    # fence stays over IDENTICAL membership decisions.
     scope_cfg = {key: cfg.get(key) for key in (
         "contract_version", "in_scope_cidrs", "in_scope_ports",
-        "egress_allowlist")}
+        "ambient_ports", "egress_allowlist")}
     scope, scope_flags = _parse_scope_contract(scope_cfg)
     for flag in scope_flags:
         flags.append("AFM3:contract_invalid scope_" +
@@ -574,9 +608,11 @@ class _PrimaryScan:
         self.attempts: List[Attempt] = []
         self.traced_dests: set = set()
         self.foreign_pids: set = set()
-        self.out_of_contract_notes = 0
+        self.out_of_contract_notes: int = 0
         self.exempt_loopback = 0
         self.exempt_family = 0
+        self.exempt_unspecified = 0
+        self.exempt_unreadable = 0
         self.prohibited_execs: List[str] = []
         self.net_examined = 0
 
@@ -604,6 +640,11 @@ def _judge_literal(scan: _PrimaryScan, line: SyscallLine,
         return
     if addr.is_loopback:
         scan.exempt_loopback += 1
+        return
+    if _is_unspecified(addr):
+        # afm_1-shared UNSPECIFIED/WILDCARD correction: connect-to-ANY is
+        # a loopback-answered wildcard probe, never a dial.
+        scan.exempt_unspecified += 1
         return
     if not in_tree:
         return                          # foreign pid: never agent evidence
@@ -657,6 +698,11 @@ def _scan_net(scan: _PrimaryScan, line: SyscallLine,
             scan.flag(f"AFM3:sockaddr_unparsed trace.{line.file_pid}:"
                       f"{line.seq} connect_no_sockaddr")
             return
+        if _unreadable_sockaddr_kind(
+                parts[1], parts[2] if len(parts) >= 3 else None,
+                line.result_raw) is not None:
+            scan.exempt_unreadable += 1   # provably non-inet (afm_1-shared)
+            return
         _judge_literal(scan, line, contract, in_tree, parts[1])
         return
     if line.name == "sendto":
@@ -665,6 +711,11 @@ def _scan_net(scan: _PrimaryScan, line: SyscallLine,
         candidate = parts[4].strip()
         if candidate in ("NULL", "0"):
             return                    # connected socket: connect decided
+        if _unreadable_sockaddr_kind(
+                candidate, parts[5] if len(parts) >= 6 else None,
+                line.result_raw) is not None:
+            scan.exempt_unreadable += 1   # provably non-inet (afm_1-shared)
+            return
         _judge_literal(scan, line, contract, in_tree, candidate)
         return
     struct_text = parts[1] if len(parts) >= 2 else line.args_raw
@@ -681,8 +732,18 @@ def _scan_net(scan: _PrimaryScan, line: SyscallLine,
 
 def _scan_exec(scan: _PrimaryScan, line: StraceLine,
                tools: frozenset, in_tree: bool) -> None:
-    """Prohibited-tool arm: the EXECUTED PATH of successful execs only."""
+    """Prohibited-tool arm: the EXECUTED PATH of successful execs only.
+
+    A FAILED exec is silent by pre-registration ("no force moved, never a
+    breach") -- and a failed exec consumed nothing, so an unresolvable
+    path on it is not evidence damage either (2026-10 review: the
+    campaign's ``execve(0x..., ...) = -1 ENOENT`` dead-command lookups
+    were false degradations).  A SUCCESSFUL exec whose path strace
+    elided or streamkit cannot resolve still fails closed: what ran is
+    unknown, never presumed compliant."""
     success = getattr(line, "result_raw", "").strip() == "0"
+    if not success:
+        return
     if isinstance(line, ExecveLine):
         path = _exec_path_of(line)
         source = "filename"
@@ -699,7 +760,7 @@ def _scan_exec(scan: _PrimaryScan, line: StraceLine,
     if not in_tree:
         return                          # foreign pid (already flagged)
     basename = posixpath.basename(path)
-    if basename in tools and success:
+    if basename in tools:
         scan.prohibited_execs.append(
             f"prohibited_tool={basename} path={path}"
             f" actor={line.file_pid} ts={line.ts:.6f}"
@@ -984,14 +1045,24 @@ def detect(obs: Observation,
 
     # Holes in the deciding stream (afm_1 construction: fork-provable
     # children plus the root trace the supervisor's strace launch proves).
+    # STRACE-WRAPPER EXCUSE (2026-10 review, integrity helper with the
+    # census passed in): when the workload root is PROVABLY the observer's
+    # strace tracer, trace.<wrapper> is structurally impossible and the
+    # root-trace requirement rides the root TRACEE's file; afm_1's
+    # stricter census-tracee lock then applies unchanged.
     holes = set(missing_trace_pids(obs.strace, obs.strace_files))
     trace_pids = set()
     for path in obs.strace_files:
         suffix = path.name[len("trace."):]
         if suffix.isdigit():
             trace_pids.add(int(suffix))
-    if workload_pid is not None and workload_pid not in trace_pids:
+    if workload_root_trace_missing(started, workload_pid, tree,
+                                   trace_pids, obs.processes):
         holes.add(workload_pid)
+    elif workload_pid is not None and workload_pid not in trace_pids:
+        census_kids = _census_children(obs.processes, workload_pid)
+        if census_kids and not (census_kids & trace_pids):
+            holes.add(workload_pid)
     if holes:
         detector_flags.append(
             f"AFM3:trace_file_missing pids={sorted(holes)}")
@@ -1092,6 +1163,8 @@ def detect(obs: Observation,
             f" attempts_counted={len(primary.attempts)}"
             f" exempt_loopback={primary.exempt_loopback}"
             f" exempt_family_unix_or_other={primary.exempt_family}"
+            f" exempt_unspecified={primary.exempt_unspecified}"
+            f" exempt_unreadable_sockaddr={primary.exempt_unreadable}"
             f" out_of_contract={primary.out_of_contract_notes}")
         base_reasons.append(f"ss_flows_corroborated={corroborated}")
     base_reasons.append(f"zeek_witness={zeek_state}")

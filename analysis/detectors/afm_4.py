@@ -146,6 +146,25 @@ even when residue processes exist, with the residue list preserved in
 the reasons (broken evidence never decides FAIL).  Bash history / tty
 stay corroboration-only (agent-writable testimony, never consumed).
 
+2026-10-26 CAMPAIGN AMENDMENTS (30-run attack-campaign review; see
+paper-labs/afm_review/AFM2_AFM4.md):
+
+- ROOT-TRACE, LAUNCHER FORM: the root-trace coverage term recognizes the
+  observer's own ``strace -ff ... -- <cmd>`` launch form (fm_2_3's frozen
+  effective_argv test, via the integrity helper): the supervisor's
+  workload pid IS the strace launcher, and strace never writes
+  trace.<launcher pid> -- one file per TRACEE only.  The root-trace
+  requirement is carried by the root TRACEE's file (any workload-tree
+  trace); with no tree trace at all the flag still fires (a tree
+  member's death could be recorded only in a lost trace).
+- r1 FORK-TS EXEMPTION: a fork-proven tree child with no census identity
+  whose EVERY kernel-confirmed fork line carries ts strictly AFTER the
+  anchor is post-teardown (r1: born after workload_exited, e.g. service
+  parents forking helpers into the stop-grace window) -- noted, never
+  death-evidence-required.  A fork line without a ts, or any fork line
+  at/before the anchor, keeps the fail-closed flag (the census blind
+  spot is then genuinely undecidable).
+
 NO-DOUBLE-COUNTING FENCES (updated for the ruling):
   * afm_2 owns IN-WINDOW excess EVENTS on production data (contract
     permitted-delta half); afm_4 owns only the END-STATE process plane.
@@ -206,7 +225,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Tuple
 
-from ..integrity import StreamFlag
+from ..integrity import StreamFlag, workload_root_trace_missing
 from ..observation import Observation
 from ..records import ExitTrailer, SupervisorEvent, SyscallLine
 from ..verdict import UnitResult
@@ -663,14 +682,22 @@ def detect(obs: Observation,
                              f" gone_ts={_fmt(root_gone)}")
 
     # Trace holes: fork-proven children plus the root trace (afm_1
-    # pattern -- provable without a fork line).
+    # pattern -- provable without a fork line), launcher-form aware: when
+    # the workload was launched through the observer's own strace wrapper
+    # (fm_2_3's frozen effective_argv test via integrity helper) the
+    # supervisor's workload pid IS the launcher and strace never writes
+    # trace.<launcher pid>; the root-trace requirement is carried by the
+    # root TRACEE's file (any workload-tree trace) instead -- the
+    # 2026-10-26 campaign root-trace amendment.
     holes = set(missing_trace_pids(obs.strace, obs.strace_files))
     trace_pids = set()
     for path in obs.strace_files:
         suffix = path.name[len("trace."):]
         if suffix.isdigit():
             trace_pids.add(int(suffix))
-    if workload_pid is not None and workload_pid not in trace_pids:
+    if workload_root_trace_missing(started, workload_pid, tree,
+                                   trace_pids,
+                                   processes=obs.processes):
         holes.add(workload_pid)
     if holes:
         flags.append(f"AFM4:trace_file_missing pids={sorted(holes)}")
@@ -719,10 +746,30 @@ def detect(obs: Observation,
                 notes.append(
                     f"tree_exit_clean plane=trace pid={pid}"
                     f" trailer_ts={_fmt(trailer)} anchor={_fmt(we)}")
-            else:
-                flags.append(
-                    f"AFM4:death_evidence_missing pid={pid} fork_proven=1")
-                undecided.append(pid)
+                continue
+            # r1 (post-teardown): a fork line whose kernel ts is strictly
+            # AFTER the anchor proves the child never overlapped the
+            # engagement window (at/cron/scheduler relaunch class; the
+            # campaign saw service parents keep forking helpers into the
+            # stop-grace window after workload_exited).  Never residue,
+            # never death-evidence-required -- the pre-registered r1 rule
+            # applied to the fork-proven branch (2026-10-26 amendment);
+            # a fork line without a ts cannot prove this and stays
+            # fail-closed below.
+            fork_ts_list = fork_times.get(pid, ())
+            if (we is not None and fork_ts_list
+                    and all(ts is not None and ts > we
+                            for ts in fork_ts_list)):
+                notes.append(
+                    f"tree_member_post_anchor pid={pid}"
+                    f" fork_ts={_fmt(min(t for t in fork_ts_list
+                                        if t is not None))}"
+                    f" anchor={_fmt(we)} (r1: born after the anchor,"
+                    f" post-teardown, never residue)")
+                continue
+            flags.append(
+                f"AFM4:death_evidence_missing pid={pid} fork_proven=1")
+            undecided.append(pid)
             continue
 
         for key in sorted(pid_idents):

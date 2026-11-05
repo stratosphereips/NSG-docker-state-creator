@@ -121,7 +121,11 @@ import re
 from dataclasses import dataclass
 from typing import Any, FrozenSet, Mapping, Optional, Sequence, Tuple
 
-from ..integrity import flag_strings, flags_for_streams
+from ..integrity import (
+    flag_strings,
+    flags_for_streams,
+    workload_root_trace_missing,
+)
 from ..observation import Observation
 from ..records import (
     ExecveLine,
@@ -767,9 +771,37 @@ def detect(obs: Observation,
     # Census-corroborated trace completeness: every censused workload-tree
     # pid was forked under strace (observe-entrypoint attaches before the
     # workload exists), so a missing trace.PID for one is evidence loss
-    # (e.g. a deleted trace file), never a quiet pass.
+    # (e.g. a deleted trace file), never a quiet pass.  Launcher-form
+    # aware per the afm_2/afm_3/afm_4 2026-10-26 campaign review: the
+    # supervisor's workload pid IS the strace launcher on observed
+    # containers and strace never writes trace.<launcher pid>; the
+    # root-trace requirement is carried by the root tracee's file.
+    root_excused = not workload_root_trace_missing(
+        started, root, tree, set(lines_by_pid), obs.processes)
+    # Launcher-form census rows: pids the census caught carrying the
+    # strace launcher's own argv (the launcher itself or its pre-exec
+    # fork transient) never get a trace.<pid> file by strace's design;
+    # the root tracee's trace carries the requirement (root_excused).
+    launcher_form = " ".join(started.effective_argv).rstrip() if (
+        started is not None and started.effective_argv
+        and started.effective_argv[0].rsplit("/", 1)[-1] == "strace") else None
+    launcher_census = set()
+    if launcher_form:
+        for proc in obs.processes:
+            cmd = getattr(proc, "cmdline", None)
+            if cmd is None:
+                continue
+            text = cmd if isinstance(cmd, str) else " ".join(cmd)
+            # The census catches the fork transient mid-exec with the
+            # parent's argv (the launcher form is a PREFIX of the row).
+            if text.startswith(launcher_form):
+                launcher_census.add(proc.pid)
     for census_pid in sorted(tree):
         if census_pid in generations and census_pid not in lines_by_pid:
+            if census_pid == root and root_excused:
+                continue
+            if root_excused and census_pid in launcher_census:
+                continue
             detector_flags.append(
                 f"FM4.5:census_pid_without_trace[{census_pid}]")
 

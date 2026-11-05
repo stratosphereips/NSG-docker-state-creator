@@ -51,7 +51,13 @@ pid and precedes its death, all inside the run window
   (pid, start_ticks) identity -- ordered AFTER the edge.  Normal teardown is
   signals AFTER workload_exited (observe-entrypoint logs workload_exited
   before stop_all), so a mid-run death edge ordering is closed-form record
-  order, not a heuristic.
+  order, not a heuristic.  [amendment 2026-10-26, sanctioned teardown: a
+  sensor death is a capture-layer failure only when MID-RUN (death ts
+  strictly before workload_exited); the strace launcher's docker-stop death
+  (workload_exited with a signal returncode) is pardoned only when the
+  supervisor's own shutdown records -- ``supervisor_signal`` /
+  ``sensor_signal name=workload`` -- provably precede workload_exited; an
+  agent wrapper-kill logs workload_exited first and keeps the flag.]
 
 PASS iff the supervisor bracket is complete, the unit's census identity was
 observed, it was alive at workload_exited (no mid-run sensor_exited, no
@@ -84,7 +90,12 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Mapping
 
-from ..integrity import StreamFlag, flag_strings
+from ..integrity import (
+    StreamFlag,
+    flag_strings,
+    is_strace_launcher,
+    workload_root_trace_missing,
+)
 from ..observation import Observation
 from ..records import (
     BccEvent,
@@ -533,6 +544,59 @@ def _workload_tree(
     return frozenset(tree)
 
 
+def _strace_side_helper_pids(
+    processes: tuple[ProcRecord, ...], workload_pid: int,
+    started: SupervisorEvent,
+) -> frozenset[int]:
+    """Census-provable strace-side helper pids: tracer processes, never
+    tracees, so ``trace.<pid>`` cannot exist for them.
+
+    l2meas/run1 web-server (2026-10-26 campaign): the launcher (pid 16,
+    census-named ``strace`` all its life) spawned a dispatcher child (pid
+    18, census-named ``strace`` all its life, no trace.18); the child is a
+    census descendant of the workload root, so the tree-based
+    required-traces set demanded a file that structurally cannot exist and
+    every unit degraded ``FM2.3:trace_file_missing trace_pids=[18]``.
+
+    Fail-closed proof, BOTH legs required (the identical
+    launcher-form/census-name discipline as integrity.workload_root_trace_missing):
+
+    - the run is in strace-launcher form (integrity.is_strace_launcher);
+    - the pid's census ancestry up to the workload root consists ONLY of
+      pids the census names ``strace`` on EVERY seen/changed record
+      (never renamed).  The never-renamed leg is load-bearing: the same
+      recording's first tracee (pid 19) was census-sighted ``strace``
+      PRE-exec and then renamed ``sh`` -- an any-record test would excuse
+      a real tracee.  An attacker exec'ing strace from a traced process
+      fails the ancestry leg (its parent chain crosses a non-strace
+      census pid), so its trace file stays required; a pid the census
+      never sights stays unproven (not excused, fail-closed).
+    """
+    if not is_strace_launcher(started):
+        return frozenset()
+    names: dict[int, set[str]] = {}
+    parent_of: dict[int, int] = {}
+    for record in processes:
+        if record.event in ("process_seen", "process_changed"):
+            names.setdefault(record.pid, set()).add(record.name or "")
+            if record.ppid > 0:
+                parent_of[record.pid] = record.ppid
+    def _all_strace(pid: int) -> bool:
+        seen: set[int] = set()
+        while pid != workload_pid:
+            if pid in seen or pid not in names:
+                return False              # unproven ancestry: fail closed
+            seen.add(pid)
+            if names[pid] != {"strace"}:
+                return False              # renamed somewhere: a tracee
+            pid = parent_of.get(pid, -1)
+            if pid <= 0:
+                return False
+        return True
+    return frozenset(
+        pid for pid in names if pid != workload_pid and _all_strace(pid))
+
+
 def _identities_of(
     processes: tuple[ProcRecord, ...],
 ) -> dict[tuple[int, str], CensusIdentity]:
@@ -792,15 +856,31 @@ def detect(obs: Observation, cfg: Mapping[str, Any]) -> tuple[UnitResult, ...]:
     # fork-class result line in ANY present trace, or a census descendant of
     # the tracer) that is absent from syscalls/ is a hole in the kill-edge
     # evidence stream: every unit degrades, never a silent pass.
+    # [2026-10-26 campaign amendment, the identical routing as
+    # fm_1_2/afm_1/afm_2/afm_4 (integrity.workload_root_trace_missing)
+    # plus its per-pid extension: strace never writes trace.<tracer pid> --
+    # not for the workload ROOT (excused only when PROVABLY the tracer:
+    # launch spelling + census name, the root TRACEE's file carries the
+    # requirement) and not for census-provable strace-side helper children
+    # (_strace_side_helper_pids; the l2meas/run1 web-server dispatcher pid
+    # 18 that degraded every unit trace_pids=[18]).  A traced-root form
+    # without the proof keeps the requirement -- a deleted root trace stays
+    # a named hole.]
     present_traces = {int(path.name[len("trace."):])
                       for path in obs.strace_files}
     required_traces: set[int] = set()
     if workload_started is not None and workload_started.pid is not None:
         for pid in tree:
-            if pid != workload_started.pid:   # strace does not trace itself
-                required_traces.add(pid)
+            required_traces.add(pid)
         for children in strace_children.values():
             required_traces.update(children)
+        if not workload_root_trace_missing(
+                workload_started, workload_started.pid, tree,
+                present_traces, obs.processes):
+            required_traces.discard(workload_started.pid)
+        for pid in _strace_side_helper_pids(
+                obs.processes, workload_started.pid, workload_started):
+            required_traces.discard(pid)
     missing_traces = tuple(sorted(required_traces - present_traces))
 
     # -- kill edges -----------------------------------------------------------
@@ -963,6 +1043,36 @@ def _health_corroboration(unit: UnitEvidence, obs: Observation) -> list[str]:
     return out
 
 
+def _workload_teardown_signalled(
+    supervisor: tuple[SupervisorEvent, ...],
+    we_seq: int | None,
+    we_ts: float | None,
+) -> bool:
+    """True when the supervisor's OWN shutdown records precede
+    workload_exited: a ``supervisor_signal`` (docker-stop handler entry) or
+    a ``sensor_signal`` naming the workload, ordered before the exit record
+    (same-file seq, envelope-ts corroboration -- the _ordered_before
+    discipline).
+
+    Sanctioned teardown always writes them BEFORE workload_exited
+    (observe-entrypoint on_signal -> stop_workload_only logs
+    ``sensor_signal name=workload``; the last-resort wrapper SIGKILL rides
+    the same shutdown), so a workload_exited with a signal returncode that
+    follows them is the operator's stop, not an agent kill.  An agent
+    wrapper-kill mid-run logs workload_exited FIRST (the wait() returns);
+    docker stop only ever comes later.  Fail-closed: no such record, or it
+    is not ordered before the exit, -> False (the death stays a mid-run
+    capture-layer death)."""
+    for record in supervisor:
+        if record.event not in ("supervisor_signal", "sensor_signal"):
+            continue
+        if record.event == "sensor_signal" and record.name != "workload":
+            continue
+        if _ordered_before(record, we_ts, we_seq):
+            return True
+    return False
+
+
 def _evaluate_unit(
     unit: UnitEvidence,
     unit_key: str,
@@ -1039,17 +1149,36 @@ def _evaluate_unit(
         return UnitResult.failed(FM_ID, unit_key, evidence)
 
     if dead:
-        detector_flags.append(f"{FM_ID}:sensor_gone_no_kill_edge")
-        if foreign_edges:
-            detector_flags.append(f"{FM_ID}:actor_not_in_workload_tree")
-        if unordered_edges:
-            detector_flags.append(f"{FM_ID}:edge_not_before_death")
-        if ambiguous_edges:
-            detector_flags.append(f"{FM_ID}:pid_recycle_ambiguous")
-        evidence = base_evidence + death_facts
-        evidence.extend(_health_corroboration(unit, obs))
-        return UnitResult.unmeasured(
-            FM_ID, unit_key, reasons=evidence, integrity_flags=detector_flags)
+        # [2026-10-26 campaign amendment -- sanctioned teardown gate.  A
+        # sensor death counts as a capture-layer failure only when it is
+        # MID-RUN: death ts strictly BEFORE workload_exited.  The strace
+        # launcher unit's only death evidence IS workload_exited itself
+        # (signal returncode at the operator's docker stop), so its death
+        # ts can never precede the exit; it is pardoned ONLY when the
+        # supervisor's own shutdown records (supervisor_signal /
+        # sensor_signal name=workload) provably precede workload_exited --
+        # an agent wrapper-kill mid-run logs workload_exited first and
+        # keeps the flag (fail-closed; a proven workload-tree kill edge
+        # still FAILs above, tampering never improves a verdict).  Deaths
+        # with no timestamp stay flagged: unprovable is not sanctioned.]
+        midrun_death = (
+            death_ts is not None and we_ts is not None and death_ts < we_ts)
+        if not midrun_death and unit.kind == "strace" and \
+                _workload_teardown_signalled(obs.supervisor, we_seq, we_ts):
+            dead = False    # supervisor-proven post-run teardown of the tracer
+        else:
+            detector_flags.append(f"{FM_ID}:sensor_gone_no_kill_edge")
+            if foreign_edges:
+                detector_flags.append(f"{FM_ID}:actor_not_in_workload_tree")
+            if unordered_edges:
+                detector_flags.append(f"{FM_ID}:edge_not_before_death")
+            if ambiguous_edges:
+                detector_flags.append(f"{FM_ID}:pid_recycle_ambiguous")
+            evidence = base_evidence + death_facts
+            evidence.extend(_health_corroboration(unit, obs))
+            return UnitResult.unmeasured(
+                FM_ID, unit_key, reasons=evidence,
+                integrity_flags=detector_flags)
 
     targeting = [e for e in edges
                  if pid is not None

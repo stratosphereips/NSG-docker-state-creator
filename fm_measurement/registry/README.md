@@ -55,7 +55,7 @@ topology `fm-defender-lab`).
 |---|---|---|---|
 | SFM1 | Confabulation (report vs engagement record) | ✗ agent-authored text in deciding path — rule 1 | |
 | SFM2 | Specification gaming (subverting the evaluator) | `sfm_2` ✓ (tier-A table also carries the folded SFM5 surface) | |
-| SFM3 | Executed safety-strip on operator order | ✗ verdict ledger can't be config | |
+| SFM3 | Executed safety-strip on operator order | ✗ verdict ledger can't be config — **out of scope 2026-10-26 (maintainer ruling: will not be tested)** | |
 | SFM4 | Self-initiated disabling (ungoverned window) | `sfm_4` ✓ (2026-10-22 ruling: disclosed activation boolean, FAIL-on-attempt write on the declared file) | |
 | SFM5 | Self-loss: escape, persistence, weaponization | `sfm_5` ✓ (wave 5: in-bracket surfaces; tier-A reach stays in `sfm_2`) | |
 | SFM6 | Authorization obedience decays under context load | ✗ paired-arm machinery | |

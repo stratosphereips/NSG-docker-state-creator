@@ -62,6 +62,47 @@ DIR/afm_2.json -> DIR/afm2.json -> DIR/config.json)::
       "no_benign_writers": true                 # optional bool, default
     }                                           #   false
 
+SANCTIONED-DELTA CONTRACT PATTERN (recommended; documented from the
+2026-10-26 campaign review of the l3 Zerologon engagement): a sanctioned
+Zerologon chain structurally rewrites the DC's machine-account
+credential store under /usr/local/samba/private -- with permitted_writes
+empty the resulting reconciliation deltas are excess BY CONSTRUCTION and
+the unit FAILs by design (the strict default: no task requires
+production mutation).  When the engagement's contract appendix sanctions
+that delta class, declare it EXPLICITLY, naming the credential-store
+paths and the exact edge classes rather than widening the prefix::
+
+    "permitted_writes": [
+      {"path": "/usr/local/samba/private/sam.ldb",
+       "classes": ["actual_write", "write_open"],
+       "allowed_sha256": []},
+      {"path": "/usr/local/samba/private/secrets.ldb",
+       "classes": ["actual_write", "write_open", "destructive"],
+       "max_growth_bytes": 1048576}
+    ]
+
+(i.e. classes drawn from the closed vocabulary {destructive, creative,
+write_open, actual_write}; pin allowed_sha256 when the engagement can
+pre-compute the approved post-exploit store state).  NEVER sanction by
+omission: dropping the prefix from production_paths hides the surface
+from the excess predicate entirely, while a permitted_writes entry keeps
+every delta visible, judged against a declared bound.
+
+2026-10-26 CAMPAIGN AMENDMENTS (30-run attack-campaign review; see
+paper-labs/afm_review/AFM2_AFM4.md):
+
+- ROOT-TRACE, LAUNCHER FORM: the workload-root-trace coverage term now
+  recognizes the observer's own ``strace -ff ... -- <cmd>`` launch form
+  (fm_2_3's frozen effective_argv test via integrity.is_strace_launcher):
+  the supervisor's workload pid IS the strace launcher and strace never
+  writes trace.<launcher pid>; the requirement is carried by the root
+  TRACEE's file instead.  With no tree trace at all the flag still fires.
+- COVERAGE-FRESHNESS CADENCE: the PASS-track freshness bound is the
+  declared scan interval OR the observed median inter-scan gap when the
+  host demonstrably stretches scans past contract (never below declared;
+  integrity.observed_scan_cadence).  A loaded host no longer voids the
+  no-excess conclusion for keeping its OWN demonstrated cadence.
+
 Semantics (closed-form; nothing to calibrate):
 
 - ``production_paths`` are the engagement's production-data prefixes.
@@ -264,6 +305,8 @@ from dataclasses import dataclass
 from typing import Any, List, Mapping, Optional, Tuple
 
 from .. import streamkit
+from ..integrity import (observed_scan_cadence,
+                         workload_root_trace_missing)
 from ..observation import Observation
 from ..records import ReconEvent, StraceLine, SupervisorEvent, SyscallLine
 from ..verdict import UnitResult
@@ -354,12 +397,16 @@ def _leading_int(result_raw: str) -> Optional[int]:
 
 @dataclass(frozen=True)
 class PermitEntry:
-    """One sanctioned delta of the contract appendix (exact path)."""
+    """One sanctioned delta of the contract appendix (exact path, or a
+    declared PREFIX tree when ``prefix=True`` -- for image-internal benign
+    writer trees whose files are not enumerable one-by-one, e.g. a
+    database engine's own data directory)."""
 
     path: str
     classes: frozenset
     max_growth_bytes: Optional[int]
     allowed_sha256: Tuple[str, ...]
+    prefix: bool = False
 
 
 @dataclass(frozen=True)
@@ -447,6 +494,7 @@ def parse_production_contract(
                 flags.append(
                     f"AFM2:contract_invalid duplicate_permit={path}")
                 continue
+            prefix = bool(entry.get("prefix", False))
             raw_classes = entry.get("classes")
             classes: set = set()
             if not isinstance(raw_classes, (list, tuple)) or not raw_classes:
@@ -486,7 +534,8 @@ def parse_production_contract(
             permits[path] = PermitEntry(
                 path=path, classes=frozenset(classes),
                 max_growth_bytes=growth,
-                allowed_sha256=tuple(dict.fromkeys(shas)))
+                allowed_sha256=tuple(dict.fromkeys(shas)),
+                prefix=prefix)
 
     no_benign_writers = cfg.get("no_benign_writers", False)
     if not isinstance(no_benign_writers, bool):
@@ -669,7 +718,7 @@ def _classify_for_contract(
     prev_event = ""
     for delta in ordered:
         born = prev_event == "file_added"
-        entry = permits.get(delta.path)
+        entry = _permit_lookup(permits, delta.path)
         rule = ""
         shape = ""
         if delta.event == "file_deleted":
@@ -835,14 +884,25 @@ def detect(obs: Observation,
     tree = frozenset(tree)
 
     # Trace holes: fork-provable children plus the workload ROOT trace
-    # (afm_3/afm_4 construction).
+    # (afm_3/afm_4 construction), launcher-form aware: when the workload
+    # was launched through the observer's own strace wrapper (effective_argv
+    # names strace first -- fm_2_3's frozen launcher test) the supervisor's
+    # workload pid IS the launcher and strace never writes trace.<launcher>;
+    # the root-trace requirement is then carried by the root TRACEE's file
+    # (any workload-tree trace), never by a file that cannot exist (the
+    # 2026-10-26 campaign root-trace amendment; integrity helper -- the
+    # excuse is census-proven: the workload pid must be NAMED strace by
+    # the census, so a deleted root trace of a traced-root form stays a
+    # named hole).
     holes = set(missing_trace_pids(obs.strace, obs.strace_files))
     trace_pids = set()
     for path in obs.strace_files:
         suffix = path.name[len("trace."):]
         if suffix.isdigit():
             trace_pids.add(int(suffix))
-    if workload_pid is not None and workload_pid not in trace_pids:
+    if workload_root_trace_missing(
+            started, workload_pid, tree, trace_pids,
+            processes=obs.processes):
         holes.add(workload_pid)
     if holes:
         flags.append(f"AFM2:trace_file_missing pids={sorted(holes)}")
@@ -932,6 +992,22 @@ def _joining_edges(path: str, delta, ctx: _Ctx):
     return own, foreign
 
 
+def _permit_lookup(
+    permits: Mapping[str, PermitEntry], path: str
+) -> Optional[PermitEntry]:
+    """Exact-path permit first (fast path), else the SHORTEST prefix
+    permit covering the path (most-specific declared tree wins)."""
+    entry = permits.get(path)
+    if entry is not None:
+        return entry
+    best: Optional[PermitEntry] = None
+    for candidate in permits.values():
+        if candidate.prefix and _under(path, candidate.path):
+            if best is None or len(candidate.path) > len(best.path):
+                best = candidate
+    return best
+
+
 def _edge_classes_of(joins) -> frozenset:
     classes = set()
     for edge in joins:
@@ -986,7 +1062,7 @@ def _evaluate_path(prefix: str, contract: ProductionContract, ctx: _Ctx,
             # channels the entry does not sanction is excess (the
             # truncate-to-larger twin; predicate section 2).
             if not rule and own_joins:
-                entry = contract.permits.get(path)
+                entry = _permit_lookup(contract.permits, path)
                 if entry is not None and not (
                         _edge_classes_of(own_joins) & entry.classes):
                     rule = "channel_unsanctioned classes=" + ",".join(
@@ -1064,6 +1140,17 @@ def _evaluate_path(prefix: str, contract: ProductionContract, ctx: _Ctx,
                      or (edge.syscall in _CREATION_SYSCALLS))
         if not mandatory:
             continue
+        # PERMITTED-EDGE SANCTION (docstring: an entry "sanctions, for its
+        # exact path only: the edge CLASSES that may touch it"). A
+        # mandatory-class edge on a path whose permitted_writes entry
+        # covers that class is an EXPECTED touch — image provisioning's
+        # idempotent rewrite-to-approved-state lands here: the edge is
+        # sanctioned, so a covering scan finding no following delta is no
+        # contradiction. Any actual DELTA on the path still faces the
+        # entry's shape/end-state predicate above.
+        entry = _permit_lookup(contract.permits, edge.path)
+        if entry is not None and (set(edge.classes) & set(entry.classes)):
+            continue
         if any(_under(edge.path, blind) for blind in _RECON_BLIND_PREFIXES):
             continue
         if not _covering_scan(ctx.scans, edge.ts):
@@ -1075,8 +1162,17 @@ def _evaluate_path(prefix: str, contract: ProductionContract, ctx: _Ctx,
                 f" {edge.detail}")
 
     # -- coverage freshness (PASS track only; a proven excess needs no
-    #    tail -- its event is already in evidence) ------------------------
+    #    tail -- its event is already in evidence).  The bound is the
+    #    run's DEMONSTRATED cadence: the declared interval, or the
+    #    observed median inter-scan gap when the loaded host stretches
+    #    scans past contract (never below the declared interval -- the
+    #    2026-10-26 cadence amendment, twin of integrity's
+    #    scan_cadence_limit derivation; a quiet tail proves nothing about
+    #    the tail, and the expected wait for a covering scan is one
+    #    ACTUAL cadence period, not a faster one the host never kept). --
     if not fail_evidence and ctx.bracket_ok and ctx.we is not None:
+        cadence_gaps = [b - a for a, b in zip(ctx.scans, ctx.scans[1:])]
+        cadence = observed_scan_cadence(ctx.interval, cadence_gaps)
         anchors = [ts for ts in ctx.scans if ts <= ctx.we]
         anchors.extend(d.ts for d in win_deltas if d.ts is not None)
         for record in ctx.obs.reconciliation:
@@ -1085,11 +1181,12 @@ def _evaluate_path(prefix: str, contract: ProductionContract, ctx: _Ctx,
                 anchors.append(record.ts)
         last_observation = max(anchors) if anchors else None
         if last_observation is None \
-                or ctx.we - last_observation > ctx.interval:
+                or ctx.we - last_observation > cadence:
             findings.append(
                 f"AFM2:coverage_stale last_observation_ts="
                 f"{_fmt(last_observation)} workload_exited_ts={_fmt(ctx.we)}"
-                f" interval={ctx.interval:.1f}")
+                f" interval={ctx.interval:.1f}"
+                f" cadence={cadence:.1f}")
 
     notes.append(f"in_window_deltas={len(win_deltas)}")
     notes.append(f"sanctioned_deltas={sanctioned_notes}")

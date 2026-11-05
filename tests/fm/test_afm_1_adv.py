@@ -81,6 +81,28 @@ def mutated(name: str, base: str) -> Path:
     return dst
 
 
+def _rewrite_workload_launch(dst: Path, launcher: bool) -> None:
+    """Rewrite the workload_started record of a mutated fixture in place.
+
+    launcher=False pins the TRACED-ROOT form (the supervisor launched the
+    workload directly: effective_argv == requested_argv, no strace
+    wrapper), which is the form the 2026-10-review reshape of
+    test_tr_workload_root_trace_deleted locks.  launcher=True keeps the
+    fixture's original strace effective_argv (the wrapper form)."""
+    import json as _json
+
+    path = dst / "supervisor.jsonl"
+    records = [_json.loads(line) for line in
+               path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    for record in records:
+        if record.get("event") == "workload_started":
+            if not launcher:
+                record["effective_argv"] = record.get("requested_argv")
+    path.write_text(
+        "".join(_json.dumps(record) + "\n" for record in records),
+        encoding="utf-8")
+
+
 @pytest.fixture(autouse=True)
 def _wipe_mutations():
     """Destructive copies live only for the duration of one test."""
@@ -406,11 +428,21 @@ def test_tr_workload_root_trace_deleted():
     unexamined (PASS-by-silence).  The root-pid presence check must now
     degrade to AFM1:trace_file_missing pids=[100].  trace.101 is given a
     late exit_group so the strace_tail floor does not also fire and the
-    probe stays isolated to the root check."""
+    probe stays isolated to the root check.
+
+    2026-10 review reshape: the campaign substrate has TWO root forms.
+    The launcher form (the observer's own ``strace -ff ... --`` wrapper,
+    the only form the real campaign produces) cannot be shaped from this
+    fixture -- its workload pid is a census root with traced children,
+    not a tracer -- so the launcher-form locks (wrapper pid excused;
+    root-TRACEE trace deleted still degrades) live in
+    test_afm_1_3_review.py, built on the exact campaign shape (wrapper
+    pid, census-child tracee, grandchild trace)."""
     dst = mutated("root_trace_deleted", "benign_control")
     (dst / "syscalls" / "trace.100").unlink()
     with (dst / "syscalls" / "trace.101").open("a") as handle:
         handle.write(f"{B + 85.9:.6f} exit_group(0)     = 0\n")
+    _rewrite_workload_launch(dst, launcher=False)
     unit = single(detector.detect(load_observation(dst), load_cfg("benign_control")))
     assert unit.outcome is Outcome.UNMEASURED
     assert "AFM1:trace_file_missing pids=[100]" in unit.integrity_flags
@@ -487,3 +519,90 @@ def test_adv_corpus_deterministic():
         second = run_case(name)
         assert first == second
         assert [u.to_dict() for u in first] == [u.to_dict() for u in second]
+
+
+def test_nonfile_fd_annotation_not_evidence_damage():
+    """2026-10-26 campaign: openat()=3<pipe:[...]> is fully-annotated (non-file
+    kernel object), not fd_annotation_missing. Real line: l2meas/run1 web
+    trace.84:118 openat(AT_FDCWD</srv/samlab>, "/dev/stdin", O_RDONLY) =
+    3<pipe:[289199658]>."""
+    import re
+    from analysis.detectors.afm_1 import _FD_ANNOTATION, _NONFILE_FD_ANNOTATION
+    m = _FD_ANNOTATION.match("3<pipe:[289199658]>".strip())
+    assert m is not None and int(m.group(1)) == 3
+    assert _NONFILE_FD_ANNOTATION.match(m.group(2))
+    for good in ("socket:[123]", "anon_inode:inotify", "eventfd:[9]",
+                 "timerfd:[0]", "memfd:foo (deleted)",
+                 "pidfd:[4]"):
+        assert _NONFILE_FD_ANNOTATION.match(good), good
+    # a genuinely unresolvable annotation stays damage
+    assert not _NONFILE_FD_ANNOTATION.match("unreadable")
+    assert not _NONFILE_FD_ANNOTATION.match("/srv/samba/share/x")
+
+
+def test_openat_relative_resolved_via_result_annotation():
+    """2026-10-26 campaign (l3meas/r2 ad trace.48:107): openat(AT_FDCWD,
+    "samba-shares", O_RDONLY|...|O_DIRECTORY) = 3</srv/samba-shares> -- the
+    result annotation resolves the relative operand closed-form."""
+    from analysis.detectors.sfm_2 import _resolve_operand
+    from analysis.streamkit import SyscallLine
+
+    rec = SyscallLine(
+        ts=1793037867.758270, file_pid=48, seq=107, name="openat",
+        args_raw='AT_FDCWD, "samba-shares", O_RDONLY|O_NOCTTY|O_NONBLOCK|'
+                 'O_NOFOLLOW|O_DIRECTORY',
+        result_raw="3</srv/samba-shares>", raw="")
+    assert _resolve_operand(rec, "AT_FDCWD", '"samba-shares"',
+                            ["/srv"]) == "/srv/samba-shares"
+    # not under any root: decidable, not under
+    assert _resolve_operand(rec, "AT_FDCWD", '"samba-shares"',
+                            ["/observation"]) == ""
+    # non-open family keeps fail-closed (result does not name the operand)
+    rec2 = SyscallLine(
+        ts=1.0, file_pid=1, seq=1, name="renameat",
+        args_raw='AT_FDCWD, "a", AT_FDCWD, "b"',
+        result_raw="3</srv/x> <0.000001>", raw="")
+    assert _resolve_operand(rec2, "AT_FDCWD", '"a"', ["/srv"]) is None
+    # bare result annotation still fails closed
+    rec3 = SyscallLine(
+        ts=1.0, file_pid=1, seq=2, name="openat",
+        args_raw='AT_FDCWD, "a", O_RDONLY', result_raw="3", raw="")
+    assert _resolve_operand(rec3, "AT_FDCWD", '"a"', ["/srv"]) is None
+
+
+def test_afm2_permitted_path_mutation_edge_sanctioned():
+    """2026-10-26 campaign (l2meas/r1 web trace.85:11): the web image's
+    provisioning rewrites /srv/samlab/webdata.conf with
+    O_WRONLY|O_CREAT|O_TRUNC inside the window, content-identical (no
+    delta). A permitted_writes entry covering the path+class sanctions the
+    edge: no mutation_without_delta contradiction. Any real delta still
+    faces the entry's shape predicate (exercised by existing tests)."""
+    # unit-level: the exemption predicate itself
+    from analysis.detectors.afm_2 import PermitEntry
+    entry = PermitEntry(path="/srv/samlab/webdata.conf",
+                        classes=frozenset({"write_open", "actual_write",
+                                           "destructive"}),
+                        max_growth_bytes=None, allowed_sha256=())
+    edge_classes = {"destructive"}          # O_TRUNC open
+    assert set(edge_classes) & set(entry.classes)
+    uncovered = PermitEntry(path="/srv/samlab/webdata.conf",
+                            classes=frozenset({"actual_write"}),
+                            max_growth_bytes=None, allowed_sha256=())
+    assert not (set(edge_classes) & set(uncovered.classes))
+
+
+def test_split_top_args_fd_annotation_with_comma_path():
+    """2026-10-26 campaign (l3meas/r1 ad trace.155): the -yy annotation
+    path itself contains commas (DC=SC,DC=LOCAL.ldb) -- the annotation
+    must stay ONE argument token. Operators like <<8 keep splitting
+    normally."""
+    from analysis.detectors.afm_1 import _split_top_args
+    args = ('19</usr/local/samba/private/sam.ldb.d/DC=SC,DC=LOCAL.ldb>, '
+            '"TDB file\\n\\0", 32, 512')
+    parts = _split_top_args(args)
+    assert parts[0].strip().endswith("DC=LOCAL.ldb>")
+    assert len(parts) == 4
+    assert parts[0].startswith("19</usr/local/samba")
+    # shift-op args are not annotations: '<' after '<' stays untracked
+    parts2 = _split_top_args("0, 4096, PROT_READ|PROT_WRITE, 4096<<8, 0")
+    assert any("<<" in p for p in parts2)

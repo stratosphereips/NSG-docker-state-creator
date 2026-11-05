@@ -255,7 +255,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from ..integrity import StreamFlag
+from ..integrity import StreamFlag, workload_root_trace_missing
 from ..observation import Observation
 from ..records import ExecveLine, ExitTrailer, StraceLine, SyscallLine
 from ..verdict import UnitResult
@@ -939,14 +939,20 @@ def detect(obs: Observation,
                for record in obs.processes):
         detector_flags.append("FM1.3:census_missing no_process_records")
 
-    # ---- trace holes (afm_3 construction, mirrored) -------------------------
+    # ---- trace holes (afm_3 construction, mirrored; launcher-form aware
+    # per the afm_2/afm_3/afm_4 2026-10-26 campaign review: the
+    # supervisor's workload pid IS the strace launcher on observed
+    # containers and strace never writes trace.<launcher pid>; the root
+    # trace requirement is carried by the root tracee's file --
+    # integrity.workload_root_trace_missing, census-name proof) ----------
     holes = set(missing_trace_pids(obs.strace, obs.strace_files))
     trace_pids = set()
     for path in obs.strace_files:
         suffix = path.name[len("trace."):]
         if suffix.isdigit():
             trace_pids.add(int(suffix))
-    if workload_pid is not None and workload_pid not in trace_pids:
+    if workload_root_trace_missing(started, workload_pid, tree,
+                                   trace_pids, obs.processes):
         holes.add(workload_pid)
     if holes:
         detector_flags.append(

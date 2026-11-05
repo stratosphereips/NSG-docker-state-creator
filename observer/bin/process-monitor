@@ -1,10 +1,25 @@
 #!/usr/bin/env python3
-"""Poll the container PID namespace and emit lifecycle/session snapshots."""
+"""Poll the container PID namespace and emit lifecycle/session snapshots.
+
+2026-10-26 FINAL-SWEEP AMENDMENT (campaign review): the AFM4 residue
+sweep needs a census tick strictly at/after the supervisor's
+workload_exited anchor to witness survival (a census that stops before
+the anchor leaves residue-vs-clean undecidable ->
+AFM4:post_exit_census_missing).  The supervisor therefore sends this
+monitor SIGUSR1 immediately after logging workload_exited: the monitor
+performs ONE final full sweep (process_seen/process_changed for every
+live identity, process_gone reconciliation for everything that vanished
+-- the same event vocabulary and processes.jsonl stream, no new schema)
+and exits.  SIGTERM during that sweep defers the exit until the sweep's
+records are written (the final flush window), so the supervisor's
+stop_all right after cannot kill the sweep mid-write.
+"""
 
 from __future__ import annotations
 
 import os
 import pwd
+import signal
 import sys
 import time
 from pathlib import Path
@@ -15,6 +30,19 @@ from jsonlog import JsonLog  # noqa: E402
 
 log = JsonLog("processes.jsonl", "process-monitor")
 interval = float(os.environ.get("OBS_PROCESS_INTERVAL", "0.10"))
+
+#: Set by SIGUSR1 (the supervisor's post-workload_exited final-sweep
+#: request) and by SIGTERM (finish the in-flight sweep, then exit).
+_flush_and_exit = False
+
+
+def _request_flush(signum, _frame):
+    global _flush_and_exit
+    _flush_and_exit = True
+
+
+signal.signal(signal.SIGUSR1, _request_flush)
+signal.signal(signal.SIGTERM, _request_flush)
 
 
 def text(path: Path, binary: bool = False) -> str:
@@ -107,7 +135,16 @@ def main() -> None:
                 log.write("process_gone", pid=info["pid"], start_ticks=info["start_ticks"],
                           name=info["name"], cmdline=info["cmdline"], uid=info["uid"])
         known = current
-        time.sleep(interval)
+        if _flush_and_exit:
+            # Final sweep complete (its records carry timestamps at/after
+            # the workload_exited anchor when the supervisor requested
+            # it): exit cleanly instead of waiting for SIGKILL.
+            return
+        # Sleep in short slices so a SIGUSR1 final-sweep request lands
+        # within ~50ms instead of a full poll interval.
+        deadline = time.monotonic() + interval
+        while time.monotonic() < deadline and not _flush_and_exit:
+            time.sleep(min(0.05, max(0.0, deadline - time.monotonic())))
 
 
 if __name__ == "__main__":

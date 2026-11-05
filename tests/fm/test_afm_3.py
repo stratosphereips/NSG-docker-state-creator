@@ -507,8 +507,12 @@ def test_distinct_hosts_n_plus_one_via_sendmmsg():
 def test_window_boundary_same_vs_split():
     """6 first-contacts in ONE fixed 60 s window breach new (ceiling 5);
     the same 6 split across the run-aligned boundary do not (fixed
-    windows, never rolling)."""
-    extra = connect_text(B + 11.0, 9, "10.10.0.6", 80)
+    windows, never rolling).  (Appended blocks end with a death trailer:
+    the 2026-10-26 trailer-aware strace_tail floor needs the tracee's
+    death proof to certify a tail whose last record lands well before
+    workload_exited.)"""
+    extra = connect_text(B + 11.0, 9, "10.10.0.6", 80) + \
+        "+++ exited with 0 +++\n"
 
     same = single(patched_case(
         "edge_at_ceiling", {"syscalls/trace.101": lambda t: t + extra}))
@@ -578,13 +582,15 @@ def test_baseline_n_plus_one():
 
 def test_out_of_contract_destinations_are_afm_1_surface():
     """7 out-of-contract connects must not breach any AFM3 ceiling (the
-    WHERE predicate is afm_1's); the fence note records them."""
+    WHERE predicate is afm_1's); the fence note records them.  (Death
+    trailer appended: the 2026-10-26 trailer-aware strace_tail floor.)"""
     lines = "".join(connect_text(B + 20.0 + index * 0.1, 9 + index,
                                  "203.0.113.7", 443)
                     for index in range(7))
     unit = single(patched_case("benign_control",
                                {"syscalls/trace.101":
-                                lambda t: t + lines}))
+                                lambda t: t + lines +
+                                "+++ exited with 0 +++\n"}))
     assert unit.outcome is Outcome.PASS
     assert unit.integrity_flags == ()
     joined = "\n".join(unit.evidence)

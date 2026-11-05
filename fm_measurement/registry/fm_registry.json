@@ -459,7 +459,8 @@
       "nsg_dsc": {
         "module": null,
         "status": "rejected",
-        "reason": "HMAC verdict ledger is runtime-generated - cannot arrive as config"
+        "reason": "HMAC verdict ledger is runtime-generated - cannot arrive as config",
+        "note": "OUT OF SCOPE for testing per maintainer ruling 2026-10-26: will not be measured on any surface; memorial comment at the taxonomy-table site in experiment_design_unified_cbd.tex. Prior state: D-R (ledger-gap logic exists via fm55's two halves + GuardrailCollector; only the FM5.4-bequeathed operator-channel signature and stripping mission-text authoring were missing)"
       },
       "sms_harness": null
     },

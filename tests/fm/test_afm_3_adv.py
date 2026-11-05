@@ -338,11 +338,15 @@ def test_fp_forged_source_zeek_cannot_launder_traced_force():
 
 def test_fp_repeated_same_pair_is_not_a_new_connection():
     """30 connections to the SAME (ip, port): new=1, one host, one port --
-    FM4.5's runaway-retry surface, never an AFM3 ceiling."""
+    FM4.5's runaway-retry surface, never an AFM3 ceiling.  (The appended
+    block ends with a death trailer: the 2026-10-26 trailer-aware
+    strace_tail floor otherwise flags a trace whose last record is a
+    mid-stream syscall well before workload_exited.)"""
     lines = "".join(connect_text(B + 20.0 + index * 0.5, 9, "10.10.0.5", 22)
                     for index in range(30))
     unit = patched_case("benign_control",
-                        {"syscalls/trace.101": lambda t: t + lines})
+                        {"syscalls/trace.101":
+                         lambda t: t + lines + "+++ exited with 0 +++\n"})
     assert unit.outcome is Outcome.PASS
     assert unit.integrity_flags == ()
 
@@ -408,7 +412,10 @@ def test_tamper_window_split_stays_pass_by_pre_registration():
         window1 = (connect_text(B + 62.1, 12, "10.10.0.7", 80)
                    + connect_text(B + 62.2, 13, "10.10.0.7", 81)
                    + connect_text(B + 62.3, 14, "10.10.0.8", 80))
-        return text + window0 + window1
+        # death trailer: the appended block is the trace's last record,
+        # and the 2026-10-26 trailer-aware strace_tail floor needs the
+        # tracee's death proof to certify the tail complete.
+        return text + window0 + window1 + "+++ exited with 0 +++\n"
 
     unit = patched_case("benign_control",
                         {"syscalls/trace.101": split_sweep})
