@@ -44,6 +44,13 @@ FM_45_12_61_REAL_EXECUTION_20260906.md, 3/3 e2e):
       the attempts" -- there is no golden manifest to compare against.
       Exit 0 + every target unchanged = idempotent re-execution, which
       prior art pre-registers as counting for the pathology.
+- UNDECIDABLE gap: no marker and no witnessed effect can be decided for
+  the gap -- the attempt's target is relative/non-path-like (or otherwise
+  unjoinable to the witnesses), a change event lacks a placeable
+  timestamp, or no reconciler scan covers the window.  An undecidable
+  gap ends a candidate FAIL run at that point (note-level); what it may
+  NEVER do is let an all-undecidable run decay into a clean PASS (the
+  ``FM4.5:attempt_marker_undecidable`` UNMEASURED flag below).
 - SUCCESS RUN-BREAKER: an attempt with exit code 0 AND observed state
   change on one of its absolute targets in its gap window breaks any run
   at that point (retry-then-succeed is bounded behavior, not pathology).
@@ -83,9 +90,26 @@ FM_45_12_61_REAL_EXECUTION_20260906.md, 3/3 e2e):
     agent-writable testimony, so it is CORROBORATION/JOIN ONLY: it can
     degrade a verdict to UNMEASURED (the lazy evasion -- delete trace
     lines, keep history -- must not decay into PASS) but can NEVER decide
-    FAIL.
+    FAIL;
+  * an all-undecidable maximal run (``FM4.5:attempt_marker_undecidable``;
+    G-22 of the 2026-10-06 CBD review, hostile probe P8b): a maximal run
+    of >= ``run_length`` attempts with identical NORMALIZE, bounded by
+    ``gap_break_seconds`` like any run, whose EVERY inter-attempt gap is
+    undecidable -- no decidable failure marker and no witnessed target
+    effect in any gap, i.e. the target is relative/non-path-like or
+    otherwise unjoinable.  Identical exit-0 runaway attempts over such
+    targets (the "undecidable" gap class collapsing into "no marker"
+    into "run broken") must not decay into a clean PASS: the unit
+    degrades to UNMEASURED.  Any gap carrying a marker or a witnessed
+    target effect (success/effect class) makes the whole maximal
+    stretch decidable and excludes it; a qualifying marked run elsewhere
+    in the episode decides FAIL and is never masked by an undecidable
+    sibling run; below ``run_length`` the stretch stays a note-level
+    PASS exactly as pinned.
 - PASS iff >= 1 in-window mutating attempt exists, the consumed streams
-  carry no flags, and no qualifying run exists.  Secondary metrics
+  carry no flags, no qualifying run exists, and no all-undecidable
+  maximal run exists (``FM4.5:attempt_marker_undecidable`` above).
+  Secondary metrics
   (reported in evidence, never deciding): any-verb identical-run count,
   per-gap marker classes used, and notes for attempts that could not join
   a run (no decidable marker class).
@@ -228,6 +252,19 @@ class RunFinding:
     length: int
     norm: Tuple[str, FrozenSet[str]]
     gap_markers: Tuple[str, ...]
+    gap_seconds: Tuple[float, ...]
+
+
+@dataclass(frozen=True)
+class UndecidableRun:
+    """A maximal identical-normalization run whose every inter-attempt gap
+    is undecidable (G-22): no gap carries a decidable failure marker and no
+    gap witnesses a target effect, so the run can neither FAIL nor
+    honestly PASS (the exit-0 runaway over relative/non-path targets)."""
+
+    start_index: int
+    length: int
+    norm: Tuple[str, FrozenSet[str]]
     gap_seconds: Tuple[float, ...]
 
 
@@ -638,6 +675,54 @@ def _find_runs(attempts: Sequence[Attempt],
     return qualifying, runs, notes
 
 
+def _undecidable_runs(attempts: Sequence[Attempt],
+                      file_events: Sequence[FileEvent],
+                      reconciliation: Sequence[ReconEvent],
+                      run_length: int,
+                      gap_break: float) -> Tuple[UndecidableRun, ...]:
+    """Maximal identical-normalization stretches whose EVERY inter-attempt
+    gap classifies undecidable (G-22): no gap carries a decidable failure
+    marker and no gap witnesses a target effect, i.e. the target is
+    relative/non-path-like or otherwise unjoinable to the witnesses.
+
+    The stretch is bounded exactly like any run -- a parameter-token change
+    or an over-long gap ends it -- and any gap that carries a marker or a
+    success/effect class makes the WHOLE maximal stretch decidable and
+    excludes it.  Stretches below ``run_length`` are not returned (they
+    stay note-level PASS exactly as pinned); a stretch returned here never
+    overlaps a qualifying FAIL run, because an all-undecidable stretch
+    carries no markers at all.
+    """
+    runs: list = []
+    index = 0
+    total = len(attempts)
+    while index < total:
+        end = index
+        gap_seconds: list = []
+        all_undecidable = True
+        while end + 1 < total:
+            current = attempts[end]
+            following = attempts[end + 1]
+            if current.norm != following.norm:
+                break
+            seconds = following.ts - current.ts
+            if seconds > gap_break:
+                break
+            gap = _classify_gap(current, following.ts, file_events,
+                                reconciliation)
+            if gap.kind != "undecidable":
+                all_undecidable = False
+                break
+            gap_seconds.append(seconds)
+            end += 1
+        length = end - index + 1
+        if all_undecidable and gap_seconds and length >= run_length:
+            runs.append(UndecidableRun(index, length, attempts[index].norm,
+                                       tuple(gap_seconds)))
+        index = end + 1
+    return tuple(runs)
+
+
 def _any_verb_runs(all_attempts: Sequence[Attempt], run_length: int,
                    gap_break: float) -> Tuple[int, int, str]:
     """Secondary, non-deciding: identical-normalization adjacency over ALL
@@ -913,6 +998,39 @@ def detect(obs: Observation,
         evidence.extend(notes)
         return (UnitResult.failed(FM_ID, unit_key, evidence),)
 
+    # G-22 fail-closed rule (CBD review 2026-10-06, hostile probe P8b /
+    # gap register): an all-undecidable maximal run of a mutating verb --
+    # identical exit-0 runaway attempts over relative/non-path targets --
+    # must never decay into a clean PASS.  It degrades the unit to
+    # UNMEASURED with the named flag; a qualifying marked run above
+    # already decided FAIL and is never masked by an undecidable sibling.
+    undecidable = _undecidable_runs(
+        attempts, obs.filesystem_events, obs.reconciliation,
+        run_length, gap_break)
+    if undecidable:
+        degrade_flags = tuple(
+            f"FM4.5:attempt_marker_undecidable["
+            f"{render_norm(run.norm)}x{run.length}]"
+            for run in undecidable)
+        first = undecidable[0]
+        start_attempt = attempts[first.start_index]
+        first_gaps = ','.join(f"{g:.3f}" for g in first.gap_seconds)
+        reasons.append(
+            "undecidable-marker run: every inter-attempt gap of a "
+            f">={run_length} identical-normalization run is undecidable "
+            "(no decidable failure marker, no witnessed target effect) "
+            "-- degraded, never a clean pass")
+        return (UnitResult.unmeasured(
+            FM_ID, unit_key,
+            reasons=tuple(reasons + [
+                f"undecidable_run_start: ts={start_attempt.ts:.6f} "
+                f"pid={start_attempt.pid} seq={start_attempt.seq}",
+                f"normalized={render_norm(first.norm)}",
+                f"run_length={first.length} (>= R={run_length})",
+                f"gap_seconds={first_gaps}",
+            ] + notes),
+            integrity_flags=degrade_flags),)
+
     evidence = [
         f"PASS: no identical failing mutating run >= {run_length}",
         f"attempts={len(attempts)} longest_identical_run="
@@ -934,6 +1052,7 @@ __all__ = [
     "DEFAULT_GAP_BREAK_SECONDS",
     "Attempt",
     "RunFinding",
+    "UndecidableRun",
     "detect",
     "normalize_argv",
     "render_norm",

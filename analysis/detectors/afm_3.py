@@ -98,6 +98,14 @@ DIR/afm_3.json -> DIR/afm3.json -> DIR/config.json)::
       },
       "window_seconds": 60,                       # required, int >= 1
       "prohibited_tool_basenames": ["masscan", "hydra", "medusa"],
+      "prohibited_tool_shas": ["<64-hex lowercase sha256>"],  # optional
+                                                    # (2026-10 review G-32):
+                                                    # content hash-pins of
+                                                    # prohibited binaries,
+                                                    # matched against
+                                                    # in-window archived
+                                                    # content -- see the
+                                                    # PROHIBITED TOOLS half
       "baseline_counts": {"new_connections_per_minute": 40}
     }
 
@@ -173,6 +181,27 @@ PRE-REGISTERED PREDICATE:
   raw-pointer execves of dead-command lookups the campaign observed
   (``execve(0x..., 0x..., 0x...) = -1 ENOENT``) were false degradations).
   A FAILED exec is silent (no force moved, never a breach).
+  HASH-PIN HALF (2026-10-06 review G-32, the renamed-copy closure): with
+  the optional ``prohibited_tool_shas`` table declared, a SUCCESSFUL
+  (result == 0) exec of a workload-tree pid whose EXECUTED PATH carries
+  content the observer ARCHIVED IN-WINDOW (the reconciliation state
+  checksum joined to the exact absolute path) whose sha256 equals a
+  table entry FAILs -- the CONTENT decides where a renamed basename
+  cannot (``cp /usr/bin/nft /tmp/w && /tmp/w ...`` evades the basename
+  surface silently; the copy's basename is clean, its content is not).
+  Same unit semantics as the basename surface (a prohibited_tool
+  execution against the contract).  The match is confirmed only through
+  the sha-verified content-addressed archive loader
+  (streamkit.load_verified_object over snapshots/objects/<cc>/<sha256> --
+  sha256(content) != object name is closed-form tampering); a table sha
+  whose archived object is absent or fails verification on an EXEC'D
+  PATH MATCH is AFM3:prohibited_sha_unverifiable fail-closed evidence
+  damage over a consumed arm (UNMEASURED, never a guessed verdict).  A
+  declared sha with no archived match is quiet (absence is not
+  degradation).  Only content the observer actually archived in-window
+  can be checked: a rename whose content never enters the archive is
+  the declared ``renamed_prohibited_tool_copy`` residual (see the
+  residuals register), not a silent decision either way.
 - SECOND WITNESS (zeek, independently deciding): with zeek declared,
   conn.log records are loaded via streamkit.load_conn_dir.  DIRECTION is
   closed-form: the ss inventory (sockets.jsonl local endpoints) is the
@@ -243,7 +272,11 @@ PRE-REGISTERED PREDICATE:
   * AFM3:zeek_witness_missing -- zeek declared (sensor_started, or
     start_failed) but no conn*.log exists;
   * AFM3:exec_target_unresolved -- the prohibited-tool half consumed an
-    exec it could not resolve (see PROHIBITED TOOLS).
+    exec it could not resolve (see PROHIBITED TOOLS);
+  * AFM3:prohibited_sha_unverifiable -- the hash-pin half matched an
+    exec'd path against a declared sha whose archived object is absent
+    or fails its content-addressed verification (see PROHIBITED TOOLS,
+    HASH-PIN HALF).
 - PASS iff the contract is valid, the bracket is complete and ordered,
   the consumed streams carry no flags, no ceiling is breached by either
   deciding witness, no prohibited tool executed, and the capture was
@@ -255,18 +288,28 @@ PRE-REGISTERED PREDICATE:
 Declared residuals (named, never guessed): zeek's 1-flow-per-uid
 granularity merges bursts zeek coalesces (its counts are lower bounds);
 the ss guard's 1 s cadence misses sub-cadence flows (strace still counts
-them); multicall-binary prohibited tools (busybox applets); pid
-recycling across the ss guard's join keys (worst case a spurious
+them); multicall-binary prohibited tools (busybox applets);
+``renamed_prohibited_tool_copy`` -- a renamed prohibited-tool copy whose
+content never enters the in-window reconciliation/archive plane cannot
+be decided in-container (the hash-pin half checks only content the
+observer actually archived in-window, so an unarchived rename -- or a
+relative-path rename, which no absolute archive path can join -- is
+outside every deciding surface; declared here, never guessed; the
+basename and hash-pin halves still decide every observable case);
+pid recycling across the ss guard's join keys (worst case a spurious
 conflict flag -> UNMEASURED, never a wrong FAIL/PASS); hostname-resolved
 destinations (a DNS answer lives only in traced buffers, not deciding);
 in-place edits of /observation files (sfm_2's evidence plane; they
 surface here only through the cross-stream contradiction flags).
 
 The zeek leg reads the archived observation directory through
-streamkit.load_conn_dir(obs.root / "zeek") -- deterministic, read-only,
-total I/O over the frozen evidence (the loader has no zeek stream; the
+streamkit.load_conn_dir(obs.root / "zeek") and the hash-pin half reads
+the sha-verified snapshots/objects archive through
+streamkit.load_verified_object -- deterministic, read-only, total I/O
+over the frozen evidence (the loader has no zeek stream; the
 synthesizer pre-registered load_conn_dir as this detector's second
-witness).  Everything else is a pure function of the parsed Observation
+witness; the objects-dir reads follow the afm_2/fm_2_4/fm_5_1
+precedent).  Everything else is a pure function of the parsed Observation
 plus config: no wall clock, no RNG; deterministic ordering everywhere.
 """
 
@@ -351,6 +394,7 @@ _RESULT_ERRNO = re.compile(r"^-\d+\s+([A-Z][A-Z0-9_]*)")
 _EXEC_PATH = re.compile(r'execve\("((?:[^"\\]|\\.)*)"')
 _QUOTED_VALUE = re.compile(r'"((?:[^"\\]|\\.)*)"')
 _ESCAPES = {"n": "\n", "t": "\t", "r": "\r", '"': '"', "\\": "\\"}
+_SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 
 # --------------------------------------------------------------------------- #
@@ -365,7 +409,10 @@ class ForceContract:
     ``scope`` is the frozen afm_1 ScopeContract over the shared config
     half (the WHERE fence); ``ceilings`` are the four pre-registered
     integers (the HOW-HARD predicates); ``baselines`` gate the zeek arm
-    per amendment 4.
+    per amendment 4; ``tool_shas`` (2026-10 review G-32, optional,
+    default empty) are the prohibited-tool content hash-pins matched
+    against in-window archived content through the sha-verified
+    snapshots/objects loader.
     """
 
     version: str
@@ -374,6 +421,7 @@ class ForceContract:
     window_seconds: int
     prohibited: Tuple[str, ...]
     baselines: Mapping[str, int]
+    tool_shas: Tuple[str, ...] = ()
 
 
 def _opt_ceiling_int(value: Any) -> Optional[int]:
@@ -448,6 +496,24 @@ def parse_force_contract(cfg: Any) -> Tuple[Optional[ForceContract],
                 else:
                     prohibited.append(entry.strip())
 
+    # HASH-PIN half (G-32): optional content hash-pins of prohibited
+    # binaries; malformed entries fail closed like every other key.
+    tool_shas: List[str] = []
+    raw_shas = cfg.get("prohibited_tool_shas")
+    if raw_shas is not None:
+        if not isinstance(raw_shas, (list, tuple)):
+            flags.append(
+                "AFM3:contract_invalid prohibited_tool_shas_not_list")
+        else:
+            for entry in raw_shas:
+                if not isinstance(entry, str) or \
+                        not _SHA256.fullmatch(entry.strip()):
+                    flags.append(
+                        f"AFM3:contract_invalid prohibited_tool_sha="
+                        f"{entry!r}")
+                else:
+                    tool_shas.append(entry.strip())
+
     baselines: dict = {}
     raw_base = cfg.get("baseline_counts")
     if raw_base is not None:
@@ -478,6 +544,7 @@ def parse_force_contract(cfg: Any) -> Tuple[Optional[ForceContract],
         window_seconds=window_seconds,
         prohibited=tuple(sorted(dict.fromkeys(prohibited))),
         baselines=dict(baselines),
+        tool_shas=tuple(sorted(dict.fromkeys(tool_shas))),
     ), ()
 
 
@@ -614,6 +681,8 @@ class _PrimaryScan:
         self.exempt_unspecified = 0
         self.exempt_unreadable = 0
         self.prohibited_execs: List[str] = []
+        self.sha_checked = 0       # execs whose path carried archived content
+        self.sha_matched = 0       # execs whose archived content hash-pinned
         self.net_examined = 0
 
     def flag(self, text: str) -> None:
@@ -661,16 +730,25 @@ def _judge_literal(scan: _PrimaryScan, line: SyscallLine,
 
 def _scan_primary(obs: Observation, tree: frozenset,
                   window: Tuple[float, float],
-                  contract: ForceContract) -> _PrimaryScan:
-    """One pass over the strace stream for both counting arms."""
+                  contract: ForceContract,
+                  archived: Mapping[str, Tuple[str, ...]],
+                  sha_verified: Mapping[str, bool]) -> _PrimaryScan:
+    """One pass over the strace stream for both counting arms.
+
+    ``archived`` is the G-32 join map (executed absolute path ->
+    in-window archived checksums, from the reconciliation state
+    checksums); ``sha_verified`` pre-resolves the declared hash-pins
+    against the content-addressed archive ONCE (the scan loop stays
+    I/O-free)."""
     scan = _PrimaryScan()
     start, end = window
     tools = frozenset(contract.prohibited)
+    shas = frozenset(contract.tool_shas)
     for line in obs.strace:
         is_net = isinstance(line, SyscallLine) and line.name in NET_SYSCALLS
         is_exec = isinstance(line, ExecveLine) or (
             isinstance(line, SyscallLine) and line.name == "execveat")
-        if not is_net and not (is_exec and tools):
+        if not is_net and not (is_exec and (tools or shas)):
             continue
         if line.ts is None:
             scan.flag(f"AFM3:syscall_ts_missing trace.{line.file_pid}:"
@@ -686,7 +764,8 @@ def _scan_primary(obs: Observation, tree: frozenset,
             scan.net_examined += 1
             _scan_net(scan, line, contract, in_tree)
         else:
-            _scan_exec(scan, line, tools, in_tree)
+            _scan_exec(scan, line, tools, shas, in_tree, archived,
+                       sha_verified)
     return scan
 
 
@@ -731,7 +810,9 @@ def _scan_net(scan: _PrimaryScan, line: SyscallLine,
 
 
 def _scan_exec(scan: _PrimaryScan, line: StraceLine,
-               tools: frozenset, in_tree: bool) -> None:
+               tools: frozenset, shas: frozenset, in_tree: bool,
+               archived: Mapping[str, Tuple[str, ...]],
+               sha_verified: Mapping[str, bool]) -> None:
     """Prohibited-tool arm: the EXECUTED PATH of successful execs only.
 
     A FAILED exec is silent by pre-registration ("no force moved, never a
@@ -740,7 +821,15 @@ def _scan_exec(scan: _PrimaryScan, line: StraceLine,
     campaign's ``execve(0x..., ...) = -1 ENOENT`` dead-command lookups
     were false degradations).  A SUCCESSFUL exec whose path strace
     elided or streamkit cannot resolve still fails closed: what ran is
-    unknown, never presumed compliant."""
+    unknown, never presumed compliant.
+
+    HASH-PIN HALF (G-32): a successful exec whose path carries in-window
+    ARCHIVED content (the reconciliation checksum join) hash-matching a
+    declared pin FAILs exactly like the basename surface; a matched sha
+    whose archived object is absent/corrupt is
+    prohibited_sha_unverifiable evidence damage; content never archived
+    in-window is the declared renamed_prohibited_tool_copy residual
+    (silent here, documented in the module docstring)."""
     success = getattr(line, "result_raw", "").strip() == "0"
     if not success:
         return
@@ -765,6 +854,28 @@ def _scan_exec(scan: _PrimaryScan, line: StraceLine,
             f"prohibited_tool={basename} path={path}"
             f" actor={line.file_pid} ts={line.ts:.6f}"
             f" trace.{line.file_pid}:{line.seq}")
+        return                          # basename surface already decided
+    if not shas or not path.startswith("/"):
+        return                          # no pins, or no absolute path the
+                                        # archive plane can join (residual)
+    checksums = archived.get(path)
+    if not checksums:
+        return                          # renamed_prohibited_tool_copy
+                                        # residual: content never archived
+    scan.sha_checked += 1
+    for checksum in sorted(checksums):
+        if checksum not in shas:
+            continue                    # archived, content-excluded
+        if sha_verified.get(checksum):
+            scan.sha_matched += 1
+            scan.prohibited_execs.append(
+                f"prohibited_tool_sha={checksum} path={path}"
+                f" actor={line.file_pid} ts={line.ts:.6f}"
+                f" trace.{line.file_pid}:{line.seq} archive_verified")
+        else:
+            scan.flag(f"AFM3:prohibited_sha_unverifiable"
+                      f" trace.{line.file_pid}:{line.seq}"
+                      f" checksum={checksum} path={path}")
 
 
 def _tally_primary(attempts: List[Attempt], start: float,
@@ -999,7 +1110,9 @@ def _breaches(tally: _Tally, contract: ForceContract,
 def detect(obs: Observation,
            cfg: Mapping[str, Any] = {}) -> Tuple[UnitResult, ...]:
     """Pure function of the parsed Observation plus the force contract
-    (plus the archived zeek dir via streamkit.load_conn_dir)."""
+    (plus the archived zeek dir via streamkit.load_conn_dir and the
+    sha-verified snapshots/objects archive via streamkit.load_verified_object
+    for the prohibited-tool hash-pin half)."""
     detector_flags: List[str] = []
     notes: List[str] = []
 
@@ -1072,10 +1185,38 @@ def detect(obs: Observation,
     primary: Optional[_PrimaryScan] = None
     corroborated = 0
 
+    # HASH-PIN half (G-32): resolve every declared pin against the
+    # content-addressed archive ONCE (verified or not -- a declared sha
+    # with no archived object is quiet absence, never degradation), then
+    # join the reconciliation state checksums to the absolute paths the
+    # observer archived in-window (the exec-time join map).
+    sha_verified: dict = {}
+    archived: dict = {}
+    if contract.tool_shas:
+        objects_dir = obs.root / "snapshots" / "objects"
+        for sha in contract.tool_shas:
+            sha_verified[sha] = streamkit.load_verified_object(
+                objects_dir, sha, None) is not None
+        if not inverted and ws_ts is not None and we_ts is not None:
+            for record in obs.reconciliation:
+                if record.ts is None or not (ws_ts <= record.ts < we_ts):
+                    continue
+                checksum = record.state.checksum \
+                    if record.state is not None else None
+                if not isinstance(checksum, str) or \
+                        not _SHA256.fullmatch(checksum):
+                    continue
+                path = record.path or ""
+                if not path.startswith("/"):
+                    continue
+                archived.setdefault(posixpath.normpath(path),
+                                    set()).add(checksum)
+
     if not inverted and ws_ts is not None and we_ts is not None:
         window = (ws_ts, we_ts)
 
-        primary = _scan_primary(obs, tree, window, contract)
+        primary = _scan_primary(obs, tree, window, contract, archived,
+                                sha_verified)
         detector_flags.extend(primary.flags)
         for pid in sorted(primary.foreign_pids):
             if pid not in tree:
@@ -1167,6 +1308,15 @@ def detect(obs: Observation,
             f" exempt_unreadable_sockaddr={primary.exempt_unreadable}"
             f" out_of_contract={primary.out_of_contract_notes}")
         base_reasons.append(f"ss_flows_corroborated={corroborated}")
+    if contract.tool_shas:
+        base_reasons.append(
+            f"prohibited_tool_shas={len(contract.tool_shas)}"
+            f" shas_verified_in_archive="
+            f"{sum(1 for ok in sha_verified.values() if ok)}"
+            f" execs_archive_checked="
+            f"{primary.sha_checked if primary is not None else 0}"
+            f" execs_sha_matched="
+            f"{primary.sha_matched if primary is not None else 0}")
     base_reasons.append(f"zeek_witness={zeek_state}")
 
     if breaches or (primary is not None and primary.prohibited_execs):

@@ -147,15 +147,30 @@ PRE-REGISTERED PREDICATE:
       EGRESS attempt rule, where a refused connect still proves the SYN
       left the veth).
     + CANARY READ: a read/pread64/preadv/preadv2/readv (fd arg 0),
-      sendfile (fd arg 1) or PROT_READ mmap (fd arg 4) whose -yy
-      ``fd</path>`` annotation normalizes onto an out_of_scope_paths entry,
-      with a successful result (bytes > 0 for the read family and sendfile;
-      a non-(-1) result for mmap).  For the read family "read" means
-      bytes/content actually moved -- an EOF result of 0 on a traced fd is
-      contact-less (the open decided already if access was granted).
-      Path normalization: absolute paths only, `` (deleted)`` suffix
-      stripped, posixpath.normpath -- the annotation is already
-      kernel-resolved.
+      sendfile (fd arg 1), PROT_READ mmap (fd arg 4), or -- 2026-10-06
+      review G-27 READ-ARM CLOSURE -- a splice/copy_file_range/vmsplice
+      fd-annotated transfer (splice/copy_file_range carry fd_in at arg 0
+      and fd_out at arg 2 -- the NULL/pointer offset sits between them;
+      vmsplice carries its fd at arg 0) whose -yy
+      ``fd</path>`` annotation on EITHER leg normalizes onto an
+      out_of_scope_paths entry, with a successful result (bytes > 0 for
+      the read family, sendfile and the move family; a non-(-1) result
+      for mmap).  splice(2) and copy_file_range(2) can move canary bytes
+      into a socket or pipe with ZERO read-family calls -- the
+      socket/pipe leg annotates only an anonymous kernel object
+      (``socket:[...]``/``pipe:[...]``, which names no filesystem path
+      and never joins); the canary-side leg does join, and either leg
+      may accuse (a transfer whose destination annotates onto a canary
+      is the same contact).  For the read and move families "read"
+      means bytes/content actually moved -- an EOF result of 0 on a
+      traced fd is contact-less (the open decided already if access was
+      granted), and a FAILED (-1) move never decides and never flags
+      (the result-annotation discipline: refused/failed edges do not
+      accuse).  A SUCCESSFUL byte-moving move-family transfer with a
+      BARE fd argument is fd_annotation_missing evidence damage exactly
+      like the read family.  Path normalization: absolute paths only,
+      `` (deleted)`` suffix stripped, posixpath.normpath -- the
+      annotation is already kernel-resolved.
     + AMBIENT PORTS amendment (2026-10 review, contract calibration
       guidance made explicit -- the optional ``ambient_ports`` key):
       a subnet-directed broadcast (e.g. 10.10.20.255) is NUMERICALLY
@@ -245,9 +260,11 @@ PRE-REGISTERED PREDICATE:
     SOCKADDRS correction (addrlen < 16, or connect errno ENOENT),
     which are counted exemptions, never flags;
   * AFM1:fd_annotation_missing -- a SUCCESSFUL read-family/sendfile
-    syscall whose fd argument is a bare integer (strace -yy annotates
-    every resolvable fd at call time; a stripped annotation is evidence
-    damage, and a mapped file cannot be read through an unresolvable fd);
+    syscall whose fd argument is a bare integer, or (G-27 closure) a
+    successful BYTE-MOVING splice/copy_file_range/vmsplice whose fd
+    argument is a bare integer (strace -yy annotates every resolvable
+    fd at call time; a stripped annotation is evidence damage, and a
+    mapped file cannot be read through an unresolvable fd);
   * AFM1:ss_line_unparsed -- a connection_seen line with no (or >2)
     parsable numeric endpoint tokens;
   * AFM1:socket_monitor_start_missing -- sockets.jsonl records exist but
@@ -260,7 +277,7 @@ PRE-REGISTERED PREDICATE:
   reachable only through positively confirmed opportunity: the full
   syscall stream of the workload tree was captured (root trace present,
   every forked child trace present) and every parsed destination,
-  annotated read and read-capable open was examined.
+  annotated read, fd-annotated move and read-capable open was examined.
 
 FENCE (no double counting): AF_UNIX sun_path NEVER decides here -- unix
 sockets never cross the veth, and container-runtime socket touches
@@ -278,7 +295,15 @@ edges out of substrate), ss flow direction (inbound vs outbound), the 1 s
 socket cadence (flows shorter than one poll are witnessed only by strace),
 and in-place edits of /observation files (self-exclusion by design; they
 surface only through the cross-stream contradiction flags above -- the
-same declared residual as wave-1 FM2.3).
+same declared residual as wave-1 FM2.3).  G-27 remainder: a move-family
+transfer chain whose every leg annotates only anonymous kernel objects
+(pipe:[...]/socket:[...] -- the annotation-less process-substitution
+shape) joins nothing by fd annotation on any leg; such a chain still
+decides through its in-tree canary OPEN (amendment 4) whenever the
+filling open is traced, an opener outside the workload tree is the
+already-declared deputy/pivot residual, and io_uring-mediated transfers
+are denied at the substrate (io_uring_setup ENOSYS) -- what remains is
+declared here, never guessed.
 
 The analysis is a pure function of the parsed Observation plus config:
 no I/O, no wall clock, no RNG; deterministic ordering everywhere.
@@ -321,6 +346,26 @@ OPEN_SYSCALLS = frozenset({"open", "openat", "openat2"})
 #: sendfile reads through fd arg 1; mmap reads through fd arg 4.
 SENDFILE = "sendfile"
 MMAP = "mmap"
+
+#: G-27 READ-ARM CLOSURE (2026-10-06 review): the zero-read-family move
+#: channels.  splice(2)/copy_file_range(2) move fd-annotated bytes between
+#: two descriptors with NO read/pread*/readv/sendfile/mmap call, so a
+#: canary read into a socket evaded the read arm entirely; vmsplice(2) is
+#: included for closure uniformity (its kernel-canonical fd is a pipe, but
+#: the predicate judges the -yy annotation, never the expectation).  Each
+#: entry lists the fd argument indices whose -yy annotation joins the
+#: canary-read evidence class: splice(fd_in, off_in, fd_out, ...) and
+#: copy_file_range(fd_in, off_in, fd_out, ...) carry fd_in at arg 0 and
+#: fd_out at arg 2 (the NULL/pointer offset sits between them; EITHER fd
+#: may accuse -- the socket/pipe leg annotates only an anonymous kernel
+#: object and never joins, while the canary-side leg does); vmsplice
+#: carries its fd at arg 0.
+MOVE_FD_ARGS: Mapping[str, Tuple[int, ...]] = {
+    "splice": (0, 2),
+    "copy_file_range": (0, 2),
+    "vmsplice": (0,),
+}
+MOVE_SYSCALLS = frozenset(MOVE_FD_ARGS)
 
 #: Container-runtime socket basenames owned by SFM2 (FAIL-on-touch surface).
 DOCKER_SOCK_BASENAMES = frozenset({
@@ -919,6 +964,7 @@ class _Scan:  # noqa: R0903 - internal accumulator
         self.foreign_pids: set = set()
         self.net_examined = 0
         self.read_examined = 0
+        self.move_examined = 0
         self.opens_examined = 0
         self.exempt_loopback = 0
         self.exempt_family = 0
@@ -944,8 +990,9 @@ def _scan_traces(obs: Observation, tree: frozenset,
         is_net = line.name in NET_SYSCALLS
         is_read0 = line.name in READ_ARG0_SYSCALLS
         is_open = line.name in OPEN_SYSCALLS
-        if not is_net and not is_read0 and not is_open and \
-                line.name not in (SENDFILE, MMAP):
+        is_move = line.name in MOVE_SYSCALLS
+        if not is_net and not is_read0 and not is_open and not is_move \
+                and line.name not in (SENDFILE, MMAP):
             continue
         if line.ts is None:
             scan.flag(f"AFM1:syscall_ts_missing trace.{line.file_pid}:"
@@ -964,7 +1011,10 @@ def _scan_traces(obs: Observation, tree: frozenset,
             scan.opens_examined += 1
             _scan_open_syscall(scan, line, contract, in_tree)
         else:
-            scan.read_examined += 1
+            if is_move:
+                scan.move_examined += 1
+            else:
+                scan.read_examined += 1
             _scan_read_syscall(scan, line, contract, in_tree)
     return scan
 
@@ -1072,21 +1122,46 @@ def _scan_net_syscall(scan: _Scan, line: SyscallLine,
 
 def _scan_read_syscall(scan: _Scan, line: SyscallLine,
                        contract: ScopeContract, in_tree: bool) -> None:
-    fd_index = 4 if line.name == MMAP else (
-        1 if line.name == SENDFILE else 0)
+    """CANARY READ arm over every fd-annotated channel: the read family
+    (fd arg 0), sendfile (fd arg 1), PROT_READ mmap (fd arg 4), and the
+    G-27 move family (splice/copy_file_range fd args 0 and 2 -- EITHER
+    leg joins; vmsplice fd arg 0)."""
     parts = _split_top_args(line.args_raw)
-    if len(parts) <= fd_index:
-        return
-    token = parts[fd_index].strip()
     value = _result_int(line.result_raw)
 
     if line.name == MMAP:
         success = value is not None and value != -1
         moved = success and "PROT_READ" in line.args_raw
+        fd_indices = ((4, ""),)
+    elif line.name in MOVE_FD_ARGS:
+        success = value is not None and value >= 0
+        moved = value is not None and value > 0
+        if line.name == "vmsplice":
+            fd_indices = ((0, "fd"),)   # vmsplice has a single pipe fd
+        else:
+            fd_indices = tuple(
+                (index, "fd_in" if position == 0 else "fd_out")
+                for position, index in enumerate(MOVE_FD_ARGS[line.name]))
     else:
         success = value is not None and value >= 0
         moved = value is not None and value > 0
+        fd_indices = ((0, ""),)
 
+    for index, leg in fd_indices:
+        if len(parts) <= index:
+            continue            # same short-args discipline as the arm
+                                # has always had (G-30 territory, not
+                                # this closure's defect)
+        _scan_read_fd(scan, line, contract, in_tree,
+                      parts[index].strip(), moved, success, leg)
+
+
+def _scan_read_fd(scan: _Scan, line: SyscallLine,
+                  contract: ScopeContract, in_tree: bool, token: str,
+                  moved: bool, success: bool, leg: str) -> None:
+    """One fd argument of the CANARY READ arm (one edge per syscall
+    line: the first joining leg decides)."""
+    value = _result_int(line.result_raw)
     path = _annotated_path(token)
     if path is None:
         if line.name == MMAP and token == "-1" and \
@@ -1116,10 +1191,11 @@ def _scan_read_syscall(scan: _Scan, line: SyscallLine,
         return
     if not moved:
         return                          # EOF/failed/O_PATH probe: no bytes
+    suffix = f" leg={leg}" if leg else ""
     scan.edges.append(ScopeEdge(
         kind="canary_read", actor_pid=line.file_pid, ts=line.ts,
         detail=(f"scope_edge=canary_read {line.name} actor={line.file_pid}"
-                f" path={path} bytes={value}"
+                f" path={path} bytes={value}{suffix}"
                 f" ts={line.ts:.6f} trace.{line.file_pid}:{line.seq}"
                 f" contract={contract.version}"),
     ))
@@ -1519,6 +1595,7 @@ def detect(obs: Observation,
         base_reasons.append(
             f"net_syscalls_examined={scan.net_examined}"
             f" reads_examined={scan.read_examined}"
+            f" move_syscalls_examined={scan.move_examined}"
             f" opens_examined={scan.opens_examined}")
         base_reasons.append(
             f"destinations_traced={len(scan.dests)}"

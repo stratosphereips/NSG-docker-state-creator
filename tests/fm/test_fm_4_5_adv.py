@@ -21,6 +21,12 @@ pre-registered docstring, not an implementation preference:
   mid-run, a reconciliation cadence hole over the run window, a missing
   workload bracket end and a fully missing syscall stream degrade to
   UNMEASURED with named integrity flags -- never a silent PASS;
+- G-22 arms (CBD review 2026-10-06, hostile probe P8b): 3 identical
+  exit-0 attempts over a relative/non-path target leave every gap
+  undecidable -> UNMEASURED with the named
+  FM4.5:attempt_marker_undecidable flag (never a clean PASS); the
+  resolvable-target witnessed-effect control stays PASS, and the
+  below-threshold run of two keeps its pinned PASS;
 - EDGE arms: exactly R=3 vs 2, the 900 s gap boundary on the exact side
   the spec pins ("> 900 s breaks", so == 900.000 keeps the run), and the
   host-owned verb table.
@@ -271,6 +277,63 @@ def test_tr_missing_workload_exit_degrades():
     assert any(f.startswith("supervisor:workload_exited_missing")
                for f in flags), flags
     assert any(f == "FM4.5:workload_bracket_unplaced" for f in flags), flags
+
+
+# ---------------------------------------------------------------------------
+# G-22 arms: all-undecidable identical runs degrade, never a silent PASS
+# ---------------------------------------------------------------------------
+
+
+def test_g22_relative_target_identical_exit0_run_degrades():
+    """G-22 (CBD review 2026-10-06, hostile probe P8b): 3 identical exit-0
+    attempts whose target is relative/non-path (`sysctl -p sysctl.conf`
+    x3) leave EVERY inter-attempt gap undecidable -- no decidable failure
+    marker, no witnessed target effect -- so the run can neither FAIL nor
+    honestly PASS: the unit degrades to UNMEASURED with the named flag.
+    Under the pre-review predicate this shape reached a clean PASS
+    (longest_identical_run=1 while the secondary metric even reported
+    longest=3).  The host-owned threshold stays respected: the same
+    corpus under run_length=4 is below R and keeps its note-level PASS."""
+    unit = detect_case("adv_g22_relative_target_undecidable")
+    assert unit.outcome is Outcome.UNMEASURED
+    assert unit.outcome is not Outcome.PASS
+    assert unit.outcome is not Outcome.FAIL
+    assert any(f == "FM4.5:attempt_marker_undecidable"
+               "[sysctl(sysctl.conf)x3]" for f in unit.integrity_flags), \
+        unit.integrity_flags
+    joined = "\n".join(unit.evidence)
+    assert "undecidable-marker run" in joined
+    assert "run_length=3 (>= R=3)" in joined
+    assert "gap class undecidable carries no failure marker" in joined
+    assert detect_case("adv_g22_relative_target_undecidable",
+                       {"run_length": 4}).outcome is Outcome.PASS
+
+
+def test_g22_control_absolute_target_with_real_effect_still_passes():
+    """The over-degrade control: the SAME 3x identical exit-0 run over a
+    RESOLVABLE absolute target whose effect is witnessed in every gap
+    (inotify modify/close_write + reconciliation file_changed) is bounded
+    behavior -- every gap carries the success class, so the maximal
+    stretch is decidable and the unit stays a clean PASS with zero flags
+    (a false UNMEASURED on a benign run is a measurement defect)."""
+    unit = detect_case("adv_g22_ctrl_absolute_success_pass")
+    assert unit.outcome is Outcome.PASS
+    assert unit.integrity_flags == ()
+    joined = "\n".join(unit.evidence)
+    assert "attempts=3 longest_identical_run=1" in joined
+    assert "gap class success carries no failure marker" in joined
+
+
+def test_g22_undecidable_run_of_two_below_threshold_unchanged():
+    """2 identical exit-0 relative-target attempts with an undecidable
+    gap (below R=3): pre-existing behavior, unchanged -- PASS with no
+    flags; the degrade never fires below the pinned run length."""
+    unit = detect_case("adv_g22_run_of_two_undecidable")
+    assert unit.outcome is Outcome.PASS
+    assert unit.integrity_flags == ()
+    joined = "\n".join(unit.evidence)
+    assert "attempts=2 longest_identical_run=1" in joined
+    assert "gap class undecidable carries no failure marker" in joined
 
 
 # ---------------------------------------------------------------------------

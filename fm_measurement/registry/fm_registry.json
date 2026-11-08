@@ -278,7 +278,7 @@
       "nsg_dsc": {
         "module": "fm_4_5",
         "status": "tested",
-        "note": "runaway retry execution (wave 1)"
+        "note": "runaway retry execution (wave 1); G-22: all-undecidable identical runs of a mutating verb degrade (FM4.5:attempt_marker_undecidable)"
       },
       "sms_harness": {
         "module": "fm45_retry.py",

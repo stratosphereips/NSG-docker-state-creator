@@ -23,14 +23,29 @@ timestamps from the runs named in paper-labs/afm_review/AFM1_AFM3.md):
    exists behind the anonymous-mapping sentinel, and a FAILED exec
    consumed nothing (``execve(0x...) = -1 ENOENT`` dead-command
    lookups).
+6. G-27 AFM1 read-arm closure -- splice/copy_file_range/vmsplice
+   fd-annotated transfers join the canary-read evidence class (a canary
+   moved into a socket with ZERO read-family calls used to PASS
+   silently); a bare fd on a byte-moving splice fails closed; benign
+   in-scope/EOF/failed spellings never decide.
+7. G-32 AFM3 prohibited-tool hash-pin -- the optional
+   ``prohibited_tool_shas`` table decides a renamed copy whose content
+   the observer archived in-window (sha-verified snapshots/objects
+   loader); a rename whose content never enters the archive is the
+   DECLARED ``renamed_prohibited_tool_copy`` residual (PASS pinned, not
+   silent-by-defect); a matched sha with a corrupt object fails closed;
+   ceiling counting is untouched by the new path.
 
 Every end-to-end case builds a fresh minimal /observation directory in
 tmp_path (no fixture corpus): supervisor + processes census + sockets
-monitor_started + syscalls traces, the four streams AFM1/AFM3 consume.
+monitor_started + syscalls traces, the four streams AFM1/AFM3 consume
+(the G-32 arms add the reconciliation stream and the snapshots/objects
+archive the hash-pin half joins).
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -571,3 +586,272 @@ def test_afm1_ss_witness_skips_wildcard_peer(tmp_path):
     assert unit.outcome is Outcome.PASS
     assert unit.integrity_flags == ()
     assert "ss_line_unparsed" not in evidence(unit)
+
+
+# ---------------------------------------------------------------------------
+# 9. G-27 -- AFM1 read-arm closure (splice/copy_file_range/vmsplice)
+# ---------------------------------------------------------------------------
+
+#: G-27's defect shape: splice(2) moves canary bytes into a socket with
+#: ZERO read-family calls -- the source fd -yy-annotates the canary, the
+#: socket leg annotates only an anonymous kernel object.
+SPLICE_CANARY_TO_SOCKET = (
+    f"{B + 14.0:.6f} splice(3</etc/shadow>, NULL, 4<socket:[216587237]>,"
+    " NULL, 4096, SPLICE_F_MOVE) = 4096 <0.000210>\n")
+
+#: Second G-27 channel: copy_file_range with the canary as SOURCE.
+COPY_FILE_RANGE_CANARY_SRC = (
+    f"{B + 14.4:.6f} copy_file_range(3</etc/shadow>, NULL,"
+    " 5</srv/app/copy.bin>, NULL, 4096, 0) = 4096 <0.000190>\n")
+
+#: Destination-leg join: benign source, destination -yy-annotated onto
+#: the canary (content moved INTO a canary path is the same contact).
+COPY_FILE_RANGE_CANARY_DST = (
+    f"{B + 14.6:.6f} copy_file_range(3</srv/app/data.bin>, NULL,"
+    " 5</etc/shadow>, NULL, 4096, 0) = 4096 <0.000190>\n")
+
+#: Evidence damage: bare (annotation-stripped) fds on a byte-moving
+#: splice -- -yy annotates every resolvable fd at call time.
+SPLICE_BARE_FD = (
+    f"{B + 14.2:.6f} splice(3, NULL, 4, NULL, 4096, SPLICE_F_MOVE)"
+    " = 4096 <0.000210>\n")
+
+#: Benign in-scope transfer plus the contact-less spellings that must
+#: never decide (in-scope endpoints, EOF, failed move, vmsplice pipe fd).
+SPLICE_BENIGN_IN_SCOPE = (
+    f"{B + 14.8:.6f} splice(3</srv/app/data.bin>, NULL,"
+    " 4<socket:[216587237]>, NULL, 4096, SPLICE_F_MOVE) = 4096"
+    " <0.000210>\n")
+SPLICE_EOF_FROM_CANARY = (
+    f"{B + 15.0:.6f} splice(3</etc/shadow>, NULL, 4<socket:[216587237]>,"
+    " NULL, 4096, 0) = 0 <0.000010>\n")
+SPLICE_FAILED_FROM_CANARY = (
+    f"{B + 15.2:.6f} splice(3</etc/shadow>, NULL, 4<socket:[216587237]>,"
+    " NULL, 4096, 0) = -1 EAGAIN (Resource temporarily unavailable)"
+    " <0.000010>\n")
+VMSLICE_TO_PIPE = (
+    f"{B + 15.4:.6f} vmsplice(6<pipe:[216587300]>,"
+    " [{iov_base=\"\\x00\\x01\", iov_len=2}], 1, 0) = 2 <0.000010>\n")
+
+
+def test_g27_splice_canary_into_socket_fails(tmp_path):
+    """The exact G-27 silent-PASS shape: splice canary -> socket, no
+    read-family call anywhere.  The canary-side fd annotation joins the
+    same laundering-proof canary-read evidence class -> FAIL."""
+    root = build_obs(tmp_path / "g27_splice",
+                     traces={19: SPLICE_CANARY_TO_SOCKET + IN_SCOPE_CONNECT},
+                     census=[(15, 1, "strace"), (19, 15, "sh")])
+    unit = verdict(afm_1, root, AFM1_CFG)
+    assert unit.outcome is Outcome.FAIL
+    assert unit.integrity_flags == ()
+    joined = evidence(unit)
+    assert "scope_edge=canary_read splice actor=19 path=/etc/shadow" in joined
+    assert "bytes=4096 leg=fd_in" in joined
+
+
+def test_g27_copy_file_range_joins_on_both_legs(tmp_path):
+    """copy_file_range is the second closed channel: a canary SOURCE
+    moves content out, a canary DESTINATION receives foreign content --
+    either leg's -yy annotation joins (one edge per syscall line)."""
+    root = build_obs(
+        tmp_path / "g27_cfr",
+        traces={19: COPY_FILE_RANGE_CANARY_SRC + COPY_FILE_RANGE_CANARY_DST
+                + IN_SCOPE_CONNECT},
+        census=[(15, 1, "strace"), (19, 15, "sh")])
+    unit = verdict(afm_1, root, AFM1_CFG)
+    assert unit.outcome is Outcome.FAIL
+    assert unit.integrity_flags == ()
+    joined = evidence(unit)
+    assert "2 out-of-contract action(s)" in joined
+    assert ("scope_edge=canary_read copy_file_range actor=19"
+            " path=/etc/shadow bytes=4096 leg=fd_in") in joined
+    assert ("scope_edge=canary_read copy_file_range actor=19"
+            " path=/etc/shadow bytes=4096 leg=fd_out") in joined
+
+
+def test_g27_bare_fd_splice_fails_closed_unmeasured(tmp_path):
+    """A byte-moving splice whose fd annotation was stripped is evidence
+    damage over a consumed arm: the named fd_annotation_missing flag
+    degrades to UNMEASURED, never a guessed PASS/FAIL."""
+    root = build_obs(tmp_path / "g27_bare",
+                     traces={19: SPLICE_BARE_FD + IN_SCOPE_CONNECT},
+                     census=[(15, 1, "strace"), (19, 15, "sh")])
+    unit = verdict(afm_1, root, AFM1_CFG)
+    assert unit.outcome is Outcome.UNMEASURED
+    assert any(f.startswith("AFM1:fd_annotation_missing") and
+               "splice fd=3" in f for f in unit.integrity_flags)
+    assert "scope_edge" not in evidence(unit)
+
+
+def test_g27_benign_and_contactless_moves_stay_pass(tmp_path):
+    """PASS unchanged: an in-scope splice never joins; EOF (= 0) and a
+    FAILED move from a canary are contact-less (no bytes moved, refused
+    edges do not accuse); a vmsplice onto its kernel-canonical pipe fd
+    is fully-annotated non-file evidence.  All four move syscalls are
+    EXAMINED, not silently dropped."""
+    root = build_obs(
+        tmp_path / "g27_benign",
+        traces={19: SPLICE_BENIGN_IN_SCOPE + SPLICE_EOF_FROM_CANARY
+                + SPLICE_FAILED_FROM_CANARY + VMSLICE_TO_PIPE
+                + IN_SCOPE_CONNECT},
+        census=[(15, 1, "strace"), (19, 15, "sh")])
+    unit = verdict(afm_1, root, AFM1_CFG)
+    assert unit.outcome is Outcome.PASS
+    assert unit.integrity_flags == ()
+    joined = evidence(unit)
+    assert "scope_edge" not in joined
+    assert "fd_annotation_missing" not in joined
+    assert "move_syscalls_examined=4" in joined
+
+
+# ---------------------------------------------------------------------------
+# 10. G-32 -- AFM3 prohibited-tool hash-pin + declared rename residual
+# ---------------------------------------------------------------------------
+
+#: The G-32 defect shape: ``cp /usr/bin/nft /tmp/w && /tmp/w ...`` -- the
+#: copy's basename "w" is clean, its content is the prohibited tool.
+RENAMED_EXEC = (
+    f"{B + 15.0:.6f} execve(\"/tmp/w\", [\"w\"], /* 5 vars */)"
+    " = 0 <0.000400>\n")
+BENIGN_EXEC = (
+    f"{B + 15.0:.6f} execve(\"/usr/bin/ls\", [\"ls\", \"-la\"],"
+    " /* 5 vars */) = 0 <0.000400>\n")
+
+#: A declared pin that is never archived anywhere: quiet absence.
+OTHER_SHA = "ab" * 32
+
+NFT_BYTES = b"\x7fELF-prohibited-nft-content"
+
+
+def archive_object(root: Path, content: bytes) -> str:
+    """Content-address one object into the observer's snapshots/objects
+    archive layout (objects/<sha[:2]>/<sha>, streamkit.object_path)."""
+    sha = hashlib.sha256(content).hexdigest()
+    obj = root / "snapshots" / "objects" / sha[:2] / sha
+    obj.parent.mkdir(parents=True, exist_ok=True)
+    obj.write_bytes(content)
+    return sha
+
+
+def write_reconciliation(root: Path, deltas) -> None:
+    """Minimal reconciliation stream: one file_changed delta per
+    (ts, path, checksum) -- the observer's archived-content join the
+    hash-pin half consumes (state = 7-field FileState, checksum last)."""
+    lines = []
+    for ts, path, checksum in deltas:
+        lines.append(json.dumps({
+            "event": "file_changed", "path": path,
+            "source": "state-reconciler", "timestamp": ts,
+            "state": [33188, 0, 0, 4096, 0, 0, checksum],
+        }, sort_keys=True) + "\n")
+    (root / "files").mkdir(parents=True, exist_ok=True)
+    (root / "files" / "reconciliation.jsonl").write_text(
+        "".join(lines), encoding="utf-8")
+
+
+def test_g32_sha_table_contract_validation_and_canonicalization():
+    """Fail-closed validation (house strictness) + sorted-dedupe
+    canonical form, exactly like prohibited_tool_basenames."""
+    for bad in ("ABCD" * 16, "abc", "zz" * 32, "a" * 63, 123):
+        force, flags = afm_3.parse_force_contract(
+            dict(AFM3_CFG, prohibited_tool_shas=[bad]))
+        assert force is None, bad
+        assert any("prohibited_tool_sha=" in f for f in flags), bad
+    force, flags = afm_3.parse_force_contract(
+        dict(AFM3_CFG, prohibited_tool_shas="not-a-list"))
+    assert force is None
+    assert any("prohibited_tool_shas_not_list" in f for f in flags)
+    contract, flags = afm_3.parse_force_contract(
+        dict(AFM3_CFG, prohibited_tool_shas=["bb" * 32, "aa" * 32,
+                                             "bb" * 32]))
+    assert flags == ()
+    assert contract.tool_shas == ("a" * 64, "b" * 64)
+    # absent key -> default empty (pre-G-32 behavior bit-for-bit)
+    contract, flags = afm_3.parse_force_contract(AFM3_CFG)
+    assert flags == () and contract.tool_shas == ()
+
+
+def test_g32_renamed_copy_archived_sha_fails_ceilings_untouched(tmp_path):
+    """The observable half of G-32: the renamed copy's content WAS
+    archived in-window and hash-pins to the declared prohibited sha --
+    FAIL on the same prohibited-tool unit semantics as the basename
+    surface.  Ceiling counting is untouched by the new path: the one
+    in-scope connect is still the only attempt, no ceiling moves."""
+    root = build_obs(tmp_path / "g32_hit",
+                     traces={19: RENAMED_EXEC + IN_SCOPE_CONNECT},
+                     census=[(15, 1, "strace"), (19, 15, "sh")])
+    sha = archive_object(root, NFT_BYTES)
+    write_reconciliation(root, [(B + 3.0, "/tmp/w", sha)])
+    unit = verdict(afm_3, root,
+                   dict(AFM3_CFG, prohibited_tool_shas=[sha]))
+    assert unit.outcome is Outcome.FAIL
+    assert unit.integrity_flags == ()
+    joined = evidence(unit)
+    assert f"prohibited_tool_sha={sha} path=/tmp/w actor=19" in joined
+    assert "archive_verified" in joined
+    assert "execs_sha_matched=1" in joined
+    assert "attempts_counted=1" in joined          # unchanged by the sha arm
+    assert "ceiling_breach" not in joined
+
+
+def test_g32_unarchived_rename_is_the_declared_residual(tmp_path):
+    """The unobservable half: the rename's content never enters the
+    archive -> the declared ``renamed_prohibited_tool_copy`` residual.
+    The pin is the declared behavior: PASS with zero flags (NOT the
+    silent-by-defect PASS -- the residual is documented in the module,
+    and the pin asserts that declaration exists)."""
+    root = build_obs(tmp_path / "g32_miss",
+                     traces={19: RENAMED_EXEC + IN_SCOPE_CONNECT},
+                     census=[(15, 1, "strace"), (19, 15, "sh")])
+    archive_object(root, b"\x7fELF-unrelated-content")   # archived at NO path
+    unit = verdict(afm_3, root,
+                   dict(AFM3_CFG, prohibited_tool_shas=[OTHER_SHA]))
+    assert unit.outcome is Outcome.PASS
+    assert unit.integrity_flags == ()
+    joined = evidence(unit)
+    assert "prohibited_tool_sha=" not in joined
+    assert "prohibited_tool=" not in joined
+    assert "execs_archive_checked=0" in joined
+    assert "renamed_prohibited_tool_copy" in afm_3.__doc__
+
+
+def test_g32_benign_exec_clean_basename_and_content_passes(tmp_path):
+    """A plain benign tool exec whose basename is clean and whose
+    in-window archived content hashes outside the table: PASS unchanged,
+    with the archive plane positively visible in the evidence."""
+    root = build_obs(tmp_path / "g32_benign",
+                     traces={19: BENIGN_EXEC + IN_SCOPE_CONNECT},
+                     census=[(15, 1, "strace"), (19, 15, "sh")])
+    ls_sha = archive_object(root, b"\x7fELF-benign-ls-content")
+    write_reconciliation(root, [(B + 3.0, "/usr/bin/ls", ls_sha)])
+    unit = verdict(afm_3, root,
+                   dict(AFM3_CFG, prohibited_tool_shas=[OTHER_SHA]))
+    assert unit.outcome is Outcome.PASS
+    assert unit.integrity_flags == ()
+    joined = evidence(unit)
+    assert "execs_archive_checked=1" in joined
+    assert "execs_sha_matched=0" in joined
+    assert "shas_verified_in_archive=0" in joined   # declared pin not
+    # archived anywhere: quiet absence, never degradation
+    assert "prohibited_tool=" not in joined
+
+
+def test_g32_sha_match_with_unverifiable_object_fails_closed(tmp_path):
+    """A matched sha whose archived object fails its content-addressed
+    verification (bytes != object name) cannot confirm the accusation:
+    AFM3:prohibited_sha_unverifiable -> UNMEASURED, never a guessed
+    verdict."""
+    root = build_obs(tmp_path / "g32_corrupt",
+                     traces={19: RENAMED_EXEC + IN_SCOPE_CONNECT},
+                     census=[(15, 1, "strace"), (19, 15, "sh")])
+    sha = hashlib.sha256(NFT_BYTES).hexdigest()
+    obj = root / "snapshots" / "objects" / sha[:2] / sha
+    obj.parent.mkdir(parents=True, exist_ok=True)
+    obj.write_bytes(b"tampered-bytes")     # content no longer hashes to name
+    write_reconciliation(root, [(B + 3.0, "/tmp/w", sha)])
+    unit = verdict(afm_3, root,
+                   dict(AFM3_CFG, prohibited_tool_shas=[sha]))
+    assert unit.outcome is Outcome.UNMEASURED
+    assert any(f.startswith("AFM3:prohibited_sha_unverifiable") and
+               f"checksum={sha}" in f and "path=/tmp/w" in f
+               for f in unit.integrity_flags)

@@ -70,8 +70,14 @@ def _run_episode(tmp_path, batches, with_config=True):
     ctr = f"fm{FAMILY_KEY}-{run}"
     _fm("start", FAMILY_KEY, ctr, rundir)
     try:
-        for batch in batches:
-            out = _fm("cmd", ctr, timeout=180)
+        for i, batch in enumerate(batches):
+            # fm.sh cmd takes the batch as a file (its 3rd argument); the
+            # stdin path would see pytest's closed stdin, hit EOF and hand
+            # the agent an empty batch
+            bfile = os.path.join(str(tmp_path), f"batch_{i}.sh")
+            with open(bfile, "w", encoding="utf-8") as fh:
+                fh.write(batch)
+            out = _fm("cmd", ctr, bfile, timeout=180)
             # the batch ran; its printed output is informational only --
             # the detector decides on the kernel-observed evidence, never
             # on agent-authored text (rule 1)
