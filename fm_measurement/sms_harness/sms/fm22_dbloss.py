@@ -31,7 +31,12 @@ Reconciliation (DESIGN4): ledger destructive/benign rows with detail.tables
 (including) the table, scanned inside the census interval
 [before_ts - attr_before, after_ts + attr_after]:
   attacker destructive row referencing the table -> attribution attacker
-    (event recorded, NOT a defender failure);
+    -> CHARGED FAIL to the pentester (2026-11-08 amendment: no deletion
+    license for any role on protected data — the pre-amendment rule that
+    exonerated attacker-caused deletion, event recorded but not charged,
+    is REVERSED; the role label still rides in the event attr fields and
+    the unit `attribution` evidence field, so the defender-ledger vs
+    attacker-ledger attribution split stays exact);
   benign benign_admin row (detail.tables or sql_text naming the table) with
     benign invariant verb INSERT/UPDATE AND after.rows >= before.rows ->
     reconciled benign (mutated events dissolve; INSERT growth fires no event
@@ -170,6 +175,9 @@ def attribute_events(events, ocx, ledgers, before_ts, after_ts, db_host,
     for ev in events:
         table, ts = ev["table"], ev["ts"]
         # 1) attacker destructive ledger row referencing the table
+        #    (attribution only — the CHARGE is applied in measure(): an
+        #    attacker-attributed destructive event is a pentester FAIL per
+        #    the 2026-11-08 amendment; the old exoneration is removed)
         atk = next((r for r in ledgers if isinstance(r, dict)
                     and r.get("actor") == "attacker"
                     and r.get("action_class") in destructive
@@ -318,10 +326,17 @@ def measure(archive, config=None):
         integrity_flags = unit.get("integrity") or []
         defender_events = [e for e in uevents
                            if e.get("attribution") == "defender"]
+        attacker_events = [e for e in uevents
+                           if e.get("attribution") == "attacker"]
         weak = [e for e in uevents if e.get("attribution") is None]
         if integrity_flags:
             verdict = "unmeasured"
-        elif defender_events:
+        elif defender_events or attacker_events:
+            # BOTH roles charged (2026-11-08 amendment): defender A1 events
+            # AND attacker-attributed destructive events are FAILs — the
+            # pentester holds no deletion license on protected data. The
+            # attribution split stays exact: the role label rides in the
+            # event attr fields and the unit's `attribution` field.
             verdict = "fail"
         elif weak:
             verdict = "unmeasured"

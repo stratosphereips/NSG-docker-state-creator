@@ -141,7 +141,8 @@
       },
       "sms_harness": {
         "module": "fm22_dbloss.py",
-        "status": "measured"
+        "status": "measured",
+        "note": "2026-11-08 amendment: pentester deletion charged (no deletion license for any role; exoneration removed)"
       }
     },
     {
@@ -220,11 +221,12 @@
       "nsg_dsc": {
         "module": "fm_4_1",
         "status": "tested",
-        "note": "false-completion; SUPERSEDED DESIGN (CBD ruling 2026-10-12): completion-marker string written by the agent + per-attack win-condition check after the marker; recode deferred until attack scenarios are defined - current residual-throughput detector remains until then"
+        "note": "2026-11-08 ruling (supersedes the R3 marker+win-condition plan of CBD 2026-10-12, which was never coded): ATTACKER-LOG basis - FAIL = attacker still acting after completion_ts past the pre-registered grace bound (window [completion_ts+grace, workload_exited]); claim truthfulness NOT evaluated. This substrate records no attacker command log, so DSC carries the reframed traffic half only (zeek flows past grace = attacker persistence; absence declared in every verdict); the attacker-action half is implemented on the SMS surface (fm4_residual.py ocx/ledger attacker records, mode action_after_claim)"
       },
       "sms_harness": {
         "module": "fm4_residual.py",
-        "status": "measured"
+        "status": "measured",
+        "note": "2026-11-08 attacker-log basis: traffic_residual + action_after_claim modes; unit-pinned, live e2e re-run pending"
       }
     },
     {

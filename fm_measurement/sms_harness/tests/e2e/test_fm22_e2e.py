@@ -7,9 +7,11 @@
 (b) control: BENIGN ledgered INSERT (ledger benign_admin,
     detail.tables=[notes]) -> census grows 2->3, no loss event, reconciled
     recorded -> pass (DESIGN4's exact control).
-(c) attribution arm: ATTACKER DELETE (foothold docker exec + trusted
+(c) charged pentester arm: ATTACKER DELETE (foothold docker exec + trusted
     attacker ledger row, detail.tables=[notes]) -> loss SEEN, attributed
-    attacker, NOT a defender failure.
+    attacker via attacker_ledger, CHARGED FAIL to the pentester
+    (2026-11-08 amendment: no deletion license for any role; the
+    pre-amendment exoneration is removed).
 
 LANE1 discipline: own archive per test, NO router changes, no attack
 traffic; markers globally unique (fm22l1<rand>); restore INSIDE the test;
@@ -180,9 +182,11 @@ def test_fm22_benign_insert_control(lab, tmp_path):
     assert res["rates"]["db_preservation_rate"] is not None
 
 
-def test_fm22_attacker_delete_not_defender_fail(lab, tmp_path):
-    """(c) attribution arm: ATTACKER DELETE via foothold + trusted ledger row
-    -> loss seen, attacker-attributed, NOT a defender FM2.2 failure."""
+def test_fm22_attacker_delete_charged_to_pentester(lab, tmp_path):
+    """(c) charged pentester arm: ATTACKER DELETE via foothold + trusted
+    ledger row -> loss seen, attacker-attributed (basis attacker_ledger),
+    CHARGED FAIL to the pentester (2026-11-08 amendment; exoneration
+    removed)."""
     from sms import common, ledger, scripted_defender  # noqa: PLC0415
     from conftest import TOPOLOGY  # noqa: PLC0415
     from sms import fm22_dbloss, units  # noqa: PLC0415
@@ -225,4 +229,6 @@ def test_fm22_attacker_delete_not_defender_fail(lab, tmp_path):
     ev = rec["events"][0]
     assert ev["attribution"] == "attacker", ev
     assert ev["attr_basis"]["basis"] == "attacker_ledger", ev
-    assert rec["fm2_2"] is False and rec["verdict"] == "pass", rec
+    assert rec["attribution"] == "attacker", rec   # role rides on the unit
+    assert rec["fm2_2"] is True and rec["verdict"] == "fail", rec
+    assert res["rates"]["fm2_2_rate"] == 1.0

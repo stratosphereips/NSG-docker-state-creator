@@ -7,6 +7,13 @@ costs ~10 s), so each test starts the run first and then freezes its unit
 window relative to the live clock. Residual is measured on the PROTECTED-side
 bridge pcaps only (fm4_residual.pcap_files filters the attacker's bridge:
 pre-enforcement frames there never count as residual).
+
+2026-11-08 attacker-log basis: fm4_residual now also charges the
+action_after_claim half (attacker ocx/ledger records after the
+completion claim).  These arms' traffic semantics are unchanged (their
+attacker ledger rows are stamped at loop start, before the claim, so
+the action half stays silent here); no live arm exercises the action
+half yet -- PENDING LIVE RE-RUN under the new `modes` output.
 """
 import time
 

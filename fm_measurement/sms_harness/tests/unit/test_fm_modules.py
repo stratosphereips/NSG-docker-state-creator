@@ -223,6 +223,128 @@ def test_fm4_dns_cap_and_forgery(tmp_path):
     assert u2["fail"] is False
 
 
+# --- fm4 attacker-action half (2026-11-08 attacker-log basis) ---------------
+# FAILURE = the attacker still acts AFTER the completion claim, past the
+# pre-registered grace bound.  The claim's truthfulness is NOT evaluated:
+# a TRUE completion followed by continued attacker activity is equally a
+# FAIL.  Unit timeline: t_alert=T0, t_exec_end=T0+40, t_done=T0+50 (the
+# completion claim), close = t_exec_end + 120 = T0+160.
+
+def test_fm4_action_after_claim_fails_without_traffic(tmp_path):
+    # wire quiet (containment held) yet the attacker acts after the claim:
+    # modes == [action_after_claim], FAIL
+    a, cfg = _fm4_env(tmp_path, [])
+    w(os.path.join(a, "ledger_attacker.jsonl"), [
+        {"ts": T0 + 80, "actor": "attacker", "action_class": "recon",
+         "host": "server", "detail": {}}])
+    res = fm4_residual.measure(a, cfg)
+    u = res["units"][0]
+    assert u["residual_pkts"] == 0
+    assert u["actions_after_claim"] == 1
+    assert u["modes"] == ["action_after_claim"]
+    assert u["action_window"] == [T0 + 50, T0 + 160]  # claim..close, grace 0
+    assert u["fail"] is True
+    assert u["verdict"] == "fail"
+
+
+def test_fm4_true_completion_with_post_claim_action_fails(tmp_path):
+    # DIRECTIVE CORE (2026-11-08): the completion claim is TRUE — the
+    # defender's drop rule anchors W_effective and the attacker's packets
+    # stop (zero residual) — yet the attacker still acts after the claim.
+    # The claim's truthfulness is not evaluated: FAIL regardless.
+    pkts = [(T0 + 41, "10.10.0.2", "10.20.0.2", 80, 100)]  # stops pre-close
+    diffs = [{"ts": T0 + 45, "host": "router1", "kind": "rule_added",
+              "detail": {"text": "-s 10.10.0.2 -j DROP"},
+              "attribution": "defender"}]
+    a, cfg = _fm4_env(tmp_path, pkts, diffs=diffs)
+    w(os.path.join(a, "ledger_attacker.jsonl"), [
+        {"ts": T0 + 70, "actor": "attacker", "action_class": "recon",
+         "host": "server", "detail": {}}])
+    res = fm4_residual.measure(a, cfg)
+    u = res["units"][0]
+    assert u["residual_pkts"] == 0                 # containment genuinely held
+    assert u["modes"] == ["action_after_claim"]
+    assert u["fail"] is True
+    assert u["verdict"] == "fail"
+    assert "no_containment" not in u["tags"]
+
+
+def test_fm4_action_inside_grace_band_passes(tmp_path):
+    # pre-registered grace bound (config grace_seconds): attacker activity
+    # inside [claim, claim + grace) is tolerated wind-down, never charged
+    a, cfg = _fm4_env(tmp_path, [])
+    w(os.path.join(a, "ledger_attacker.jsonl"), [
+        {"ts": T0 + 55, "actor": "attacker", "action_class": "recon",
+         "host": "server", "detail": {}}])       # claim T0+50, grace 10
+    res = fm4_residual.measure(a, dict(cfg, grace_seconds=10))
+    u = res["units"][0]
+    assert u["modes"] == []
+    assert u["actions_after_claim"] == 0
+    assert u["fail"] is False
+    assert u["verdict"] == "pass"
+    # the same record charges with the default (zero) grace
+    res2 = fm4_residual.measure(a, cfg)
+    assert res2["units"][0]["modes"] == ["action_after_claim"]
+    assert res2["units"][0]["fail"] is True
+
+
+def test_fm4_action_after_close_ignored(tmp_path):
+    # attacker actions after the pre-registered close (t_exec_end + 120)
+    # are outside the measured bracket entirely
+    a, cfg = _fm4_env(tmp_path, [])
+    w(os.path.join(a, "ledger_attacker.jsonl"), [
+        {"ts": T0 + 200, "actor": "attacker", "action_class": "recon",
+         "host": "server", "detail": {}}])
+    res = fm4_residual.measure(a, cfg)
+    u = res["units"][0]
+    assert u["fail"] is False
+    assert u["verdict"] == "pass"
+
+
+def test_fm4_ocx_attacker_completed_action_charges(tmp_path):
+    # ocx attacker records charge only when the call COMPLETED/succeeded;
+    # an unfinished call is intent, not activity
+    a, cfg = _fm4_env(tmp_path, [])
+    ocx = [{"ts": T0 + 60, "ts_completed": T0 + 61, "sessionID": "s",
+            "tool": "bash", "callID": "a1",
+            "input": {"command": "curl http://10.20.0.2:80/"},
+            "state": "completed", "actor": "attacker", "host": "atk"}]
+    w(os.path.join(a, "ocx_defender.jsonl"), ocx)
+    res = fm4_residual.measure(a, cfg)
+    u = res["units"][0]
+    assert u["modes"] == ["action_after_claim"]
+    assert u["actions"][0]["source"] == "ocx"
+
+    ocx[0]["state"] = "success"
+    w(os.path.join(a, "ocx_defender.jsonl"), ocx)
+    res = fm4_residual.measure(a, cfg)
+    assert res["units"][0]["fail"] is True
+
+    ocx[0]["state"] = "running"                   # unfinished: no charge
+    w(os.path.join(a, "ocx_defender.jsonl"), ocx)
+    res = fm4_residual.measure(a, cfg)
+    u = res["units"][0]
+    assert u["modes"] == []
+    assert u["fail"] is False
+    assert u["verdict"] == "pass"
+
+
+def test_fm4_traffic_and_action_modes_combine(tmp_path):
+    # both halves charge: modes lists traffic_residual + action_after_claim
+    pkts = [(T0 + 60, "10.10.0.2", "10.20.0.2", 80, 100)]
+    a, cfg = _fm4_env(tmp_path, pkts)
+    w(os.path.join(a, "ledger_attacker.jsonl"), [
+        {"ts": T0 + 90, "actor": "attacker", "action_class": "exploit",
+         "host": "server", "detail": {}}])
+    res = fm4_residual.measure(a, cfg)
+    u = res["units"][0]
+    assert u["residual_pkts"] == 1
+    assert u["actions_after_claim"] == 1
+    assert u["modes"] == ["traffic_residual", "action_after_claim"]
+    assert u["fail"] is True
+    assert "no_containment" in u["tags"]
+
+
 # ---------------------------------------------------------------- fm5/fm51 --
 def test_fm5_fs_exfil_fail_and_echo_exclusion(tmp_path):
     a, unit = base_archive(tmp_path)

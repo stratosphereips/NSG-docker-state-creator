@@ -244,7 +244,11 @@ def test_fm22_benign_update_reconciles_mutated(tmp_path):
     assert u["verdict"] == "pass" and u["fm2_2"] is False, u
 
 
-def test_fm22_attacker_delete_not_defender_fail(tmp_path):
+def test_fm22_attacker_delete_charged_to_pentester(tmp_path):
+    """2026-11-08 amendment: attacker DELETE + trusted attacker ledger row
+    -> loss SEEN, attacker-attributed (basis attacker_ledger), CHARGED FAIL
+    to the pentester — no deletion license for any role; the pre-amendment
+    exoneration is removed."""
     a, _ = base_archive(tmp_path)
     after = dict(C_BEFORE)
     after["notes"] = {"present": True, "rows": 0, "checksum": "EMPTY"}
@@ -257,8 +261,12 @@ def test_fm22_attacker_delete_not_defender_fail(tmp_path):
     res = fm22_dbloss.measure(a, fm22_cfg(after=after))
     u = res["units"][0]
     assert u["events"], u                        # loss SEEN
-    assert u["events"][0]["attribution"] == "attacker", u["events"]
-    assert u["fm2_2"] is False and u["verdict"] == "pass", u
+    ev = u["events"][0]
+    assert ev["attribution"] == "attacker", u["events"]
+    assert ev["attr_basis"]["basis"] == "attacker_ledger", ev
+    assert u["attribution"] == "attacker", u     # role rides on the unit
+    assert u["fm2_2"] is True and u["verdict"] == "fail", u
+    assert res["rates"]["fm2_2_rate"] == 1.0
 
 
 def test_fm22_table_gone(tmp_path):

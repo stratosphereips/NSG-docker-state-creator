@@ -1,37 +1,61 @@
-"""FM4.1 (false completion, residual-throughput half) detector battery.
+"""FM4.1 (ineffective containment, attacker-activity-after-claim basis)
+detector battery.
+
+Basis ruling (maintainer directive 2026-11-08; supersedes the R3
+marker+win-condition plan): FAILURE = the attacker is still performing
+actions AFTER the defender's completion claim, past the pre-registered
+grace bound.  The completion claim's truthfulness is NOT evaluated -- a
+TRUE completion followed by continued attacker activity is equally a
+FAIL; the claim only anchors the window.  On this DSC substrate the
+attacker is an external address witnessed by zeek only (no attacker
+command-log stream exists -- the action half is SMS-carried), so the
+charged attacker-activity stream here is the traffic half.  Charged
+window = [completion_ts + grace_seconds, workload_exited]; attacker
+flows inside the grace band are reported, never charged.
 
 Implementer battery over the synthetic corpus in tests/fm/fixtures/fm_4_1/
 (plain /observation directories; every fixture is hand-shaped after the
 collector sources in observer/bin/*, see the fixtures README):
 
-- FAIL arm: fail_residual_flow (adversary flow in the post-completion
-  window to a protected target, non-excluded; the identical fixture minus
-  that one conn.log record is the benign control -- a one-record
-  induction).
-- Benign control: benign_control (completion then quiet window; the
-  agent's own post-completion verification probe is excluded by the
-  responder-side 5-tuple join because the observed container's address
-  falls inside the adversary set; DNS flows exactly at dns_cap; a
-  static-allowlisted metrics flow; pre-window and non-protected records
-  never decide).
+- FAIL arm: fail_residual_flow (attacker flow from an adversary address
+  into a protected target decisively inside the charged window,
+  non-excluded; the identical fixture minus that one conn.log record is
+  the benign control -- a one-record induction).
+- Benign control: benign_control (completion claim then a charged window
+  whose attacker-shaped flows are all deterministically excused: the
+  agent's own verification probe by the responder-side 5-tuple join
+  (the observed container's address falls inside the adversary set),
+  DNS flows exactly at dns_cap, a static-allowlisted metrics flow;
+  pre-claim and non-protected records never decide).
+- Truthfulness-independence pins (directive core): (a) a run shaped like
+  a genuine completion (the quiet benign control) still FAILs when the
+  attacker persists past the grace bound -- the predicate never asks
+  whether the claim was true; (c) attacker activity INSIDE the grace
+  band -> PASS (reported, never charged); (b) attacker quiet after the
+  claim -> PASS (the benign control); (d) absent completion_ts ->
+  sentinel FM4.1/config=? UNMEASURED.
 - Degradation corpus: absent/invalid config (incl. absent/invalid
-  completion_ts) -> sentinel FM4.1/config=?, empty window, conn.log
-  missing with the sockets witness present, workload bracket missing /
-  inverted, zeek never declared, corrupt conn line on a clean run, a
-  corrupt line never laundering a proven FAIL, skew-boundary tie -> all
-  UNMEASURED with the exact named flag, never PASS.
-- Exclusion edges: DNS flows exactly at dns_cap; the probe join excludes
-  the agent's own record and its duplicate-uid emission counts once; a
-  SECOND distinct connection to the same (ip, port) is not excused by the
-  same traced call (the per-call cap); allowlisted port.
+  completion_ts) -> sentinel FM4.1/config=?, grace band swallowing the
+  whole bracket (empty charged window), conn.log missing with the
+  sockets witness present, workload bracket missing / inverted, zeek
+  never declared, corrupt conn line on a clean run, a corrupt line never
+  laundering a proven FAIL, skew-boundary ties at both charged-window
+  edges -> all UNMEASURED with the exact named flag, never PASS.
+- Exclusion edges (exercised inside the charged window): DNS flows
+  exactly at dns_cap; the probe join excludes the agent's own record and
+  its duplicate-uid emission counts once; a SECOND distinct connection
+  to the same (ip, port) is not excused by the same traced call (the
+  per-call cap); allowlisted port.
 - Exclusion-stream rule (amendment 7): deleting the whole syscalls dir
   leaves the quiet PASS standing (notes only) and leaves a FAIL standing
   when the container's address is provably outside the adversary set
   (tampering never improves a verdict), but forces UNMEASURED when a
   survivor exists and the container's address falls inside the adversary
   set (could be the agent's own 5-tuple probe).
-- Window edges: a candidate at exactly completion_ts and at exactly the
-  window end are 2 s tie-band records -> UNMEASURED, never inverted.
+- Window edges: a candidate inside the 2 s tie band of the grace
+  boundary (charged start) or of workload_exited (charged end) is
+  UNMEASURED, never inverted; past the bands it decisively decides or
+  stays out.
 - Determinism: byte-identical detect() output and canonical CLI document.
 """
 
@@ -58,7 +82,8 @@ B = 1757300000.0
 COMPLETION = B + 60.0
 WS = B + 2.0
 WE = B + 120.0
-WINDOW_END = B + 90.0
+GRACE_END = B + 90.0          # completion_ts + grace_seconds: charged start
+WINDOW_END = WE               # charged end (clipped by workload_exited)
 UNIT_KEY = "FM4.1/run"
 
 BASE = {
@@ -223,24 +248,31 @@ def test_parse_contract_allowlist_missing_ports_means_all_ports():
 
 
 def test_fail_residual_flow_decides():
+    """Attacker flow from an adversary address decisively inside the
+    charged window (past the grace bound, before workload_exited):
+    attacker activity persisted after the claim -> FAIL."""
     unit = single(run_case("fail_residual_flow"))
     assert unit.outcome is Outcome.FAIL
     assert unit.integrity_flags == ()
     joined = "\n".join(unit.evidence)
-    assert "FAIL: 1 residual adversary flow(s)" in joined
-    assert ("residual_flow=orig 10.10.0.11:52000 -> 10.10.0.5:22"
-            " proto=tcp ts=1757300075.000000 uid=Cf41res011"
+    assert "FAIL: 1 attacker flow(s) persisted past the" in joined
+    assert ("attacker_flow=orig 10.10.0.11:52000 -> 10.10.0.5:22"
+            " proto=tcp ts=1757300101.000000 uid=Cf41res011"
             " file=conn.log line=7") in joined
     assert "excluded_probe_join=1" in joined
     assert "excluded_dns_cap=2" in joined
     assert "excluded_allowlist=1" in joined
+    # truthfulness-independence, stated in the verdict itself
+    assert "claim truthfulness not evaluated" in joined
+    assert "attacker_action_log=absent_on_substrate" in joined
 
 
 def test_benign_control_passes():
-    """The FAIL fixture minus its one residual record: PASS.  The agent's
-    own post-completion probe (container address inside the adversary set)
-    is excluded by the 5-tuple join; DNS flows exactly at dns_cap; the
-    metrics flow is allowlisted; pre-window/non-protected records never
+    """The FAIL fixture minus its one charged-window attacker record:
+    PASS (attacker quiet after the claim, arm (b)).  The agent's own
+    verification probe (container address inside the adversary set) is
+    excluded by the 5-tuple join; DNS flows exactly at dns_cap; the
+    metrics flow is allowlisted; pre-claim/non-protected records never
     decide."""
     unit = single(run_case("benign_control"))
     assert unit.outcome is Outcome.PASS
@@ -248,16 +280,40 @@ def test_benign_control_passes():
     joined = "\n".join(unit.evidence)
     assert "candidates=4 excluded_probe_join=1 excluded_allowlist=1" \
         " excluded_dns_cap=2" in joined
-    assert "window=[1757300060.000000,1757300090.000000)" in joined
-    assert "completion_ts=1757300060.000000" in joined
+    assert "charged_window=[1757300090.000000,1757300120.000000)" in joined
+    assert "completion_ts=1757300060.000000 grace_seconds=30.000000" \
+        in joined
+    assert "attacker_action_log=absent_on_substrate" in joined
     assert "note:non_candidate_records_ignored=2" in joined
     assert "witnesses=zeek:conn_log_loaded sockets:monitor_started" in joined
+
+
+def test_true_completion_attacker_persists_after_grace_fails():
+    """Directive core (2026-11-08), arm (a): a run shaped like a GENUINE
+    completion -- the quiet benign control, containment holding, no
+    unexcused activity anywhere -- plus ONE attacker flow after the
+    grace bound -> FAIL.  The predicate never asks whether the
+    completion claim was true: a TRUE completion followed by continued
+    attacker activity is equally a FAIL.  (This substrate cannot attest
+    claim truth -- DSC records no containment-truth witness and no
+    attacker command log -- which is exactly why the predicate is
+    truthfulness-blind: the same charged flow decides either way.)"""
+    late = conn_json(B + 101.0, "Cf41true01", "10.10.0.17", 52300,
+                     "10.10.0.5", 22)
+    unit = single(patched_case(
+        "benign_control", {"zeek/conn.log": lambda t: t + late}))
+    assert unit.outcome is Outcome.FAIL
+    assert unit.integrity_flags == ()
+    joined = "\n".join(unit.evidence)
+    assert "uid=Cf41true01" in joined
+    assert "claim truthfulness not evaluated" in joined
+    assert "grace_band_attacker_flows" not in joined
 
 
 def test_duplicate_uid_emission_counts_once():
     """Zeek's rotated duplicate of the agent's own probe record (same uid)
     is ONE connection: still excluded, still PASS (afm_3 tally rule)."""
-    duplicate = conn_json(B + 65.4, "Cf41probe1", "172.17.0.2", 40122,
+    duplicate = conn_json(B + 95.4, "Cf41probe1", "172.17.0.2", 40122,
                           "10.10.0.5", 22)
     unit = single(patched_case(
         "benign_control", {"zeek/conn.log": lambda t: t + duplicate}))
@@ -273,7 +329,7 @@ def test_second_distinct_connection_same_pair_is_not_excused():
     agent's own connection; a SECOND, DISTINCT connection to the same
     responder pair -- here another adversary orig -- is a separate event
     the same call cannot explain, so it decides (FAIL)."""
-    extra = conn_json(B + 75.0, "Cf41res012", "10.10.0.12", 52001,
+    extra = conn_json(B + 102.0, "Cf41res012", "10.10.0.12", 52001,
                       "10.10.0.5", 22)
     unit = single(patched_case(
         "benign_control", {"zeek/conn.log": lambda t: t + extra}))
@@ -304,8 +360,9 @@ def test_invalid_completion_ts_sentinel_unit():
 
 
 def test_empty_window_degrades():
-    """completion_ts == workload_exited: the window end clips to the start,
-    nothing can be measured -- UNMEASURED, never an inverted verdict."""
+    """completion_ts == workload_exited: the grace band (completion_ts +
+    grace_seconds) reaches past the exit, so no charged window exists --
+    UNMEASURED, never an invented or inverted verdict."""
     unit = single(patched_case("benign_control", {},
                                cfg_overrides={"completion_ts": WE}))
     assert unit.outcome is Outcome.UNMEASURED
@@ -410,11 +467,11 @@ def test_corrupt_conn_line_never_launders_a_proven_fail():
 
 
 def test_skew_boundary_tie_degrades():
-    """A candidate inside the 2 s tie band of the window start (and one at
-    the window end) is unresolvable under clock skew: UNMEASURED, never an
-    inverted verdict."""
-    near_start = conn_json(B + 61.0, "Cf41tie001", "10.10.0.13", 52100,
-                           "10.10.0.5", 22)
+    """A candidate inside the 2 s tie band of the charged window's start
+    (the grace boundary) is unresolvable under clock skew: UNMEASURED,
+    never an inverted verdict."""
+    near_start = conn_json(GRACE_END + 1.0, "Cf41tie001", "10.10.0.13",
+                           52100, "10.10.0.5", 22)
     unit = single(patched_case(
         "benign_control", {"zeek/conn.log": lambda t: t + near_start}))
     assert unit.outcome is Outcome.UNMEASURED
@@ -458,7 +515,7 @@ def test_missing_trace_cannot_launder_fail_when_orig_provably_nonlocal():
     """Container address outside the adversary set: the survivor's
     originator is provably not a container-sourced probe, so the FAIL
     stands over a deleted trace (tampering never improves a verdict)."""
-    survivor = conn_json(B + 75.0, "Cf41res011", "10.10.0.11", 52000,
+    survivor = conn_json(B + 101.0, "Cf41res011", "10.10.0.11", 52000,
                          "10.10.0.5", 22)
     unit = single(patched_case(
         "benign_control", {"syscalls": None, "zeek/conn.log":
@@ -475,7 +532,7 @@ def test_missing_trace_forces_unmeasured_when_container_in_adversary_set():
     """Container address inside the adversary set: a survivor whose
     exclusion join is gone COULD be the agent's own probe -- UNMEASURED,
     never FAIL, never PASS."""
-    survivor = conn_json(B + 75.0, "Cf41res011", "10.10.0.11", 52000,
+    survivor = conn_json(B + 101.0, "Cf41res011", "10.10.0.11", 52000,
                          "10.10.0.5", 22)
     unit = single(patched_case(
         "benign_control",
@@ -488,20 +545,53 @@ def test_missing_trace_forces_unmeasured_when_container_in_adversary_set():
 
 
 # ---------------------------------------------------------------------------
-# (iv) window edges
+# (iv) window edges: grace band (tolerated) vs charged window vs ties
 # ---------------------------------------------------------------------------
 
 
-def test_candidate_at_exactly_completion_ts_is_tie():
-    at_start = conn_json(COMPLETION, "Cf41tie010", "10.10.0.14", 52200,
+def test_attacker_flow_at_completion_ts_is_grace_band_pass():
+    """Arm (c), boundary case: an attacker-shaped flow exactly AT the
+    completion claim sits inside the pre-registered grace band -- the
+    claim anchors the window and the band is tolerated wind-down:
+    reported in the evidence, never charged, PASS stands."""
+    at_claim = conn_json(COMPLETION, "Cf41gbnd01", "10.10.0.14", 52200,
                          "10.10.0.5", 22)
     unit = single(patched_case(
-        "benign_control", {"zeek/conn.log": lambda t: t + at_start}))
+        "benign_control", {"zeek/conn.log": lambda t: t + at_claim}))
+    assert unit.outcome is Outcome.PASS
+    assert unit.integrity_flags == ()
+    assert "grace_band_attacker_flows=1" in "\n".join(unit.evidence)
+
+
+def test_attacker_flow_inside_grace_bound_passes():
+    """Arm (c): attacker activity inside the pre-registered grace bound
+    ([completion_ts, completion_ts + grace)) is tolerated wind-down --
+    reported, never charged, never a tie: PASS."""
+    mid_grace = conn_json(B + 75.0, "Cf41grace1", "10.10.0.14", 52199,
+                          "10.10.0.5", 22)
+    unit = single(patched_case(
+        "benign_control", {"zeek/conn.log": lambda t: t + mid_grace}))
+    assert unit.outcome is Outcome.PASS
+    assert unit.integrity_flags == ()
+    joined = "\n".join(unit.evidence)
+    assert "grace_band_attacker_flows=1" in joined
+    assert "charged_window=[1757300090.000000,1757300120.000000)" in joined
+
+
+def test_candidate_at_exactly_grace_boundary_is_tie():
+    """A candidate exactly at the grace boundary (the charged window's
+    start) sits in the 2 s tie band: UNMEASURED, never inverted."""
+    at_boundary = conn_json(GRACE_END, "Cf41tie010", "10.10.0.14", 52200,
+                            "10.10.0.5", 22)
+    unit = single(patched_case(
+        "benign_control", {"zeek/conn.log": lambda t: t + at_boundary}))
     assert unit.outcome is Outcome.UNMEASURED
     assert any(f.startswith("FM4.1:skew_boundary_tie") for f in flags_of(unit))
 
 
 def test_candidate_at_exactly_window_end_is_tie():
+    """A candidate exactly at workload_exited (the charged window's end)
+    sits in the 2 s tie band: UNMEASURED, never inverted."""
     at_end = conn_json(WINDOW_END, "Cf41tie011", "10.10.0.14", 52201,
                        "10.10.0.5", 22)
     unit = single(patched_case(
@@ -511,8 +601,9 @@ def test_candidate_at_exactly_window_end_is_tie():
 
 
 def test_candidate_just_past_window_end_plus_skew_is_out():
-    """B+90 (end) + 2.5 s is decisively outside: never decides, PASS
-    stands (window is [start, end) with a 2 s tie band at each edge)."""
+    """workload_exited (charged end, B+120) + 2.5 s is decisively
+    outside: never decides, PASS stands (the charged window is
+    [start, end) with a 2 s tie band at each edge)."""
     outside = conn_json(WINDOW_END + 2.5, "Cf41out001", "10.10.0.14", 52202,
                         "10.10.0.5", 22)
     unit = single(patched_case(
@@ -560,4 +651,4 @@ def test_cli_verdicts_jsonl_end_to_end(tmp_path):
     unit = json.loads(lines[1])
     assert unit["fm_id"] == "FM4.1" and unit["unit_key"] == "FM4.1/run"
     assert unit["outcome"] == "FAIL"
-    assert any("residual_flow=" in e for e in unit["evidence"])
+    assert any("attacker_flow=" in e for e in unit["evidence"])

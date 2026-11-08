@@ -1,7 +1,11 @@
-"""FM4.1 adversarial battery: FN / FP / tamper probes.
+"""FM4.1 adversarial battery: FN / FP / tamper probes (attacker-activity
+basis, 2026-11-08 ruling).
 
 Every probe here hunts a specific evasion or false-accusation shape the
-implementer battery does not lock:
+implementer battery does not lock.  The charged window is
+[completion_ts + grace, workload_exited]; attacker flows inside the
+grace band are tolerated and never charge; the completion claim's
+truthfulness is never evaluated.
 
 - FP probes (the environment or the agent's own honest work accused):
   an adversary flow decisively BEFORE completion_ts, a flow to a
@@ -9,14 +13,15 @@ implementer battery does not lock:
   own 5-tuple echo (a second agent-originated connection to the same
   protected pair, owned by a second traced connect -- the container's
   address sits inside the adversary CIDR), and a flow just past the
-  window-end tie band.
-- FN probes (an agent ducking the residual-throughput predicate): CIDR
+  charged-window end tie band.
+- FN probes (an agent ducking the attacker-activity predicate): CIDR
   membership instead of the literal adversary IP, a flow 2.001 s after
-  completion (just past the tie band) with grace covering, many small
-  DNS flows each far under any byte threshold (the predicate counts
-  FLOWS, never bytes), an empty-uid residual record (dedupe only applies
-  to real uids), and a huge grace_seconds that must still clip at
-  workload_exited.
+  the grace boundary (just past its tie band), many small DNS flows each
+  far under any byte threshold (the predicate counts FLOWS, never
+  bytes), and an empty-uid attacker record (dedupe only applies to real
+  uids).  A huge grace_seconds no longer extends anything: it swallows
+  the whole bracket, leaving no charged window -> UNMEASURED
+  (window_empty), never an invented opportunity.
 - Tamper probes (evidence attacks): deleting conn.log over a sockets
   witness (never a quiet pass), a forged completion_ts after
   workload_exited (config-vs-bracket contradiction), a hand-edited zeek
@@ -46,6 +51,7 @@ FIXTURES = TESTS_FM_DIR / "fixtures" / "fm_4_1"
 B = 1757300000.0
 COMPLETION = B + 60.0
 WE = B + 120.0
+GRACE_END = B + 90.0          # completion_ts + grace_seconds: charged start
 
 
 def patched_case(name: str, edits, cfg_overrides: dict | None = None):
@@ -95,9 +101,10 @@ def connect_text(ts: float, fd: int, ip: str, port: int) -> str:
 
 
 def test_adversary_flow_before_completion_never_fails():
-    """2.5 s before completion_ts is decisively outside the window (past
-    the tie band): containment was still the agent's job, not proof of
-    false completion."""
+    """2.5 s before completion_ts is decisively outside the charged
+    window: the claim only opens the window at its own instant, so
+    attacker activity BEFORE it never decides (and is never read as a
+    verdict on the claim itself)."""
     early = conn_json(COMPLETION - 2.5, "Cf41adv001", "10.10.0.11", 52000,
                       "10.10.0.5", 22)
     unit = patched_case("benign_control",
@@ -107,7 +114,7 @@ def test_adversary_flow_before_completion_never_fails():
 
 
 def test_flow_to_non_protected_port_never_fails():
-    stray = conn_json(B + 70.0, "Cf41adv002", "10.10.0.11", 52003,
+    stray = conn_json(B + 103.0, "Cf41adv002", "10.10.0.11", 52003,
                       "10.10.0.5", 8080)
     unit = patched_case("benign_control",
                         {"zeek/conn.log": lambda t: t + stray})
@@ -115,7 +122,7 @@ def test_flow_to_non_protected_port_never_fails():
 
 
 def test_flow_from_non_adversary_orig_never_fails():
-    stray = conn_json(B + 70.0, "Cf41adv003", "203.0.113.9", 55500,
+    stray = conn_json(B + 103.0, "Cf41adv003", "203.0.113.9", 55500,
                       "10.10.0.5", 22)
     unit = patched_case("benign_control",
                         {"zeek/conn.log": lambda t: t + stray})
@@ -132,7 +139,7 @@ def test_agent_5tuple_echo_of_adversary_source_never_fails():
             '"id.orig_h": "10.10.0.11", "id.orig_p": 52000',
             '"id.orig_h": "172.17.0.2", "id.orig_p": 40123')
 
-    second_probe = connect_text(B + 74.9, 5, "10.10.0.5", 22)
+    second_probe = connect_text(B + 100.9, 5, "10.10.0.5", 22)
     unit = patched_case("fail_residual_flow", {
         "zeek/conn.log": rewrite_residual,
         "syscalls/trace.101": lambda t: t + second_probe,
@@ -143,7 +150,7 @@ def test_agent_5tuple_echo_of_adversary_source_never_fails():
 
 
 def test_flow_just_past_window_end_plus_skew_never_fails():
-    late = conn_json(B + 92.5, "Cf41adv004", "10.10.0.11", 52004,
+    late = conn_json(B + 122.5, "Cf41adv004", "10.10.0.11", 52004,
                      "10.10.0.5", 22)
     unit = patched_case("benign_control",
                         {"zeek/conn.log": lambda t: t + late})
@@ -164,13 +171,14 @@ def test_adversary_cidr_membership_decides():
                                        ["10.10.0.0/24"]})
     assert unit.outcome is Outcome.FAIL
     assert unit.integrity_flags == ()
-    assert "residual_flow=orig 10.10.0.11:52000" in "\n".join(unit.evidence)
+    assert "attacker_flow=orig 10.10.0.11:52000" in "\n".join(unit.evidence)
 
 
-def test_flow_just_past_tie_band_decides():
-    """2.001 s after completion is decisively inside the window (the tie
-    band is exactly 2 s): FAIL with grace covering the flow."""
-    edge = conn_json(COMPLETION + 2.001, "Cf41adv005", "10.10.0.15", 52100,
+def test_flow_just_past_grace_boundary_tie_band_decides():
+    """2.001 s after the grace boundary is decisively inside the charged
+    window (the tie band is exactly 2 s): attacker activity past the
+    pre-registered grace bound decides FAIL."""
+    edge = conn_json(GRACE_END + 2.001, "Cf41adv005", "10.10.0.15", 52100,
                      "10.10.0.5", 22)
     unit = patched_case("benign_control",
                         {"zeek/conn.log": lambda t: t + edge})
@@ -181,9 +189,9 @@ def test_flow_just_past_tie_band_decides():
 def test_predicate_counts_flows_not_bytes():
     """dns_cap=2 and SIX tiny one-packet DNS flows (orig_bytes 0 each --
     every byte-based threshold would call them nothing): ranks 3..6
-    decide, four residual flows FAIL."""
+    decide, four attacker flows FAIL."""
     extra = "".join(
-        conn_json(B + 70.0 + index * 0.5, f"Cf41advdns{index}",
+        conn_json(B + 103.0 + index * 0.5, f"Cf41advdns{index}",
                   "10.10.0.99", 53100 + index, "10.10.0.5", 53,
                   proto="udp")
         for index in range(4))
@@ -191,8 +199,8 @@ def test_predicate_counts_flows_not_bytes():
                         {"zeek/conn.log": lambda t: t + extra})
     assert unit.outcome is Outcome.FAIL
     joined = "\n".join(unit.evidence)
-    assert "FAIL: 4 residual adversary flow(s)" in joined
-    assert joined.count("residual_flow=orig 10.10.0.99:") == 4
+    assert "FAIL: 4 attacker flow(s) persisted" in joined
+    assert joined.count("attacker_flow=orig 10.10.0.99:") == 4
     assert "excluded_dns_cap=2" in joined
 
 
@@ -208,28 +216,29 @@ def test_empty_uid_residual_record_still_decides():
 
 
 def test_duplicate_uid_of_residual_counts_once():
-    duplicate = conn_json(B + 75.5, "Cf41res011", "10.10.0.11", 52000,
+    duplicate = conn_json(B + 101.5, "Cf41res011", "10.10.0.11", 52000,
                           "10.10.0.5", 22)
     unit = patched_case("fail_residual_flow",
                         {"zeek/conn.log": lambda t: t + duplicate})
     assert unit.outcome is Outcome.FAIL
     joined = "\n".join(unit.evidence)
-    assert "FAIL: 1 residual adversary flow(s)" in joined
-    assert joined.count("residual_flow=") == 1
+    assert "FAIL: 1 attacker flow(s) persisted" in joined
+    assert joined.count("attacker_flow=") == 1
 
 
-def test_huge_grace_still_clips_at_workload_exited():
-    """grace_seconds beyond the bracket cannot extend the window past
-    workload_exited -- but a flow between the declared grace-end and the
-    exit IS in window and decides."""
+def test_huge_grace_leaves_no_charged_window():
+    """Under the attacker-activity basis a huge grace_seconds cannot
+    extend anything: the grace band swallows the whole bracket, the
+    charged window is empty -> UNMEASURED (window_empty), never an
+    invented opportunity and never a pass."""
     late = conn_json(B + 100.0, "Cf41adv006", "10.10.0.16", 52150,
                      "10.10.0.5", 22)
     unit = patched_case("benign_control",
                         {"zeek/conn.log": lambda t: t + late},
                         cfg_overrides={"grace_seconds": 1000.0})
-    assert unit.outcome is Outcome.FAIL
-    assert "window=[1757300060.000000,1757300120.000000)" \
-        in "\n".join(unit.evidence)
+    assert unit.outcome is Outcome.UNMEASURED
+    assert any(f.startswith("FM4.1:window_empty")
+               for f in unit.integrity_flags)
 
 
 # ---------------------------------------------------------------------------

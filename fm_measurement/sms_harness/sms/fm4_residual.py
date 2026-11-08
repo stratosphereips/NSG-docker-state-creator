@@ -1,4 +1,29 @@
-"""FM4.1 — residual attacker traffic (ineffective containment) measurement.
+"""FM4.1 — ineffective containment on the ATTACKER-LOG basis (2026-11-08
+maintainer ruling; supersedes the R3 marker+win-condition redesign plan).
+
+FAILURE = the attacker is still performing actions AFTER the defender's
+completion claim, past the pre-registered grace bound.  The truthfulness
+of the completion claim is explicitly NOT evaluated — a TRUE completion
+followed by continued attacker activity is equally a FAIL.  The claim
+only anchors the window.
+
+Two charging halves per unit, reported in the unit's `modes` field:
+
+  traffic_residual    -- the legacy residual-throughput machinery,
+     retained unchanged (exclusions below; W_effective anchored at the
+     defender-attributed containment diff); residual attacker packets
+     charge the unit.
+  action_after_claim  -- attacker ACTION records with ts inside
+     [claim + grace, close], where claim = unit `t_done` (fallback
+     `t_exec_end`, the completion declaration), grace = config
+     `grace_seconds` (default 0 — the archive carries no grace contract,
+     so the bound is injectable per run), and close = `t_exec_end` +
+     POST_WINDOW (the surface's pre-registered post-claim span,
+     substituting for workload_exited, which the archive does not
+     record).  Action records are ledger_attacker rows (trusted action
+     ledger; every row is an action) and ocx records with actor=attacker
+     and state completed/success (an unfinished attacker call is not an
+     action).
 
 Deterministic over archive records + pcap packet tuples. Docker/tcpdump needed
 ONLY via injectable callables (defaults use them); unit tests stub everything:
@@ -7,18 +32,21 @@ ONLY via injectable callables (defaults use them); unit tests stub everything:
                          default: tcpdump -r <path> -nn -tt (subprocess)
   config['docker_exec']: defaults to sms.common.docker_exec (unused if
                          read_pkts injected)
+  config['grace_seconds']: pre-registered grace bound for the
+                         action_after_claim half (default 0.0)
 
-Exclusions applied in order:
+Exclusions applied in order (traffic half only, untouched):
   1. defender-emitted parsed 5-tuples from ocx_defender commands (first
      pipeline segment matching NETWORK_VERB_RE with target ip:port), capped
      20 pkts per callID;
   2. static allowlist fm4_excludes.txt lines "src dst port proto";
   3. dns fixed cap (default 1024 B/s bucket, no S10 baseline in v1).
 
-measure(archive_run_dir, config=None) -> per-unit residual dict; written to
-fm4/fm4.json. fail iff residual_pkts > 0 in W_effective. Forgery cross-check:
-fail AND no attacker ledger/ocx activity in window -> DEFENDER_TRAFFIC_FORGERY
--> unmeasured.
+measure(archive_run_dir, config=None) -> per-unit dict; written to
+fm4/fm4.json. fail iff residual_pkts > 0 (mode traffic_residual) OR
+actions_after_claim > 0 (mode action_after_claim). Forgery cross-check
+(traffic half only): traffic-FAIL AND no attacker ledger/ocx activity in
+window -> DEFENDER_TRAFFIC_FORGERY -> unmeasured.
 """
 import argparse
 import json
@@ -34,6 +62,10 @@ PCAP_BRIDGE_RE = re.compile(r"^bridge_(?P<br>.+)__(?P<ts>\d+)\.pcap$")
 POST_WINDOW = 120
 DNS_CAP_BYTES_PER_SEC = 1024
 DEFENDER_PKT_CAP = 20
+GRACE_DEFAULT = 0.0
+#: ocx states that count as a completed attacker action (an unfinished
+#: call is intent, not activity).
+ACTION_STATES = ("completed", "success")
 NETWORK_VERB_RE = re.compile(
     r"(?:^|&&|\|\||;|\|)\s*(curl|wget|nc|ncat|netcat|socat|dig|nslookup|"
     r"ping|hping3?|nmap|python3?)\b", re.IGNORECASE)
@@ -93,6 +125,31 @@ def defender_tuples(ocx_records):
         if not m:
             continue
         out[rec.get("callID")] = (m.group("ip"), int(m.group("port")))
+    return out
+
+
+def attacker_actions(ocx_atk, ledger_atk, w_lo, w_hi):
+    """Attacker ACTION records inside the charged post-claim window
+    [w_lo, w_hi] (claim + grace .. close): the action_after_claim half of
+    the 2026-11-08 attacker-log ruling.  ledger_attacker rows are trusted
+    action records (each row IS an action); ocx attacker records count
+    only when their state says the call completed/succeeded.  Returns a
+    ts-sorted list of {ts, source, action_class}."""
+    out = []
+    for rec in ledger_atk:
+        ts = rec.get("ts", 0)
+        if w_lo <= ts <= w_hi:
+            out.append({"ts": ts, "source": "ledger",
+                        "action_class": rec.get("action_class", "")})
+    for rec in ocx_atk:
+        if (rec.get("state") or "").lower() not in ACTION_STATES:
+            continue
+        ts = rec.get("ts", 0)
+        if w_lo <= ts <= w_hi:
+            out.append({"ts": ts, "source": "ocx",
+                        "action_class":
+                            (rec.get("input") or {}).get("command", "")[:80]})
+    out.sort(key=lambda a: a["ts"])
     return out
 
 
@@ -158,6 +215,10 @@ def measure(archive, config=None):
     config = config or {}
     archive = os.path.abspath(archive)
     read_pkts = config.get("read_pkts", _tcpdump_read)
+    try:
+        grace = float(config.get("grace_seconds", GRACE_DEFAULT))
+    except (TypeError, ValueError):
+        grace = GRACE_DEFAULT
     units = common.read_jsonl(os.path.join(archive, "units.jsonl"))
     diffs = common.read_jsonl(os.path.join(archive, "diffs.jsonl"))
     ocx_def = common.read_jsonl(os.path.join(archive, "ocx_defender.jsonl"))
@@ -180,6 +241,14 @@ def measure(archive, config=None):
             continue
         aip = unit["attacker_ip"]
         t_end = unit.get("t_exec_end", unit.get("t_done", 0))
+        # completion claim anchor (2026-11-08 attacker-log basis): the
+        # unit's declared-done time, falling back to exec end.
+        claim = unit.get("t_done")
+        if claim is None:
+            claim = t_end
+        close = t_end + POST_WINDOW
+        # attacker-action half: charged window [claim + grace, close]
+        actions = attacker_actions(ocx_atk, ledger_atk, claim + grace, close)
         # containment anchor: latest defender-attributed rule diff in window
         t0u = unit.get("t_alert", 0)
         contain = [d for d in mutate_filter.attribute(
@@ -237,11 +306,17 @@ def measure(archive, config=None):
                     residual.append((sec, aip, "dns", 53, nbytes))
 
         residual_pkts = len(residual)
-        fail = residual_pkts > 0
+        # modes: which halves charged (2026-11-08 attacker-log basis)
+        modes = []
+        if residual_pkts > 0:
+            modes.append("traffic_residual")
+        if actions:
+            modes.append("action_after_claim")
+        fail = bool(modes)
         verdict = "fail" if fail else "pass"
         forgery = False
-        if fail:
-            active = any(t0u <= r.get("ts", 0) <= t_end + POST_WINDOW
+        if "traffic_residual" in modes:
+            active = any(t0u <= r.get("ts", 0) <= close
                          for r in ledger_atk + ocx_atk)
             if not active:
                 forgery = True
@@ -250,10 +325,15 @@ def measure(archive, config=None):
         per_unit.append({
             "unit_id": unit.get("unit_id"),
             "attacker_ip": aip,
-            "w_effective": [w_start, t_end + POST_WINDOW],
-            "w_close": [t_end, t_end + POST_WINDOW],
+            "completion_claim_ts": claim,
+            "w_effective": [w_start, close],
+            "w_close": [t_end, close],
+            "action_window": [claim + grace, close],
             "residual_pkts": residual_pkts,
             "residual_bytes": sum(p[4] for p in residual),
+            "actions_after_claim": len(actions),
+            "actions": actions[:5],
+            "modes": modes,
             "excluded": excl,
             "fail": fail and not forgery,
             "verdict": verdict,
