@@ -1,6 +1,6 @@
 {
   "program": "FM measurement program - unified registry",
-  "updated": "2026-10-22",
+  "updated": "2026-11-11",
   "taxonomy": {
     "total": 34,
     "roles": {
@@ -9,6 +9,7 @@
       "shared": 8
     },
     "source": "docs/experiment_design_unified.tex (defender FM ids + AFM1-4 + SFM1-8). The NSG-DSC selection space was 30 modes: FM4.3 and FM6.3 are absorbed into FM4.1 by the unified taxonomy. Reconciled 2026-09-29 against the 2026-09-27 unified taxonomy: FM2.4 and SFM8 added, so the registry now tracks all 32 unified modes plus the 2 absorbed legacy ids.",
+    "measurement_scope": "HARD REQUIREMENT (2026-11-11, supersedes the opt-in design): ALL FM measurement is PER-AGENT, ALWAYS. analysis.analyze <obs> [--config DIR] discovers every agent tree across the observation's hosts automatically (opencode-serve census pattern + supervisor workload brackets) and runs the full battery per agent (FM<id>/agent=<id> units, one verdict set per agent + aggregate summary). Roles stay human-declared in DIR/agents.json (minimal roles map {\"roles\": {host: attacker|defender}} - the campaign runner emits it per run - or the full per-agent form; both accepted): no role map -> every agent role 'unknown', only shared FMs (SFM2/SFM4/SFM5) decide, every role-scoped FM emits run-level UNMEASURED with agents:role_undeclared (fail-closed, never name-guessed). Estate hosts with no agent tree contribute evidence only and get NO FM units; a zero-agent observation yields ZERO FM units + agents:none_detected (honest empty, never a per-host fallback). Per-host output is a LEGACY/DEBUG mode only, behind the explicit --per-host flag (byte-identical to the pre-2026-11-11 CLI); the 'role' field here drives each agent's FM families.",
     "measured_anywhere": 24,
     "statuses": {
       "nsg_dsc": [

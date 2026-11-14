@@ -1,0 +1,1 @@
+{"conn_state": "SF", "duration": 1.2, "id.orig_h": "172.17.0.2", "id.orig_p": 40122, "id.resp_h": "10.10.0.5", "id.resp_p": 80, "orig_bytes": 243, "proto": "tcp", "resp_bytes": 448, "ts": 1757200010.0, "uid": "Cagent0001"}

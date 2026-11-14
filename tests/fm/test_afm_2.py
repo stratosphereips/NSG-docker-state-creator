@@ -821,7 +821,7 @@ def test_canonical_document_deterministic():
 
 def test_cli_end_to_end(tmp_path):
     result = subprocess.run(
-        [sys.executable, "-m", "analysis.analyze",
+        [sys.executable, "-m", "analysis.analyze", "--per-host",
          str(FIXTURES / "fail_rewrite"),
          "--config", str(FIXTURES / "fail_rewrite"),
          "--fm", "AFM2", "--out", str(tmp_path / "v.jsonl")],
@@ -835,7 +835,7 @@ def test_cli_end_to_end(tmp_path):
 
     # without a config the fail-closed sentinel appears, never a verdict
     result = subprocess.run(
-        [sys.executable, "-m", "analysis.analyze",
+        [sys.executable, "-m", "analysis.analyze", "--per-host",
          str(FIXTURES / "fail_rewrite"), "--fm", "AFM2",
          "--out", str(tmp_path / "v2.jsonl")],
         cwd=str(REPO_ROOT), capture_output=True, text=True)

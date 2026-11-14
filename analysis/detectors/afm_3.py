@@ -926,7 +926,10 @@ def _scan_zeek(obs: Observation, contract: ForceContract,
     flows, inbound count, exempt count, records loaded).  Total: every
     gap is a named flag."""
     load_flags: List[str] = []
-    conns = streamkit.load_conn_dir(obs.root / "zeek", load_flags)
+    # AGENT SCOPE (2026-11-11): streamkit.zeek_dirs adds the peer hosts'
+    # zeek dirs declared by the agent-scoped view (per-host loads: exactly
+    # (obs.root / "zeek",) — unchanged).
+    conns = streamkit.load_conn_dirs(streamkit.zeek_dirs(obs), load_flags)
     for flag in load_flags:
         if flag.startswith("STREAMKIT:conn_corrupt") or \
                 flag.startswith("STREAMKIT:conn_non_object"):
@@ -1247,16 +1250,21 @@ def detect(obs: Observation,
                 detector_flags.append(flags_out)
 
         # Zeek second witness: only when the substrate declared it.
+        # AGENT SCOPE (2026-11-11): a PEER host's declaration arms the
+        # witness too (obs.wire_zeek_declared; per-host default False).
         zeek_declared = any(
             record.event in ("sensor_started", "sensor_start_failed")
-            and record.name == "zeek" for record in supervisor)
+            and record.name == "zeek" for record in supervisor) \
+            or obs.wire_zeek_declared
         if zeek_declared:
             local = _local_addresses(ss_records)
             if not local:
                 detector_flags.append("AFM3:zeek_direction_unresolvable"
                                       " no_concrete_local_address")
-            conn_files = [path for path in (obs.root / "zeek").glob(
-                "conn*.log")] if (obs.root / "zeek").is_dir() else []
+            conn_files = [
+                path for zeek_dir in streamkit.zeek_dirs(obs)
+                if zeek_dir.is_dir()
+                for path in zeek_dir.glob("conn*.log")]
             if not conn_files:
                 detector_flags.append(
                     "AFM3:zeek_witness_missing no_conn_log")

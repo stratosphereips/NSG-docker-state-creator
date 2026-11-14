@@ -269,7 +269,7 @@ def test_determinism_bit_for_bit():
 
 def test_cli_end_to_end_with_config(tmp_path):
     result = subprocess.run(
-        [sys.executable, "-m", "analysis.analyze",
+        [sys.executable, "-m", "analysis.analyze", "--per-host",
          str(FAM / "fail_wildcard_bind"),
          "--config", str(FAM / "fail_wildcard_bind"),
          "--fm", "FM3.2", "--json", "--out", str(tmp_path / "v.jsonl")],

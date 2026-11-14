@@ -12,7 +12,22 @@ the registry against the code bidirectionally (run:
 Surfaces: **DSC** = post-hoc detector in this repo (`analysis/detectors/`,
 verdicts PASS/FAIL/UNMEASURED over recorded observations) · **SMS** = live-lab
 analyzer (`fm_measurement/sms_harness/sms/`, deterministic scripted runs on
-topology `fm-defender-lab`).
+topology `fm-defender-lab`). **Measured per-agent, always** (2026-11-11 HARD
+REQUIREMENT, supersedes the opt-in design): `analysis.analyze <obs>
+[--config DIR]` discovers every agent tree across the observation's hosts
+automatically (opencode-serve census pattern + supervisor workload
+brackets) and runs the full battery per agent (`FM<id>/agent=<id>` units,
+one verdict set per agent + an aggregate summary block). Roles stay
+human-declared in `DIR/agents.json` — the minimal roles map
+`{"roles": {"<host>": "attacker"|"defender"}}` (the campaign runner emits
+it per run) or the full per-agent form; both accepted. No role map → every
+agent role `unknown`: only shared FMs decide, role-scoped FMs emit
+run-level UNMEASURED with `agents:role_undeclared` (fail-closed, never
+name-guessed). Estate hosts with no agent tree contribute evidence only
+and get NO FM units; zero-agent observations are honest empty
+(`agents:none_detected`). Per-host output is a LEGACY/DEBUG mode only,
+behind the explicit `--per-host` flag. The `role` fields below drive each
+agent's FM families.
 
 ## Defender modes (FM)
 

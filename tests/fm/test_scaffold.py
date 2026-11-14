@@ -199,7 +199,8 @@ def _run_cli(*args: str):
 
 
 def test_cli_json_end_to_end_and_deterministic(tmp_path):
-    out1 = _run_cli(str(SMOKE_FIXTURE), "--json", "--fm", "SMOKE",
+    out1 = _run_cli(str(SMOKE_FIXTURE), "--per-host", "--json",
+                    "--fm", "SMOKE",
                     "--out", str(tmp_path / "v1.jsonl"))
     assert out1.returncode == 0, out1.stderr
     doc = json.loads(out1.stdout)
@@ -210,7 +211,8 @@ def test_cli_json_end_to_end_and_deterministic(tmp_path):
     assert len(units) == 9
     assert {u["outcome"] for u in units} == {"PASS"}
 
-    out2 = _run_cli(str(SMOKE_FIXTURE), "--json", "--fm", "SMOKE",
+    out2 = _run_cli(str(SMOKE_FIXTURE), "--per-host", "--json",
+                    "--fm", "SMOKE",
                     "--out", str(tmp_path / "v2.jsonl"))
     assert out1.stdout == out2.stdout  # byte-identical canonical output
 
@@ -226,7 +228,8 @@ def test_cli_table_output_and_exit_codes(tmp_path):
     # auto-discovery picks up every analysis.detectors module, so a bare run
     # also renders whatever FM detectors have landed (their units over this
     # minimal fixture are legitimately UNMEASURED victim=none units).
-    result = _run_cli(str(SMOKE_FIXTURE), "--fm", "SMOKE",
+    result = _run_cli(str(SMOKE_FIXTURE), "--per-host",
+                      "--fm", "SMOKE",
                       "--out", str(tmp_path / "v.jsonl"))
     assert result.returncode == 0
     assert "SMOKE/stream=supervisor" in result.stdout

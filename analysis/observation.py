@@ -113,6 +113,13 @@ class Observation:
     health: HealthFinal | None = None
     flags: tuple[StreamFlag, ...] = ()
     pins: EnvelopePins = DEFAULT_ENVELOPE_PINS
+    #: Agent-scoped wire plane (analysis.agents): peer hosts' zeek
+    #: directories and the fact that a PEER host's supervisor declares a
+    #: zeek sensor.  Empty/False in every per-host load (the default), so
+    #: per-host behavior is untouched; the conn.log loaders consult these
+    #: so the agent's wire evidence is read wherever it was captured.
+    wire_zeek_dirs: tuple[Path, ...] = ()
+    wire_zeek_declared: bool = False
 
 
 # ---------------------------------------------------------------------------

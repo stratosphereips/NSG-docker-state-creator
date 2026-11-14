@@ -724,7 +724,8 @@ def test_cli_end_to_end_deterministic(tmp_path):
     shutil.copy(case / "config.json", config_dir / "fm_4_2.json")
     outs = []
     for i in (1, 2):
-        result = _run_cli(str(case), "--fm", "FM4.2", "--json",
+        result = _run_cli(str(case), "--per-host", "--fm", "FM4.2",
+                          "--json",
                           "--config", str(config_dir),
                           "--out", str(tmp_path / f"v{i}.jsonl"))
         assert result.returncode == 0, result.stderr
@@ -750,7 +751,8 @@ def test_cli_config_dir_selects_contract(tmp_path):
         "contract_version": "2026-10-origin-1",
         "attacker_opencode_roots": [{"pid": 10, "start_ticks": "10"}]}),
         encoding="utf-8")
-    result = _run_cli(str(case), "--fm", "FM4.2", "--json",
+    result = _run_cli(str(case), "--per-host", "--fm", "FM4.2",
+                      "--json",
                       "--config", str(config_dir),
                       "--out", str(tmp_path / "v.jsonl"))
     assert result.returncode == 0, result.stderr

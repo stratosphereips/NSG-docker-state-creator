@@ -640,7 +640,7 @@ def test_cli_verdicts_jsonl_end_to_end(tmp_path):
     case = FIXTURES / "fail_residual_flow"
     out = tmp_path / "verdicts.jsonl"
     result = subprocess.run(
-        [sys.executable, "-m", "analysis.analyze", str(case),
+        [sys.executable, "-m", "analysis.analyze", "--per-host", str(case),
          "--config", str(case), "--fm", "FM4.1", "--out", str(out)],
         capture_output=True, text=True, cwd=REPO_ROOT,
         env={"PATH": "/usr/bin:/bin", "PYTHONIOENCODING": "utf-8"})

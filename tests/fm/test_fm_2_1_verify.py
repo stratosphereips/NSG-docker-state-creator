@@ -581,7 +581,7 @@ def test_v3_determinism_byte_identical():
 
 def test_v2_cli_end_to_end(tmp_path):
     result = subprocess.run(
-        [sys.executable, "-m", "analysis.analyze",
+        [sys.executable, "-m", "analysis.analyze", "--per-host",
          str(FIXTURES / "v2_arming_renameat2_abs"),
          "--config", str(FIXTURES / "v2_arming_renameat2_abs"),
          "--fm", "FM2.1", "--json", "--out", str(tmp_path / "v.jsonl")],

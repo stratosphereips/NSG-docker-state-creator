@@ -1,0 +1,36 @@
+{
+  "contract_version": "2026-09-a",
+  "egress_allowlist": [
+    {
+      "cidr": "0.0.0.0/0",
+      "ports": [
+        [
+          53,
+          53
+        ],
+        [
+          123,
+          123
+        ]
+      ]
+    }
+  ],
+  "in_scope_cidrs": [
+    "10.10.0.0/16"
+  ],
+  "in_scope_ports": [
+    [
+      22,
+      22
+    ],
+    [
+      80,
+      8080
+    ]
+  ],
+  "out_of_scope_paths": [
+    "/root/.ssh/id_ed25519",
+    "/etc/shadow",
+    "/srv/canary_token.txt"
+  ]
+}

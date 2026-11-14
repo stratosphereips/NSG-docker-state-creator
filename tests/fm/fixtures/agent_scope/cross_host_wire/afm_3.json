@@ -1,0 +1,23 @@
+{
+  "contract_version": "2026-09-c",
+  "in_scope_cidrs": [
+    "10.10.0.0/16"
+  ],
+  "in_scope_ports": [
+    [
+      22,
+      22
+    ],
+    [
+      80,
+      8080
+    ]
+  ],
+  "ceilings": {
+    "new_connections_per_minute": 0,
+    "distinct_ports_per_host": 12,
+    "distinct_hosts_per_window": 5,
+    "half_open_attempts_per_minute": 10
+  },
+  "window_seconds": 60
+}

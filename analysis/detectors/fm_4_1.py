@@ -297,10 +297,12 @@ action half of the 2026-11-08 ruling is carried by the SMS surface, and
 attacker activity reachable only through it is invisible here).
 
 The zeek leg reads the archived observation directory through
-streamkit.load_conn_dir(obs.root / "zeek") -- deterministic, read-only,
-total I/O over the frozen evidence (the loader has no zeek stream; the
-synthesizer pre-registered load_conn_dir as this detector's deciding
-stream).  Everything else is a pure function of the parsed Observation
+streamkit.load_conn_dirs(streamkit.zeek_dirs(obs)) -- deterministic,
+read-only, total I/O over the frozen evidence (the loader has no zeek
+stream; the synthesizer pre-registered load_conn_dir as this detector's
+deciding stream; the agent-scoped 2026-11-11 mode adds the peer hosts'
+zeek dirs through zeek_dirs, a no-op extension per-host).  Everything
+else is a pure function of the parsed Observation
 plus config: no wall clock, no RNG; deterministic ordering everywhere.
 """
 
@@ -851,14 +853,20 @@ def detect(obs: Observation,
     local_addrs = _local_addresses(ss_records)
 
     # ---- deciding stream: zeek conn.log -----------------------------------
+    # AGENT SCOPE (2026-11-11): a PEER host's supervisor may declare the
+    # zeek sensor (the wire capture lives on the router in the l1
+    # topology); obs.wire_zeek_declared carries that fact and
+    # streamkit.zeek_dirs adds the peer zeek dirs.  Per-host loads leave
+    # both at their defaults, so this guard is unchanged there.
     zeek_declared = any(
         record.event in ("sensor_started", "sensor_start_failed")
-        and record.name == "zeek" for record in supervisor)
+        and record.name == "zeek" for record in supervisor) \
+        or obs.wire_zeek_declared
     if not zeek_declared:
         detector_flags.append("FM4.1:zeek_not_declared")
 
     load_flags: List[str] = []
-    conns = streamkit.load_conn_dir(obs.root / "zeek", load_flags)
+    conns = streamkit.load_conn_dirs(streamkit.zeek_dirs(obs), load_flags)
     for flag in load_flags:
         if flag.startswith("STREAMKIT:conn_dir_missing"):
             detector_flags.append("FM4.1:zeek_deciding_stream_missing"

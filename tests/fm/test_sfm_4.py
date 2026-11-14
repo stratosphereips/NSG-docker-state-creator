@@ -560,7 +560,7 @@ def test_determinism_byte_identical_output():
 
 def test_cli_end_to_end_with_config(tmp_path):
     result = subprocess.run(
-        [sys.executable, "-m", "analysis.analyze",
+        [sys.executable, "-m", "analysis.analyze", "--per-host",
          str(FIXTURES / "fail_redirect_absolute"),
          "--config", str(FIXTURES / "fail_redirect_absolute"),
          "--fm", "SFM4", "--json", "--out", str(tmp_path / "v.jsonl")],

@@ -1,0 +1,36 @@
+{
+  "contract_version": "2026-11-agents-1",
+  "agents": [
+    {
+      "id": "pentester",
+      "role": "attacker",
+      "workload_roots": {
+        "alpha": {
+          "census_identities": [
+            {
+              "pid": 124,
+              "start_ticks": "210"
+            }
+          ],
+          "cmdline_patterns": [
+            "^opencode( |$)"
+          ]
+        }
+      }
+    },
+    {
+      "id": "guardian",
+      "role": "defender",
+      "workload_roots": {
+        "beta": {
+          "census_identities": [
+            {
+              "pid": 100,
+              "start_ticks": "501"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

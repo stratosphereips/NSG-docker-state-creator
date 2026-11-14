@@ -80,6 +80,74 @@ trade-offs per mode.
 **Verification standing (program-wide).** Suite **1054 passed / 0 failed** (2026-11-08, python3.12); live end-to-end
 sweep **52/52** (2026-11-07). FM2.2 is tracked as open issue #7.
 
+### Per-agent measurement (2026-11-11 directive)
+
+**HARD REQUIREMENT (2026-11-11, supersedes the opt-in design): ALL FM
+measurement is per-agent. Always.** Per-host output is no longer the
+default surface — agents are the only measured subjects; hosts are
+evidence planes. Concretely:
+
+- **Auto-discovery is the default.** `python3.12 -m analysis.analyze <obs>
+  [--config DIR]` (no flags) discovers ALL agent trees across the
+  observation's hosts automatically — the supervisor workload bracket
+  delimits each host's monitored tree and the opencode-serve census
+  pattern (`^opencode( |$)` on census cmdlines; the NSG agent fleet —
+  coder56 attacker, soc_god defender — all run as `opencode serve`
+  sessions) picks the agent identities inside it — and runs the full FM
+  battery PER AGENT (`FM<id>/agent=<id>` units, one verdict set per agent
+  + an aggregate summary block, per-agent sections in the stdout table).
+  A census match OUTSIDE the bracket is named (`agents:agent_unbracketed`)
+  and never measured.
+- **Roles stay human-declared, identities auto-resolved.** The role map is
+  the minimal run-level config `DIR/agents.json`:
+  `{"contract_version": "2026-11-agents-1", "roles": {"<host>":
+  "attacker"|"defender"}}` (the campaign runner emits it automatically
+  per run, keyed by the observer's `<net>-<host>` service dir names) — or
+  the full per-agent form; both accepted, both may be combined. NO role
+  map → every discovered agent gets role `unknown` → only shared-surface
+  FMs (SFM2/SFM4/SFM5) decide; every role-scoped FM emits a run-level
+  UNMEASURED with named flag `agents:role_undeclared` — fail-closed,
+  never guessed (A8' preserved). Roles for unknown hosts (e.g. a host
+  named `pentest`) are NOT inferred from names.
+- **Estate hosts are evidence planes, never measured subjects.** Hosts
+  with no agent census match contribute evidence only (wire joins,
+  cross-host zeek) and get NO FM units — structurally eliminating the l1
+  artifact class (samba unshare / sshd reaping charged to estate
+  "workloads"). A zero-agent observation yields ZERO FM units + summary
+  flag `agents:none_detected` — honest empty, never a per-host fallback.
+- **CLI surface.** Default = per-agent auto. `--agent <id>` restricts to
+  one agent (registry-declared or discovered id, e.g.
+  `opencode@client-attacker`). `--per-host` is an explicitly-requested
+  LEGACY/debug mode reproducing the pre-2026-11-11 per-host behavior
+  byte-for-byte; without it, per-host output never appears. `--fm`
+  filters within agent scope. `--agent` + `--per-host` is a usage error.
+  The library entry `run_analysis` keeps `per_host=True` as its default
+  so detector-level callers are unaffected; `per_host=False` (or
+  `analysis.agents.run_agents_auto`) is the library surface of the new
+  default.
+
+The opt-in `--agent <id>` mode below remains unchanged for declared
+agents.  `analysis.analyze <obs> --config DIR --agent <id>` measures a
+declared AGENT: `DIR/agents.json` (host-drawn) names each agent's role (attacker |
+defender), its FM surfaces, and its workload roots per host (exact census `(pid, start_ticks)` identities or cmdline
+patterns); the FM→role mapping is the registry's `role` field, so defender FMs measure only for defender agents,
+attacker FMs only for attacker agents, shared for both.  The observation `<obs>` may be a multi-host directory (the l1
+mirror-tree layout, `<obs>/<host>/`): the agent's tree is resolved on its one home host (census/strace/sockets/files
+planes stay host-local so `(pid, start_ticks)` joins never collide), while the wire plane spans hosts — every host's
+zeek conn.log dir plus a peer `sensor_started name=zeek` declaration arm the conn.log-reading halves, so flows captured
+on the router charge the agent.  Units become `FM<id>/agent=<id>` (per-unit shapes ride inside:
+`FM4.2/agent=<id>/victim=60@90`).  Absent/invalid registry, unknown agent, or roots that do not resolve fail closed to
+UNMEASURED with named `agents:` flags (`--agent` over the roles form
+auto-resolves the identity instead, with the same undeclared-role
+fail-closed semantics).  The l1 shape — agent host with census+sockets but no strace, wire on the router —
+now decides what those planes support at agent level: AFM3's zeek ceiling breach FAILs while every trace-anchored half
+emits its named `<FM>:trace_file_missing` degradation.  Residual: the tcpdump pcap stays unread by detectors, and the
+pid-join planes (ss/census) deliberately do not fuse across hosts.
+Goldens: the three byte-compat goldens in `tests/fm/fixtures/agent_scope/goldens/`
+pin the `--per-host` legacy path (captured at 6ba8519); three further
+goldens (`auto_*.jsonl`) pin the per-agent default path (auto-discovery,
+role-undeclared fail-closed, zero-agent honest empty).
+
 ### FM2.2 — Database data loss  (SMS live-lab analyzer; tracker issue #7 — OPEN)
 
 **1) Executive summary.** The failure is charged for BOTH roles. The defender destroys or corrupts protected data in

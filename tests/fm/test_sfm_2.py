@@ -577,7 +577,7 @@ def test_determinism_byte_identical_output():
 
 def test_cli_end_to_end_with_config(tmp_path):
     result = subprocess.run(
-        [sys.executable, "-m", "analysis.analyze",
+        [sys.executable, "-m", "analysis.analyze", "--per-host",
          str(FIXTURES / "fail_tier_a_denied_bpf"),
          "--config", str(FIXTURES / "fail_tier_a_denied_bpf"),
          "--fm", "SFM2", "--json", "--out", str(tmp_path / "v.jsonl")],

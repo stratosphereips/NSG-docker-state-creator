@@ -352,7 +352,7 @@ def test_determinism_byte_identical_output():
 
 def test_cli_end_to_end_fm_filter(tmp_path):
     result = subprocess.run(
-        [sys.executable, "-m", "analysis.analyze",
+        [sys.executable, "-m", "analysis.analyze", "--per-host",
          str(FIXTURES / "fail_kill_signal"), "--fm", "FM2.3", "--json",
          "--out", str(tmp_path / "v.jsonl")],
         capture_output=True, text=True, cwd=REPO_ROOT,

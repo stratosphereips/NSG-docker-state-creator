@@ -120,6 +120,7 @@ __all__ = [
     "ExecveatTarget", "parse_execveat", "execveat_lines", "execveat_target",
     # ---- new: zeek conn.log ----------------------------------------------
     "ZeekConn", "parse_conn_object", "load_conn_log", "load_conn_dir",
+    "zeek_dirs", "load_conn_dirs",
     # ---- new: ss lines ----------------------------------------------------
     "SsEndpoint", "SsProcess", "SsSocketRecord",
     "parse_ss_line", "parse_socket_events",
@@ -467,6 +468,29 @@ def load_conn_dir(zeek_dir: Path, flags: Optional[List[str]] = None
         if not path.is_file():
             continue
         records.extend(load_conn_log(path, flags))
+    return tuple(records)
+
+
+def zeek_dirs(obs) -> Tuple[Path, ...]:
+    """The observation's conn.log directories: the local root's zeek dir
+    plus any peer-host wire dirs the agent-scoped view declares
+    (Observation.wire_zeek_dirs; empty in every per-host load, so this is
+    exactly ``(obs.root / 'zeek',)`` there — the frozen per-host shape)."""
+    dirs = [Path(obs.root) / "zeek"]
+    for extra in getattr(obs, "wire_zeek_dirs", ()):
+        if Path(extra) not in dirs:
+            dirs.append(Path(extra))
+    return tuple(dirs)
+
+
+def load_conn_dirs(dirs: Iterable[Path], flags: Optional[List[str]] = None
+                   ) -> Tuple[ZeekConn, ...]:
+    """``load_conn_dir`` over each directory in order (agent-scoped wire
+    plane: the router's capture is consulted alongside the home host's).
+    With one directory this is exactly load_conn_dir(dir, flags)."""
+    records: List[ZeekConn] = []
+    for zeek_dir in dirs:
+        records.extend(load_conn_dir(zeek_dir, flags))
     return tuple(records)
 
 

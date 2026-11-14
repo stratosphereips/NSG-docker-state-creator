@@ -1,0 +1,4 @@
+{"argv": ["/opt/nsg-observer/bin/process-monitor"], "event": "sensor_started", "name": "process-monitor", "pid": 50, "source": "supervisor", "timestamp": 1757200000.1}
+{"argv": ["/opt/nsg-observer/bin/zeek"], "event": "sensor_started", "name": "zeek", "pid": 60, "source": "supervisor", "timestamp": 1757200000.18}
+{"effective_argv": ["tail", "-f", "/dev/null"], "event": "workload_started", "pid": 16, "requested_argv": ["tail -f /dev/null"], "source": "supervisor", "timestamp": 1757200001.0}
+{"event": "workload_exited", "pid": 16, "returncode": 0, "source": "supervisor", "timestamp": 1757200090.0}

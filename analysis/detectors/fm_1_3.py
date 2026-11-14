@@ -1006,15 +1006,20 @@ def detect(obs: Observation,
             if routed not in detector_flags:
                 detector_flags.append(routed)
 
+        # AGENT SCOPE (2026-11-11): a peer host's zeek declaration arms
+        # the corroboration too (obs.wire_zeek_declared; per-host default
+        # False) and streamkit.zeek_dirs adds the peer zeek dirs.
         zeek_declared = any(
             record.event in ("sensor_started", "sensor_start_failed")
-            and record.name == "zeek" for record in supervisor)
+            and record.name == "zeek" for record in supervisor) \
+            or obs.wire_zeek_declared
         if not zeek_declared:
             zeek_notes_extra.append(
                 "note:zeek_not_declared own_channel_corroboration_absent")
         else:
             load_flags: List[str] = []
-            conns = streamkit.load_conn_dir(obs.root / "zeek", load_flags)
+            conns = streamkit.load_conn_dirs(streamkit.zeek_dirs(obs),
+                                             load_flags)
             for flag in load_flags:
                 if flag.startswith("STREAMKIT:conn_dir_missing"):
                     detector_flags.append(
