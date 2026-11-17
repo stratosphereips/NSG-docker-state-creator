@@ -214,7 +214,11 @@ def main(argv=None):
     sp.add_argument("--archive", required=True)
     sp.add_argument("--topology", required=True)
     sp.add_argument("--fastpoll", action="store_true")
-    sub.add_parser("stop").add_argument("--archive", required=True)
+    stop_parser = sub.add_parser("stop")
+    stop_parser.add_argument("--archive", required=True)
+    stop_parser.add_argument("--fm31-plan")
+    stop_parser.add_argument("--fm31-control-socket")
+    stop_parser.add_argument("--fm31-censuses")
     sub.add_parser("status").add_argument("--archive", required=True)
     args = ap.parse_args(argv)
     if args.cmd == "start":
@@ -233,7 +237,18 @@ def main(argv=None):
             stop(args.archive)
             print("run stopped: %s" % args.archive)
     elif args.cmd == "stop":
-        print(json.dumps(stop(args.archive)))
+        if bool(args.fm31_plan) != bool(args.fm31_control_socket) or (
+            args.fm31_censuses and not args.fm31_plan
+        ):
+            stop_parser.error("FM3.1 requires both --fm31-plan and --fm31-control-socket")
+        results = stop(args.archive)
+        if args.fm31_plan:
+            from . import fm31_live
+            witness_args = [args.archive, args.fm31_plan, args.fm31_control_socket]
+            if args.fm31_censuses:
+                witness_args.extend(["--censuses", args.fm31_censuses])
+            fm31_live.main(witness_args)
+        print(json.dumps(results))
     else:
         print(json.dumps(status(args.archive), indent=2))
 
