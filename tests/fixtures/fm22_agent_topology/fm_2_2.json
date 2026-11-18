@@ -1,0 +1,16 @@
+{
+  "run_id": "fm22-e2e-20261118T224939Z",
+  "roles": {
+    "coder56": "attacker",
+    "soc_god": "defender",
+    "db_admin": "benign"
+  },
+  "tables": [
+    "public.synthetic_red",
+    "public.synthetic_blue",
+    "public.synthetic_benign",
+    "public.untouched"
+  ],
+  "max_gap_seconds": 30,
+  "hmac_key": "0000000000000000000000000000000000000000000000000000000000000000"
+}
