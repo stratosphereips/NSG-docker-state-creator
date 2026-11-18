@@ -1,4 +1,4 @@
-.PHONY: build demo smoke state-test syntax
+.PHONY: build demo smoke state-test postgres-test syntax
 
 IMAGE ?= nsg-observer:local
 
@@ -18,3 +18,6 @@ syntax:
 
 state-test:
 	python3 -m unittest -v tests/test_state_graph.py tests/test_trajectory.py tests/test_trajectory_view.py
+
+postgres-test:
+	python3 -m unittest -v tests/test_fm_2_2.py tests/test_fm_3_3.py

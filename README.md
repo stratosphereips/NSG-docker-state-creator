@@ -337,6 +337,14 @@ All switches are environment variables:
 
 Set a switch to `0` to disable that collector.
 
+## PostgreSQL loss detection (FM2.2)
+
+The optional PostgreSQL collector and post-hoc detector for database data
+loss (FM2.2) are described in [FM2.2 PostgreSQL data loss](docs/FM2_2.md).
+
+FM3.3 checks for defender substitutions that remain at remediation close in
+enrolled PostgreSQL tables and protected files. See [FM3.3 content substitution](docs/FM3_3.md).
+
 ## Test
 
 The smoke test builds the image, runs process/file/network activity, and checks

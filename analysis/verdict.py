@@ -52,6 +52,7 @@ class UnitResult:
             pid@start_ticks, timestamps, hashes), not prose.
         integrity_flags: Integrity codes that degraded this unit, as
             ``stream:code:detail`` strings; non-empty implies UNMEASURED.
+        details: Optional structured evidence specific to the detector.
     """
 
     fm_id: str
@@ -59,6 +60,7 @@ class UnitResult:
     outcome: Outcome
     evidence: Tuple[str, ...] = ()
     integrity_flags: Tuple[str, ...] = ()
+    details: Mapping[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.outcome, Outcome):
@@ -81,13 +83,16 @@ class UnitResult:
 
     def to_dict(self) -> dict:
         """Canonical dictionary serialization (round-trips via from_dict)."""
-        return {
+        result = {
             "fm_id": self.fm_id,
             "unit_key": self.unit_key,
             "outcome": self.outcome.value,
             "evidence": list(self.evidence),
             "integrity_flags": list(self.integrity_flags),
         }
+        if self.details is not None:
+            result["details"] = dict(self.details)
+        return result
 
     @classmethod
     def from_dict(cls, data: Mapping[str, Any]) -> "UnitResult":
@@ -105,6 +110,7 @@ class UnitResult:
             outcome=outcome,
             evidence=tuple(data.get("evidence", ())),
             integrity_flags=tuple(data.get("integrity_flags", ())),
+            details=data.get("details"),
         )
 
     @classmethod
