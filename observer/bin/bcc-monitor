@@ -144,6 +144,15 @@ def main() -> int:
     start_preferred("opensnoop", [
         ("opensnoop-bpfcc", ["-T", "-U", "-e", "-F", "--cgroupmap", str(cgroup_map_path)]),
     ])
+    # exitsnoop captures each process's exit code from sched_process_exit, which
+    # is the only reliable way to tell a successful command (for example an ssh
+    # pivot) from a failed one: the /proc poller reaps short-lived children
+    # before it can read the zombie status.  exitsnoop has no cgroup filter, so
+    # it traces host-wide; the consumer scopes results to this container's PIDs.
+    start_preferred("exitsnoop", [
+        ("exitsnoop", []),
+        ("exitsnoop-bpfcc", []),
+    ])
     while True:
         for name, process, _handle in children:
             if process.poll() is not None and name not in reported_exits:

@@ -16,13 +16,14 @@ This project intentionally does not collect CPU or memory utilization.
 |---|---|---|
 | Workload syscalls | `strace -ff` with timestamps, durations, paths and file descriptors | `syscalls/trace.*` |
 | All visible processes | `/proc` lifecycle polling; libbpf/BCC `execsnoop` when available | `processes.jsonl`, `bcc/` |
+| Process exit codes | libbpf/BCC `exitsnoop` when available; `/proc` zombie status otherwise | `bcc/exitsnoop.log`, `processes.jsonl` |
 | File events | Recursive inotify create/write/move/delete/attribute events | `files/events.jsonl` |
 | File state | Periodic metadata and SHA-256 reconciliation | `files/reconciliation.jsonl` |
 | Connections and ports | Repeated `ss` connection/listener inventory in the container network namespace | `sockets/sockets.jsonl` |
 | Network knowledge | Interfaces, addresses, routes, neighbors, iptables and nftables snapshots | `network/topology.jsonl` |
 | Network protocols | Zeek on the container network namespace | `zeek/*.log` |
 | Packets | Bounded rotating `tcpdump` ring | `pcap/traffic.pcap*` |
-| Interactive commands | `script` TTY input/output, persistent Bash history, command exit status | `tty/` |
+| Shell commands | `script` TTY input/output and persistent Bash history for interactive shells; an EXIT trap (via `BASH_ENV`) records the command and exit status of non-interactive `bash -c` invocations | `tty/` |
 | Supervisor state | Lifecycle and health records | `supervisor.jsonl`, `health.json` |
 | Inferred world state | Confidence-bearing property graph, compact summary, embedding documents | `state/graph.json`, `state/summary.json`, `state/embedding.jsonl` |
 | Passive actions and state transitions | Bash boundaries, process trees, exec events, and syscall activity correlated with material graph changes | `trajectory/sequence.jsonl`, `trajectory/actions/`, `trajectory/states/`, `trajectory/deltas/` |

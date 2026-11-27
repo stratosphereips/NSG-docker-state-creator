@@ -149,9 +149,34 @@ Remote control is intentionally conservative:
 
 - the local container is controlled by definition;
 - Zeek SSH `auth_success=true` is 0.99 confidence;
-- an interactive Bash audit record showing `ssh`, `scp`, or `sftp` exit status
-  zero is 0.95 confidence;
+- a Bash audit record showing `ssh`, `scp`, or `sftp` exit status zero is 0.95
+  confidence;
 - an explicit assertion uses the supplied confidence.
+
+Control is only conferred on a verified exit status of zero. A failed pivot and a
+successful one exchange almost identical bytes (TCP connect, SSH banner, and key
+exchange all complete before authentication resolves), so the exit code is the
+only reliable local signal. It reaches the compiler by three paths, in order of
+reliability:
+
+- the eBPF exit probe `exitsnoop` (`bcc/exitsnoop.log`), keyed by host PID — the
+  most reliable, because it reads `sched_process_exit` in the kernel and so
+  never misses a short-lived child such as an ssh client;
+- the non-interactive Bash `EXIT` trap, which records the exit status of each
+  `bash -c` command the workload runs (`tty/commands-*.jsonl`);
+- the `/proc` zombie status read by the process poller, which is best-effort:
+  the parent usually reaps a short-lived child before the poll observes it.
+
+When the command contains a shell operator after the access tool (for example
+`ssh host cmd | tail`), the captured status belongs to a later command, so it is
+not used to confer control.
+
+**Limitation.** Observations captured without the eBPF probe and without the
+`BASH_ENV` trap (for example datasets produced before this change, or runs where
+BPF is unavailable because the container is not privileged) carry no exit status,
+so no shell-access control is inferred from them. Such datasets must be
+re-collected to benefit from pivot-success verification; they cannot be
+retrofitted.
 
 Every inferred control relation records `source_host_id`. For a remote target,
 the graph additionally contains `local-host --CAN_CONTROL--> remote-host`, so
