@@ -190,6 +190,11 @@ class StateCompiler:
         self.local_ips = {"127.0.0.1", "::1"}
         self.local_hostname = "local-container"
         self.process_nodes: dict[int, str] = {}
+        # Host-namespace PID -> process exit code, learned from the eBPF exit
+        # probe (bcc/exitsnoop.log).  Supplies a trustworthy status for
+        # short-lived children, such as an ssh client, that the /proc poller
+        # reaps before it can read the zombie's exit code.
+        self.exit_codes: dict[int, int] = {}
         self.data_counts: Counter[str] = Counter()
         self.data_seen: set[tuple[str, str]] = set()
         self.http_files: dict[str, tuple[str, str]] = {}
@@ -496,6 +501,13 @@ class StateCompiler:
         if command_index is None:
             return
         tool = Path(tokens[command_index]).name
+        # A shell operator after the access command (``ssh host cmd | tail``,
+        # ``ssh host cmd && echo ok``) reassigns the pipeline's exit status to a
+        # later command, so the captured status no longer reflects whether the
+        # pivot itself succeeded.  Quoted operators belong to the remote shell
+        # and are kept inside a single token, so they are not matched here.
+        if any(token in {"|", "||", "&&", ";"} for token in tokens[command_index + 1:]):
+            command_exit_status = None
         remaining = tokens[command_index + 1:]
         port = 22
         targets: list[str] = []
@@ -757,6 +769,16 @@ class StateCompiler:
                 exit_status = int(record["exit_status"])
             except (KeyError, TypeError, ValueError):
                 exit_status = None
+            if exit_status is None and self.exit_codes:
+                # The /proc poller rarely catches a short-lived child as a
+                # zombie, so its exit status is usually absent.  Fall back to the
+                # eBPF exit probe, keyed by the host-namespace PID.
+                try:
+                    host_pid = int(record.get("host_pid"))
+                except (TypeError, ValueError):
+                    host_pid = None
+                if host_pid is not None:
+                    exit_status = self.exit_codes.get(host_pid)
             self._extract_command(command, evidence, exit_status)
             username = str(record.get("username", record.get("uid", ["unknown"])[0]))
             uid_value = record.get("uid", ["unknown"])
@@ -1084,6 +1106,40 @@ class StateCompiler:
                                         errno=errno, destination=address, port=port)
                             break
 
+    def _bcc_exits(self) -> None:
+        # Parse the eBPF exit probe (bcc/exitsnoop.log) into a host-PID -> exit
+        # code map.  exitsnoop cannot be cgroup-filtered, so the log may contain
+        # terminations from other containers; that is harmless because the map
+        # is only ever read for host PIDs this container's own records mention.
+        path = self.input / "bcc" / "exitsnoop.log"
+        if not path.exists():
+            return
+        relative = str(path.relative_to(self.input))
+        self.files_read[relative] += 1
+        # PCOMM  PID  PPID  TID  AGE(s)  EXIT_CODE
+        # where EXIT_CODE is "0", "code N", or "signal N (NAME)".
+        pattern = re.compile(r"^\S+\s+(\d+)\s+\d+\s+\d+\s+[\d.]+\s+(.*)$")
+        with path.open(encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                match = pattern.match(line.strip())
+                if not match:
+                    continue
+                pid_text, reason = match.groups()
+                reason = reason.strip()
+                if reason == "0":
+                    code = 0
+                elif reason.startswith("code "):
+                    try:
+                        code = int(reason.split(None, 1)[1])
+                    except (IndexError, ValueError):
+                        continue
+                else:
+                    # A fatal signal is a failure; record a non-zero status so it
+                    # never satisfies the ``exit == 0`` control gate.
+                    code = 128
+                self.records_read[relative] += 1
+                self.exit_codes[int(pid_text)] = code
+
     def _bcc_exec(self) -> None:
         path = self.input / "bcc" / "execsnoop.log"
         if not path.exists() or self.profile["process_mode"] == "none":
@@ -1142,6 +1198,7 @@ class StateCompiler:
         self._prepare()
         self._session()
         self._topology()
+        self._bcc_exits()
         self._processes()
         self._sockets()
         self._files()

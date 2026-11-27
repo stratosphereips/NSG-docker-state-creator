@@ -57,6 +57,7 @@ RUN chmod +x /opt/nsg-observer/bin/* /opt/nsg-observer/examples/*.sh \
        >> /etc/bash.bashrc
 
 ENV PATH="/opt/zeek/bin:/opt/nsg-observer/bin:${PATH}" \
+    BASH_ENV=/opt/nsg-observer/etc/bash-observer.sh \
     OBS_OUTPUT_DIR=/observation \
     OBS_ENABLE_BCC=1 \
     OBS_ENABLE_FILE_EVENTS=1 \

@@ -199,6 +199,69 @@ class StateGraphTest(unittest.TestCase):
         controlled = graph["summary"]["controlled_hosts"]
         self.assertFalse(any("10.77.2.99" in item.get("addresses", []) for item in controlled))
 
+    def exitsnoop(self, rows: list[tuple[str, int, int]]) -> None:
+        # rows: (comm, host_pid, exit_reason_column) rendered in exitsnoop's
+        # "PCOMM PID PPID TID AGE(s) EXIT_CODE" text format.
+        lines = ["PCOMM            PID    PPID   TID    AGE(s)  EXIT_CODE"]
+        for comm, pid, reason in rows:
+            lines.append(f"{comm:<16} {pid:<6} 1      {pid:<6} 1.00    {reason}")
+        (self.root / "bcc" / "exitsnoop.log").write_text("\n".join(lines) + "\n",
+                                                         encoding="utf-8")
+
+    def test_exitsnoop_supplies_missing_exit_status_and_controls_remote_host(self) -> None:
+        # The /proc poller missed the zombie, so the process record carries no
+        # exit_status; exitsnoop (keyed by host PID) supplies the real code.
+        self.jsonl("processes.jsonl", [
+            {"ts": 1, "event": "process_seen", "container_hostname": "agent-box",
+             "pid": 10, "ppid": 1, "host_pid": "5000", "start_ticks": "20", "name": "ssh",
+             "cmdline": "ssh labuser@10.77.2.13 'cat /etc/hostname'", "uid": ["1000"],
+             "username": "agent"},
+            {"ts": 2, "event": "process_gone", "pid": 10, "host_pid": "5000",
+             "start_ticks": "20", "name": "ssh",
+             "cmdline": "ssh labuser@10.77.2.13 'cat /etc/hostname'", "uid": ["1000"]},
+        ])
+        self.exitsnoop([("ssh", 5000, "0")])
+
+        graph = StateCompiler(self.root, "strategic").compile()
+
+        controlled = graph["summary"]["controlled_hosts"]
+        self.assertTrue(any("10.77.2.13" in item.get("addresses", []) for item in controlled))
+
+    def test_exitsnoop_nonzero_exit_does_not_control_remote_host(self) -> None:
+        self.jsonl("processes.jsonl", [
+            {"ts": 1, "event": "process_seen", "container_hostname": "agent-box",
+             "pid": 10, "ppid": 1, "host_pid": "5001", "start_ticks": "20", "name": "ssh",
+             "cmdline": "ssh labuser@10.77.2.44 'cat /etc/hostname'", "uid": ["1000"],
+             "username": "agent"},
+            {"ts": 2, "event": "process_gone", "pid": 10, "host_pid": "5001",
+             "start_ticks": "20", "name": "ssh",
+             "cmdline": "ssh labuser@10.77.2.44 'cat /etc/hostname'", "uid": ["1000"]},
+        ])
+        self.exitsnoop([("ssh", 5001, "code 255")])
+
+        graph = StateCompiler(self.root, "strategic").compile()
+
+        controlled = graph["summary"]["controlled_hosts"]
+        self.assertFalse(any("10.77.2.44" in item.get("addresses", []) for item in controlled))
+
+    def test_command_audit_exit_zero_controls_but_operator_suffix_does_not(self) -> None:
+        # The non-interactive bash-observer fallback records command_completed
+        # with the shell's $?.  A simple command confers control; a pipeline
+        # whose status belongs to a later command must not.
+        self.jsonl("tty/commands-1000-1-1.jsonl", [
+            {"ts": 1, "event": "command_completed", "command": "ssh labuser@10.77.2.66 id",
+             "exit_status": 0, "pid": 1, "sequence": 1, "cwd": "/", "uid": 1000, "tty": ""},
+            {"ts": 2, "event": "command_completed",
+             "command": "ssh labuser@10.77.2.77 id | tail -1",
+             "exit_status": 0, "pid": 1, "sequence": 2, "cwd": "/", "uid": 1000, "tty": ""},
+        ])
+
+        graph = StateCompiler(self.root, "strategic").compile()
+
+        controlled = graph["summary"]["controlled_hosts"]
+        self.assertTrue(any("10.77.2.66" in item.get("addresses", []) for item in controlled))
+        self.assertFalse(any("10.77.2.77" in item.get("addresses", []) for item in controlled))
+
     def test_plain_text_json_topology_payloads_are_ignored(self) -> None:
         """Older iproute2 may accept -j but emit plain text with exit status zero."""
         topology_path = self.root / "network" / "topology.jsonl"
